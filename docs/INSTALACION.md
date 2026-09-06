@@ -93,6 +93,21 @@ explicado en [PRIMER-CAMBIO.md](PRIMER-CAMBIO.md).
 **No aparecen los comandos `/kit-*`** — reinicia la sesión de Claude Code. Los plugins se
 cargan al arrancar.
 
+## Actualizar
+
+Cuando el kit cambie:
+
+```bash
+claude plugin marketplace update hiram-kits       # trae el repo nuevo
+claude plugin update ios-agent-kit@hiram-kits     # instala la versión nueva
+```
+
+**`claude plugin install` NO actualiza** — si ya está instalado responde "ya instalado" y
+se queda con la versión vieja, sin avisar de que hay otra. El comando es `update`.
+Reinicia la sesión para que cargue.
+
+Los proyectos que usan el kit no tocan nada, salvo que cambie el contrato de `kit.conf`.
+
 ## Desinstalar
 
 ```bash

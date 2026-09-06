@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Language: es
+  All artifacts must be written in es.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  # RELLENA ESTO. Es lo que el agente lee antes de proponer nada.
+  Proyecto: <una o dos frases: qué es, qué plataforma, deployment target>.
+  Módulos: <dónde vive la lógica, dónde la UI, qué paquetes hay>.
+  Reglas que mandan: <AGENTS.md, .archlint.yml, .swiftlint.yml… si existen, cítalos>.
+  Verificación: `/kit-verifica` (definida en kit.conf).
+
+rules:
+  proposal:
+    - 'Usa los encabezados que el CLI espera: "## Why" y "## What Changes".'
+    - 'Incluye siempre una sección "Fuera de alcance" con lo que NO se va a tocar.'
+    - 'Incluye siempre "Criterios de aceptación" como lista de casillas, y cada criterio
+       tiene que poder comprobarse mirando el resultado. "La carga es más fluida" no es un
+       criterio; "UploadsView pasa el flag en false y hay un test que lo fija" sí lo es.'
+    - 'Nombra los ficheros o módulos concretos que se van a tocar. Un criterio que dice
+       "las pantallas que lanzan trabajo largo" no se puede verificar: di cuáles.'
+  tasks:
+    - 'La última tarea de todo cambio es `/kit-verifica` en verde.'
+  design:
+    - 'Solo si el cambio tiene decisiones técnicas de verdad. Un cambio sin decisiones no
+       lleva design.md: lleva un proposal y sus tareas.'
+
+operations:
+  apply:
+    guidance:
+      - 'Antes de escribir una función nueva, comprueba que no exista ya con
+         `/kit-duplicados`.'
+      - 'Si al implementar descubres que el acuerdo estaba mal, se corrige el ACUERDO por
+         escrito y se dice. Lo prohibido es seguir adelante en silencio porque "es obvio
+         que hace falta".'
+  archive:
+    guidance:
+      - 'Antes de archivar, pasa `/kit-acepta`. Compara lo ENTREGADO con lo ACORDADO,
+         criterio por criterio. Es la pregunta que ni el compilador, ni los tests, ni el
+         reviewer se hacen.'
+      - 'No se archiva con veredicto DEVUELTO o ACUERDO-ROTO. Con ACUERDO-ROTO se corrige
+         el acuerdo primero, POR ESCRITO, y se vuelve a pasar.'

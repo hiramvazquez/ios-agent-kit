@@ -1,0 +1,35 @@
+{
+  "_nota": "Tres hooks y ninguno más. Cada uno existe porque resuelve un fallo observado, no por simetría. Si algún día hay un cuarto, tiene que traer escrito el fallo que lo motiva.",
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/inyecta-contexto.sh\""
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "matcher": "compact",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/inyecta-contexto.sh\""
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "Bash",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/puerta-commit.sh\""
+        }
+      ]
+    }
+  ]
+}

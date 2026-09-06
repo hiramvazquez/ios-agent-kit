@@ -1,0 +1,24 @@
+# kit.conf — el ÚNICO fichero que el kit necesita de tu proyecto.
+#
+# Lo lee `verifica.sh` del plugin. Define dos cosas: qué significa "verificado" aquí, y
+# dónde vive el código Swift.
+
+# Dónde buscar duplicados. Directorios, separados por espacios.
+FUENTES="App Packages"
+
+# Qué hay que ejecutar para dar el proyecto por verificado. Cada `paso` lleva un nombre
+# legible y un comando; si alguno sale distinto de 0, no hay firma.
+verificaciones() {
+    paso "Platform · build"  bash -c 'cd Packages/Platform && swift build'
+    paso "Platform · tests"  bash -c 'cd Packages/Platform && swift test'
+    paso "Features · build"  bash -c 'cd Packages/Features && swift build'
+    paso "Features · tests"  bash -c 'cd Packages/Features && swift test'
+
+    # Un proyecto de un solo módulo suele necesitar solo esto:
+    # paso "build"  swift build
+    # paso "tests"  swift test
+
+    # Y si quieres el build de la app de verdad (tarda más):
+    # paso "app" xcodebuild build -scheme MiApp \
+    #     -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO
+}

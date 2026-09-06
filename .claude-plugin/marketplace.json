@@ -1,0 +1,12 @@
+{
+  "name": "hiram-kits",
+  "owner": { "name": "Hiram Vazquez" },
+  "description": "Kits propios para trabajar con agentes.",
+  "plugins": [
+    {
+      "name": "ios-agent-kit",
+      "source": "./",
+      "description": "OpenSpec + aceptación + revisión + verificación firmada, para proyectos iOS."
+    }
+  ]
+}

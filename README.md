@@ -36,12 +36,23 @@ terminal). Frena el **error de proceso**, que es el fallo real y el más caro.
 npm install -g @fission-ai/openspec@latest     # necesita Node
 ```
 
-En Claude Code, registra el marketplace y instala el plugin:
+En Claude Code, registra el marketplace e instala el plugin:
 
 ```
 /plugin marketplace add hiramvazquez/ios-agent-kit
 /plugin install ios-agent-kit
 ```
+
+O desde la terminal, que es como está verificado:
+
+```bash
+claude plugin marketplace add hiramvazquez/ios-agent-kit
+claude plugin install ios-agent-kit@hiram-kits -y
+claude plugin details ios-agent-kit      # 5 skills, 2 agentes, 3 hooks
+```
+
+Coste: **~469 tokens siempre activos** por sesión. Los agentes y comandos solo cuestan
+cuando se invocan; los tres hooks corren fuera del contexto del modelo y no cuestan nada.
 
 ### Una vez por proyecto
 
@@ -166,6 +177,14 @@ tres veces: tres `extension Date` en tres view models distintos, cada una correc
 separado.
 
 ---
+
+## Documentación
+
+| | |
+|---|---|
+| [Instalación](docs/INSTALACION.md) | paso a paso, con los errores reales y cómo salir de ellos |
+| [Tu primer cambio](docs/PRIMER-CAMBIO.md) | el bucle completo sobre un caso de verdad, con el formato de las specs |
+| [Las piezas](docs/PIEZAS.md) | qué hace cada una, cuándo se dispara, y **qué no hace** |
 
 ## Requisitos
 

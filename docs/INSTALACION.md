@@ -1,0 +1,104 @@
+# Instalación
+
+Todo lo de aquí está ejecutado y verificado, incluidos los errores. Si algo no te sale, mira
+[Cuando algo falla](#cuando-algo-falla) antes de tocar nada.
+
+## 1. Node y el CLI de OpenSpec — una vez por máquina
+
+El kit se apoya en [OpenSpec](https://github.com/Fission-AI/OpenSpec), que es un CLI de npm.
+
+```bash
+brew install node                              # si no lo tienes
+npm install -g @fission-ai/openspec@latest
+openspec --version                             # 1.12.0 o superior
+```
+
+Sin esto el kit funciona a medias: los scripts y los agentes van, pero no tienes
+`/opsx:propose`, ni validación de specs, ni archivado automático — que es la mitad del valor.
+
+## 2. El plugin — una vez por máquina
+
+Dentro de una sesión de Claude Code:
+
+```
+/plugin marketplace add hiramvazquez/ios-agent-kit
+/plugin install ios-agent-kit
+```
+
+O desde la terminal, que es como está verificado:
+
+```bash
+claude plugin marketplace add hiramvazquez/ios-agent-kit
+claude plugin install ios-agent-kit@hiram-kits -y
+claude plugin list          # debe decir: Status ✔ enabled
+```
+
+Comprueba qué quedó instalado:
+
+```bash
+claude plugin details ios-agent-kit
+```
+
+Tiene que inventariar **5 skills, 2 agentes y 3 hooks**. Coste: **~469 tokens siempre
+activos** por sesión, más lo que cueste cada pieza cuando se invoca (el agente de aceptación
+es el más caro, ~1,6k, y solo se paga al usarlo).
+
+## 3. Tu proyecto — una vez por proyecto
+
+Con Claude Code abierto en la raíz del proyecto:
+
+```
+/kit-init
+```
+
+Mira el repo antes de escribir nada —qué paquetes hay, qué comandos de build y test— y deja:
+
+| qué | dónde | qué es |
+|---|---|---|
+| `openspec/` | raíz | tus specs y tus cambios. **Tuyo**, no del kit |
+| `kit.conf` | raíz | 10 líneas: qué verifica este proyecto y dónde vive el código |
+| `openspec/config.yaml` | dentro de `openspec/` | las reglas: criterios de aceptación obligatorios, etc. |
+| `.agent-kit/` en `.gitignore` | raíz | la firma de verificación es estado local |
+
+Termina con `/kit-verifica`. **Si no sale verde a la primera, el `kit.conf` está mal** — y
+ese es el momento de arreglarlo, no la primera vez que alguien intente commitear.
+
+### Si prefieres hacerlo a mano
+
+```bash
+openspec init --tools claude --language es
+cp "$(claude plugin details ios-agent-kit | grep -o '/.*ios-agent-kit')/plantillas/kit.conf.ejemplo" kit.conf
+printf '\n.agent-kit/\n' >> .gitignore
+$EDITOR kit.conf          # pon los comandos reales de tu proyecto
+```
+
+## Cuando algo falla
+
+**`Status: ✘ failed to load`** — `claude plugin list` te dice el motivo exacto. Los dos que
+me encontré montando esto: `plugin.json` declarando rutas que ya son las de por defecto, y
+`hooks.json` con los eventos fuera del objeto `hooks`. Los dos están corregidos; si te sale
+con una versión tuya modificada, el mensaje del CLI nombra la clave concreta.
+
+**`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1. Es deliberado: "no
+pude mirar" no es lo mismo que "está mal". Créalo con `/kit-init`.
+
+**La puerta bloquea un commit que crees válido** — la firma es de OTRO diff. Pasa siempre
+por lo mismo: encadenar `git add && git commit`. Stagea, verifica y commitea en **tres
+comandos separados**; entre la firma y el commit el diff no puede cambiar.
+
+**`openspec list --specs` dice `requirements 0`** — tu spec es prosa que el parser no
+reconoce. Necesita `### Requirement:` con "SHALL" y `#### Scenario:` con WHEN/THEN. Está
+explicado en [PRIMER-CAMBIO.md](PRIMER-CAMBIO.md).
+
+**No aparecen los comandos `/kit-*`** — reinicia la sesión de Claude Code. Los plugins se
+cargan al arrancar.
+
+## Desinstalar
+
+```bash
+claude plugin uninstall ios-agent-kit@hiram-kits
+claude plugin marketplace remove hiram-kits
+```
+
+En tu proyecto quedan `openspec/` y `kit.conf`. El primero es documentación tuya que sigue
+teniendo sentido sin el kit; el segundo son diez líneas que puedes borrar.

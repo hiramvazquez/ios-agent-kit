@@ -139,6 +139,18 @@ firma y la puerta de commit no deja pasar.
 | `hooks/hooks.json` | los tres hooks |
 | `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh` |
 
+### Para mejorar el kit
+
+```bash
+bash scripts/autocomprueba.sh          # ANTES de publicar. Comprueba lo que el CLI rechaza
+# sube la versión en .claude-plugin/plugin.json, commit y push
+claude plugin marketplace update hiram-kits
+claude plugin install ios-agent-kit@hiram-kits -y
+claude plugin list                      # Status ✔ enabled, con la versión nueva
+```
+
+Los proyectos que lo usan no tocan nada, salvo que cambie el contrato de `kit.conf`.
+
 ### Los tres hooks
 
 | evento | qué hace |

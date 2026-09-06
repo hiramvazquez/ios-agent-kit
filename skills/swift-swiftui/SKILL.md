@@ -1,3 +1,8 @@
+---
+name: swift-swiftui
+description: Reglas de Swift y SwiftUI para código escrito por agentes, adaptadas de SwiftAgents (Paul Hudson) con las que exigen iOS 26 marcadas aparte. Úsala al escribir o revisar cualquier fichero .swift de UI o de lógica de vista.
+---
+
 # Swift y SwiftUI — reglas de código
 
 Adaptado de [SwiftAgents](https://github.com/twostraws/SwiftAgents) (Paul Hudson).

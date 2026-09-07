@@ -36,20 +36,32 @@ terminal). Frena el **error de proceso**, que es el fallo real y el más caro.
 npm install -g @fission-ai/openspec@latest     # necesita Node
 ```
 
-En Claude Code, registra el marketplace e instala el plugin:
+**Dentro de una sesión de Claude Code** — es la forma normal, y la única que necesitas:
 
 ```
 /plugin marketplace add hiramvazquez/ios-agent-kit
 /plugin install ios-agent-kit
 ```
 
-O desde la terminal, que es como está verificado:
+Reinicia la sesión después: los plugins se cargan al arrancar.
+
+<details>
+<summary>La misma operación desde la terminal (equivalente, útil para guiones y CI)</summary>
 
 ```bash
 claude plugin marketplace add hiramvazquez/ios-agent-kit
 claude plugin install ios-agent-kit@hiram-kits -y
 claude plugin details ios-agent-kit      # 5 skills, 2 agentes, 3 hooks
+claude plugin list                       # Status ✔ enabled
 ```
+
+Es la forma con la que está verificada la instalación de este kit, porque un agente no
+puede teclear comandos de barra: los escribe el humano.
+</details>
+
+**Todo el trabajo del día a día es con comandos de barra dentro de Claude Code**
+(`/opsx:propose`, `/kit-verifica`, `/kit-acepta`…). La terminal solo hace falta para
+instalar, actualizar y diagnosticar.
 
 Coste: **~469 tokens siempre activos** por sesión. Los agentes y comandos solo cuestan
 cuando se invocan; los tres hooks corren fuera del contexto del modelo y no cuestan nada.
@@ -194,6 +206,7 @@ separado.
 
 | | |
 |---|---|
+| [**El flujo completo**](docs/FLUJO.md) | de una tarea de Jira a un commit, paso a paso. **Empieza por aquí** |
 | [Instalación](docs/INSTALACION.md) | paso a paso, con los errores reales y cómo salir de ellos |
 | [Tu primer cambio](docs/PRIMER-CAMBIO.md) | el bucle completo sobre un caso de verdad, con el formato de las specs |
 | [Las piezas](docs/PIEZAS.md) | qué hace cada una, cuándo se dispara, y **qué no hace** |

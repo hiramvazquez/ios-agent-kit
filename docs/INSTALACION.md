@@ -18,20 +18,26 @@ Sin esto el kit funciona a medias: los scripts y los agentes van, pero no tienes
 
 ## 2. El plugin — una vez por máquina
 
-Dentro de una sesión de Claude Code:
+**La forma normal es dentro de una sesión de Claude Code**, escribiendo:
 
 ```
 /plugin marketplace add hiramvazquez/ios-agent-kit
 /plugin install ios-agent-kit
 ```
 
-O desde la terminal, que es como está verificado:
+Y reiniciar la sesión: los plugins se cargan al arrancar.
+
+**La terminal hace lo mismo** y es la forma con la que está verificado este kit (un agente
+no puede teclear comandos de barra — los escribe el humano). Sirve además para guiones y
+para CI:
 
 ```bash
 claude plugin marketplace add hiramvazquez/ios-agent-kit
 claude plugin install ios-agent-kit@hiram-kits -y
 claude plugin list          # debe decir: Status ✔ enabled
 ```
+
+Elige una; no hay diferencia en el resultado.
 
 Comprueba qué quedó instalado:
 

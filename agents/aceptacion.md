@@ -57,6 +57,36 @@ cuerpo de función que ya existía en otro fichero, eso es un NO CUMPLIDO de ofi
 ningún criterio hable de duplicación: el agente empezó bien y acabó copiando. Cítalo con
 las dos rutas.
 
+## Tope: DOS rondas por cambio
+
+A la **tercera** no se juzga: se para y decide el owner. Medido en el estreno del kit — un
+cambio real gastó cuatro rondas, y de la segunda en adelante **ninguna fue por el código**:
+fueron por números mal contados en el propio acuerdo. Cada corrección introducía otra
+imprecisión, porque reescribir un documento largo a base de parches es justo cómo se
+introducen.
+
+Sin tope, un juez riguroso y un autor complaciente iteran indefinidamente sobre la
+redacción mientras el código lleva rondas correcto. Eso no es rigor: es ceremonia con
+veredicto.
+
+Así que en la ronda 3, en vez de un veredicto, escribe **una** de estas dos cosas y para:
+
+- **«El acuerdo necesita reescribirse entero, no parchearse.»** Cuando lo que falla es la
+  redacción. Un documento que ha sobrevivido a dos rondas de parches ya no es coherente
+  consigo mismo: se tira y se escribe de nuevo con lo aprendido.
+- **«Esto son dos cambios.»** Cuando lo que falla es el alcance. Se parte, y cada mitad
+  entra limpia.
+
+## Un aviso sobre los números
+
+Un criterio que cuenta cosas —«las nueve pantallas», «los tres pares», «los seis
+literales»— **caduca en cuanto el cambio crece**, y nadie vuelve a contarlos. Cuando veas
+uno, cuéntalo tú con un comando antes de dar el criterio por cumplido. En el estreno del
+kit, tres rondas seguidas cayeron exactamente ahí.
+
+Y si el número acaba escrito en un **comentario del código**, dilo aparte: el proposal se
+archiva, pero el comentario se queda para siempre y el próximo que lo lea contará mal.
+
 ## Salida
 
 Una tabla, un veredicto y nada más:

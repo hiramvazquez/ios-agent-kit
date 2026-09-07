@@ -46,6 +46,18 @@ AYUDA
     exit 3   # "no pude mirar", que no es lo mismo que "está mal"
 fi
 
+# El árbol sucio hace mentir a la firma, y hay que decirlo.
+#
+# `swift build`/`swift test` compilan el ÁRBOL DE TRABAJO; la firma es del ÍNDICE. Si algún
+# fichero trackeado tiene cambios sin stagear, lo verificado NO es lo que se va a commitear
+# — y el informe diría "verde" sobre otro código. Lo cazaron dos revisiones seguidas sobre
+# un cambio ajeno que llevaba días en el árbol.
+#
+# Avisa y lo DEJA ESCRITO en el informe; no bloquea. Quien tenga trabajo en curso aparte
+# decide si lo guarda (`git stash -k`) o asume la diferencia — pero ya no puede no saberlo,
+# y el reviewer y el juez lo leen en `--informe`.
+SUCIO="$(git diff --name-only 2>/dev/null)"
+
 FALLOS=0
 INFORME=""
 paso() {  # paso "<nombre>" <comando...>   ← lo usa kit.conf
@@ -76,6 +88,12 @@ case "$DUP" in
   *) INFORME="${INFORME}⚠️  lógica repetida (mírala, no bloquea):"$'\n'"${DUP}"$'\n' ;;
 esac
 
+if [ -n "$SUCIO" ]; then
+    INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR, así que"$'\n'
+    INFORME="${INFORME}    lo que se compiló y testeó NO es exactamente lo que se va a commitear:"$'\n'
+    INFORME="${INFORME}$(printf '%s\n' "$SUCIO" | sed 's/^/      /')"$'\n'
+fi
+
 {
     echo "verificado: $(date -u +%FT%TZ)"
     echo "diff: $(huella)"
@@ -85,6 +103,7 @@ esac
 } > "$MARKER"
 
 printf '%s' "$INFORME"
+[ -n "$SUCIO" ] && echo "⚠️  el árbol tenía cambios sin stagear: la firma vale, el verde es sobre otro árbol."
 [ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el diff staged." \
                     || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."
 exit "$FALLOS"

@@ -87,6 +87,13 @@ distintas. El caso que lo motivó: tres `extension Date` en tres view models.
 **No hace:** detección semántica. Dos funciones que hacen lo mismo escritas distinto no se
 parecen para él.
 
+**Y mide ESTRUCTURA, no contenido** — esto hay que saberlo antes de escribir un criterio de
+aceptación sobre él. Sustituir un literal por una constante (`"Sin conexión"` →
+`ErrorCopy.Offline.title`) **no cambia la huella**: los dos cuerpos siguen siendo el mismo
+`switch`. Un criterio del tipo «el informe dejará de listar X» tras extraer constantes es
+inalcanzable por construcción, y se escribió uno así en el estreno del kit. Solo desaparece
+del informe lo que deja de existir como cuerpo repetido.
+
 ### `inyecta-contexto.sh` — contra la deriva
 
 **Cuándo:** en cada turno (`UserPromptSubmit`) y tras cada compactación.

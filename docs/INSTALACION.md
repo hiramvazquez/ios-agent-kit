@@ -99,6 +99,10 @@ explicado en [PRIMER-CAMBIO.md](PRIMER-CAMBIO.md).
 **No aparecen los comandos `/kit-*`** — reinicia la sesión de Claude Code. Los plugins se
 cargan al arrancar.
 
+**`Agent type 'reviewer' not found`** — lo mismo, y el síntoma engaña porque no es que el
+agente no aparezca: es que **falla al invocarlo**. Los sub-agentes del plugin tampoco
+existen en una sesión que ya estaba abierta cuando se instaló. Reinicia.
+
 ## Actualizar
 
 Cuando el kit cambie:

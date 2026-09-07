@@ -75,6 +75,32 @@ else
     ORIGEN="desde HEAD (nada revisado todavía en esta rama)"
 fi
 
+# Los ficheros NUEVOS sin trackear no salen en ningún `git diff`, y en un cambio que crea
+# código son justamente todo el cambio. La primera prueba sobre una feature nueva reportó
+# 26 líneas cuando había cerca de setecientas: el revisor no habría visto la feature.
+#
+# Se añaden aparte, sin tocar el índice. Un `git add -N` los haría visibles de golpe, pero
+# deja entradas intent-to-add que rompen el `git stash create` del que depende la marca.
+#
+# Consecuencia asumida: un fichero que siga sin trackear aparece entero en CADA rodaja
+# hasta que se stagee. Se repite trabajo, no se pierde — y ese es el lado correcto en el
+# que equivocarse.
+NUEVOS=""
+HAY_NUEVOS=0
+while IFS= read -r nuevo; do
+    [ -n "$nuevo" ] || continue
+    TROZO="$(git diff --no-index /dev/null "$nuevo" 2>/dev/null || true)"
+    [ -n "$TROZO" ] && HAY_NUEVOS=1
+    NUEVOS="${NUEVOS}${TROZO}"$'\n'
+done < <(git ls-files --others --exclude-standard)
+
+# Bandera puesta en el bucle, y no un `${NUEVOS//[[:space:]]/}` al final: esa sustitución
+# de patrones sobre el diff entero tarda MINUTOS en bash en cuanto pasa de unas decenas de
+# KB. Colgó el script en su primer uso real con 43 KB de ficheros nuevos.
+if [ "$HAY_NUEVOS" -eq 1 ]; then
+    D="${D}"$'\n'"${NUEVOS}"
+fi
+
 N="$(printf '%s\n' "$D" | grep -c '^[+-][^+-]' || true)"
 
 if [ -z "$D" ]; then

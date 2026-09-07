@@ -31,6 +31,16 @@ de bien en una rodaja de 100 líneas.
 Si te llaman con el cambio ya entero, revísalo igual: no rechaces trabajo por su tamaño.
 Pero dilo en la salida, porque es información sobre el proceso, no sobre el código.
 
+**Y no exijas rodajas pequeñas cuando el lenguaje no las permite.** En un proyecto SwiftPM
+la unidad que compila es el TARGET: una rodaja que no compila no se puede verificar, así que
+no se puede revisar. Al crear una feature nueva, el modelo no enlaza sin la firma de su
+servicio y el target no compila hasta que el ViewModel y la Vista existen — la primera
+rodaja es «la feature entera compilando», y en la prueba real fueron 850 líneas. Las
+siguientes (rutas, enganches, snapshots) sí son pequeñas de verdad.
+
+O sea: **la rodaja la define el compilador, no `tasks.md`**. Modificar código existente
+trocea fino; crearlo, no.
+
 ## Entrada
 
 ```bash

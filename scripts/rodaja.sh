@@ -87,12 +87,32 @@ fi
 # que equivocarse.
 NUEVOS=""
 HAY_NUEVOS=0
+OMITIDOS=""
 while IFS= read -r nuevo; do
     [ -n "$nuevo" ] || continue
+    # `.claude/` es estado de herramientas, nunca código del proyecto. Un `worktrees/` ahí
+    # dentro metió 26.000 líneas de OTRO repo en una rodaja de 900: el revisor las leyó
+    # como si fueran el cambio. No está en .gitignore de todos los proyectos, así que se
+    # excluye aquí y no se confía en que lo esté.
+    case "$nuevo" in .claude/*|*/.claude/*) continue ;; esac
+
+    LINEAS="$(wc -l < "$nuevo" 2>/dev/null || echo 0)"
+    if [ "$LINEAS" -gt 1500 ]; then
+        # Un fichero enorme sin trackear no se inlinea: se nombra. Volcarlo entero empuja
+        # fuera de la ventana justamente lo que hay que mirar.
+        OMITIDOS="${OMITIDOS}   $nuevo ($LINEAS líneas — léelo directamente)"$'\n'
+        HAY_NUEVOS=1
+        continue
+    fi
+
     TROZO="$(git diff --no-index /dev/null "$nuevo" 2>/dev/null || true)"
     [ -n "$TROZO" ] && HAY_NUEVOS=1
     NUEVOS="${NUEVOS}${TROZO}"$'\n'
 done < <(git ls-files --others --exclude-standard)
+
+if [ -n "$OMITIDOS" ]; then
+    NUEVOS="${NUEVOS}"$'\n'"FICHEROS NUEVOS DEMASIADO GRANDES PARA VOLCARLOS AQUÍ:"$'\n'"${OMITIDOS}"
+fi
 
 # Bandera puesta en el bucle, y no un `${NUEVOS//[[:space:]]/}` al final: esa sustitución
 # de patrones sobre el diff entero tarda MINUTOS en bash en cuanto pasa de unas decenas de

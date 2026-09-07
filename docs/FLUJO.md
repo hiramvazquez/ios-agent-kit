@@ -157,6 +157,13 @@ cerradas desde entonces.
 La primera rodaja siempre es la más grande. Si una pasa de 400 líneas, el script lo dice:
 no rechaza la revisión, avisa de que se está revisando tarde.
 
+**Con un matiz que salió de probarlo sobre una feature nueva:** en SwiftPM la unidad que
+compila es el target, y una rodaja que no compila no se puede verificar ni revisar. Creando
+código, la primera rodaja es «la feature entera compilando» —850 líneas en la prueba real—
+porque el modelo no enlaza sin la firma del servicio y el target no compila hasta que están
+el ViewModel y la Vista. La rodaja la define el compilador, no `tasks.md`. Modificando
+código existente sí se trocea fino; creándolo, no.
+
 ---
 
 ## 6. El juez de aceptación — *¿es lo acordado?*

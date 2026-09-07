@@ -36,6 +36,22 @@ else
     add "· Sin cambio OpenSpec activo. Si vas a tocar código, primero /opsx:propose."
 fi
 
+# Los paquetes de los que depende el proyecto traen sus propias reglas, y viven en rutas
+# que git ignora (`.build/checkouts`, `DerivedData/.../SourcePackages`). Nadie las encuentra
+# solo. No se inyecta la doc —envejece y ocupa—, se inyecta que EXISTE y cómo llegar.
+# Se cachea: este hook corre en CADA turno y un `find` sobre DerivedData no es gratis. El
+# nombre de las dependencias cambia como mucho cuando se toca un Package.swift.
+CACHE="$(git rev-parse --show-toplevel)/.agent-kit/.paquetes-con-reglas"
+mkdir -p "$(dirname "$CACHE")"
+if [ -z "$(find "$CACHE" -mtime -1 2>/dev/null)" ]; then
+    find . "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 6 -name AGENTS.md \
+         -path "*checkouts*" 2>/dev/null \
+      | xargs -n1 dirname 2>/dev/null | xargs -n1 basename 2>/dev/null \
+      | sort -u | tr '\n' ' ' > "$CACHE" 2>/dev/null
+fi
+DEPDOC="$(cat "$CACHE" 2>/dev/null)"
+[ -n "$DEPDOC" ] && add "· Estos paquetes traen sus PROPIAS reglas y no están en el repo: ${DEPDOC}— rutas con /kit-doc."
+
 M="$(git rev-parse --show-toplevel)/.agent-kit/verificacion.txt"
 if [ -f "$M" ]; then
     grep -q "^diff: $(git diff --cached | shasum -a 256 | cut -d' ' -f1)$" "$M" \

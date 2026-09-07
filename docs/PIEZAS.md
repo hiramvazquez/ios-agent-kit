@@ -49,7 +49,8 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 |---|---|
 | `/kit-init` | prepara el proyecto: OpenSpec, `kit.conf`, reglas, `.gitignore` |
 | `/kit-verifica` | build, tests y duplicados, firmado contra el diff staged |
-| `/kit-duplicados` | busca lógica repetida, a demanda |
+| `/kit-duplicados` | busca lógica repetida, a demanda — **todos** los grupos, también los preexistentes |
+| `/kit-doc` | dónde está la doc de los paquetes de los que dependes (rutas resueltas) |
 | `/kit-acepta` | lanza el juez de aceptación |
 
 ---

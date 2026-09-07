@@ -13,13 +13,34 @@ Y aparte: agrupa las `extension` del MISMO tipo declaradas en módulos distintos
 la forma que toma el problema antes de que los cuerpos sean idénticos.
 
 Uso:  python3 Scripts/busca-duplicados.py [rutas...]   (por defecto: App y Packages)
-Sale 1 si encuentra algo; 0 si está limpio.
+      ... --tocados <fichero> ...  solo los grupos que toca el cambio en curso
+
+Sobre `--tocados`: un proyecto vivo arrastra duplicados preexistentes que ya se miraron y
+se decidieron. Listarlos enteros en CADA verificación convierte el aviso en papel pintado
+—se leyó seis veces seguidas sin que nadie actuara— y entierra el único que importa: el que
+ESTE cambio acaba de introducir. Con `--tocados` se reporta un grupo solo si alguna de sus
+copias está en un fichero del diff, y los demás se resumen en una línea.
+
+Sale 1 si encuentra algo (de lo reportado); 0 si está limpio.
 """
 import hashlib, re, sys
 from collections import defaultdict
 from pathlib import Path
 
-RAICES = [Path(p) for p in (sys.argv[1:] or ["App", "Sources", "Packages"]) if Path(p).exists()]
+argv = sys.argv[1:]
+TOCADOS = None
+if "--tocados" in argv:
+    i = argv.index("--tocados")
+    lista = Path(argv[i + 1]) if len(argv) > i + 1 else None
+    argv = argv[:i] + argv[i + 2:]
+    if lista and lista.exists():
+        TOCADOS = {l.strip() for l in lista.read_text().splitlines() if l.strip()}
+
+RAICES = [Path(p) for p in (argv or ["App", "Sources", "Packages"]) if Path(p).exists()]
+
+def tocado(*rutas):
+    """¿Alguna de estas rutas está en el diff? Sin `--tocados`, todo cuenta como tocado."""
+    return True if TOCADOS is None else any(str(r) in TOCADOS for r in rutas)
 MIN_LINEAS = 3  # un cuerpo de 1-2 líneas coincide por casualidad demasiado a menudo
 
 def sin_ruido(txt):
@@ -60,7 +81,9 @@ for f in ficheros:
         por_tipo[tipo].add(str(f))
 
 fallos = 0
-dups = {h: v for h, v in por_huella.items() if len({x[0] for x in v}) > 1}
+todos = {h: v for h, v in por_huella.items() if len({x[0] for x in v}) > 1}
+dups = {h: v for h, v in todos.items() if tocado(*{x[0] for x in v})}
+ocultos = len(todos) - len(dups)
 if dups:
     fallos += len(dups)
     print(f"❌ {len(dups)} cuerpo(s) repetido(s) en ficheros distintos:\n")
@@ -70,7 +93,7 @@ if dups:
             print(f"     {f}:{linea}  {nombre}()")
         print()
 
-esparcidas = {t: fs for t, fs in por_tipo.items() if len(fs) > 2}
+esparcidas = {t: fs for t, fs in por_tipo.items() if len(fs) > 2 and tocado(*fs)}
 if esparcidas:
     print(f"⚠️  tipos extendidos desde 3+ ficheros (mírales antes de que converjan):\n")
     for t, fs in sorted(esparcidas.items(), key=lambda kv: -len(kv[1])):
@@ -79,5 +102,12 @@ if esparcidas:
         print()
 
 if not fallos and not esparcidas:
-    print(f"✅ sin lógica repetida en {len(ficheros)} ficheros Swift.")
+    print(f"✅ sin lógica repetida en {len(ficheros)} ficheros Swift"
+          + (" que toque este cambio." if TOCADOS is not None else "."))
+
+if ocultos:
+    # Ni se ocultan a escondidas ni se repiten enteros: se cuentan, y hay un comando para
+    # verlos. Un duplicado preexistente es deuda conocida, no un hallazgo de este cambio.
+    print(f"\n({ocultos} grupo(s) repetido(s) preexistente(s), sin relación con este cambio."
+          f" Lístalos con /kit-duplicados.)")
 sys.exit(1 if fallos else 0)

@@ -147,9 +147,9 @@ firma y la puerta de commit no deja pasar.
 | `agents/aceptacion.md` | juez de aceptación |
 | `agents/reviewer.md` | revisor de corrección |
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
-| `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-acepta` |
+| `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh` |
+| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `doc-paquetes.sh` |
 
 ### Para mejorar el kit
 

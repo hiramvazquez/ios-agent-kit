@@ -57,19 +57,32 @@ cuerpo de función que ya existía en otro fichero, eso es un NO CUMPLIDO de ofi
 ningún criterio hable de duplicación: el agente empezó bien y acabó copiando. Cítalo con
 las dos rutas.
 
-## Tope: DOS rondas por cambio
+## Tope: DOS rondas SIN hallazgos de código
 
-A la **tercera** no se juzga: se para y decide el owner. Medido en el estreno del kit — un
-cambio real gastó cuatro rondas, y de la segunda en adelante **ninguna fue por el código**:
-fueron por números mal contados en el propio acuerdo. Cada corrección introducía otra
-imprecisión, porque reescribir un documento largo a base de parches es justo cómo se
-introducen.
+No cuentes rondas: cuenta **rondas que no cambiaron ni una línea de código**. Mientras un
+veredicto tuyo haga tocar código, la siguiente ronda está pagada por sí sola. Cuando dos
+seguidas terminen sin que el código se mueva —solo correcciones a lo que el acuerdo
+*afirma*—, para y que decida el owner.
 
-Sin tope, un juez riguroso y un autor complaciente iteran indefinidamente sobre la
-redacción mientras el código lleva rondas correcto. Eso no es rigor: es ceremonia con
-veredicto.
+La versión anterior de esta regla contaba vueltas («a la tercera se para») y el segundo uso
+real la desmintió: la ronda 3 todavía encontró un bug de verdad —el solapamiento entre dos
+cargas, que le quitaba el indicador de progreso a la que iba ganando— y la ronda 6 encontró
+el hallazgo más fino de todos: el censo del acuerdo estaba escrito en términos **léxicos**
+(«un caso llamado `cancelled`») mientras el requisito estaba escrito en términos
+**semánticos** («un error que representa cancelación»), y por ese hueco se colaba un error
+de dominio real que la norma no debía cubrir. Un tope por vueltas habría archivado el
+acuerdo con las dos cosas dentro.
 
-Así que en la ronda 3, en vez de un veredicto, escribe **una** de estas dos cosas y para:
+Lo que la regla vieja quería impedir sigue siendo verdad: un juez riguroso y un autor
+complaciente iteran indefinidamente sobre la redacción mientras el código lleva rondas
+correcto, y eso no es rigor, es ceremonia con veredicto. Pero el síntoma no es «van muchas
+vueltas»; es **«van dos vueltas y el código no se ha movido»**.
+
+Una ronda cuenta como «sin hallazgos de código» solo si TÚ no pediste tocarlo. Si lo pediste
+y el autor no lo hizo, eso es un desacuerdo abierto y se dice como tal — no es una ronda
+limpia.
+
+Al alcanzar el tope, en vez de un veredicto escribe **una** de estas dos cosas y para:
 
 - **«El acuerdo necesita reescribirse entero, no parchearse.»** Cuando lo que falla es la
   redacción. Un documento que ha sobrevivido a dos rondas de parches ya no es coherente

@@ -66,6 +66,47 @@ fi
 # y el reviewer y el juez lo leen en `--informe`.
 SUCIO="$(git diff --name-only 2>/dev/null)"
 
+# ¿Estoy corriendo el kit que el proyecto cree que corre?
+#
+# Un plugin instalado NO se actualiza solo, y `claude plugin install` tampoco lo actualiza:
+# hace falta `claude plugin marketplace update` y luego `claude plugin update`. Mientras
+# tanto el proyecto corre una versión vieja sin que nada lo diga. Pasó de verdad: AppStarter
+# verificó durante una sesión entera con una versión ANTERIOR al arreglo del falso verde —la
+# que firmaba el commit aunque los gates salieran en rojo— y encima sin el aviso de árbol
+# sucio. Dos fallos observados, una sola causa, y se descubrió de casualidad.
+#
+# No bloquea y no habla si no tiene nada que decir. La consulta al remoto es como mucho una
+# vez al día y falla en silencio sin red.
+DESFASE=""
+_ver() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -1; }
+MI_JSON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.claude-plugin/plugin.json"
+if [ -f "$MI_JSON" ]; then
+    MI_VER="$(_ver "$MI_JSON")"
+    MI_NOMBRE="$(sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' "$MI_JSON" | head -1)"
+    for d in "$HOME"/.claude/plugins/marketplaces/*/; do
+        [ -f "$d/.claude-plugin/plugin.json" ] || continue
+        grep -q "\"name\": *\"$MI_NOMBRE\"" "$d/.claude-plugin/plugin.json" || continue
+        MKT_VER="$(_ver "$d/.claude-plugin/plugin.json")"
+        [ -n "$MKT_VER" ] && [ "$MKT_VER" != "$MI_VER" ] && DESFASE="corriendo $MI_VER, instalable $MKT_VER → claude plugin update $MI_NOMBRE"
+
+        # Y el propio clon del marketplace puede estar atrasado respecto a su remoto: ese
+        # fue exactamente el caso, porque los dos coincidían en la versión vieja y
+        # compararlos entre sí no habría avisado de nada.
+        STAMP="$ESTADO/.consulta-version"
+        if [ -z "$(find "$STAMP" -mtime -1 2>/dev/null)" ]; then
+            if GIT_TERMINAL_PROMPT=0 git -C "$d" fetch --quiet origin 2>/dev/null; then
+                touch "$STAMP"
+                REF="$(git -C "$d" rev-parse --verify --quiet origin/HEAD || echo origin/main)"
+                REM_VER="$(git -C "$d" show "$REF:.claude-plugin/plugin.json" 2>/dev/null \
+                           | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)"
+                [ -n "$REM_VER" ] && [ "$REM_VER" != "$MKT_VER" ] && \
+                    DESFASE="corriendo $MI_VER, publicada $REM_VER → claude plugin marketplace update ${d%/} && claude plugin update $MI_NOMBRE"
+            fi
+        fi
+        break
+    done
+fi
+
 FALLOS=0
 INFORME=""
 paso() {  # paso "<nombre>" <comando...>   ← lo usa kit.conf
@@ -89,12 +130,27 @@ verificaciones
 
 # Lógica repetida: avisa, no bloquea. Un duplicado puede ser deliberado, y quien lo decide
 # es quien mira el cambio, no un script.
+#
+# Y solo se reportan los grupos que TOCA este cambio. Antes se listaban todos, y en un
+# proyecto vivo eso son seis grupos preexistentes que se repiten en cada verificación hasta
+# que nadie los lee: el aviso que siempre dice lo mismo deja de ser un aviso. Los ocultos se
+# cuentan en una línea y se listan enteros con /kit-duplicados.
 printf '▶ %s\n' "lógica repetida"
-DUP="$(python3 "$(dirname "${BASH_SOURCE[0]}")/busca-duplicados.py" $FUENTES 2>&1)"
+TOCADOS="$ESTADO/.tocados"
+{ git diff --cached --name-only; git diff --name-only; } 2>/dev/null | sort -u > "$TOCADOS"
+DUP="$(python3 "$(dirname "${BASH_SOURCE[0]}")/busca-duplicados.py" $FUENTES --tocados "$TOCADOS" 2>&1)"
+rm -f "$TOCADOS"
 case "$DUP" in
-  *"sin lógica repetida"*) INFORME="${INFORME}✅ lógica repetida: ninguna"$'\n' ;;
+  # Se copia el texto tal cual y no un "ninguna" propio: la salida limpia ya trae, cuando
+  # toca, la línea de cuántos grupos preexistentes quedaron fuera del reporte. Resumirla
+  # aquí la perdía.
+  *"sin lógica repetida"*) INFORME="${INFORME}${DUP}"$'\n' ;;
   *) INFORME="${INFORME}⚠️  lógica repetida (mírala, no bloquea):"$'\n'"${DUP}"$'\n' ;;
 esac
+
+if [ -n "$DESFASE" ]; then
+    INFORME="${INFORME}"$'\n'"⚠️  KIT DESFASADO: $DESFASE"$'\n'
+fi
 
 if [ -n "$SUCIO" ]; then
     INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR, así que"$'\n'
@@ -114,6 +170,7 @@ fi
 } > "$MARKER"
 
 printf '%s' "$INFORME"
+[ -n "$DESFASE" ] && echo "⚠️  kit desfasado: $DESFASE"
 [ -n "$SUCIO" ] && echo "⚠️  el árbol tenía cambios sin stagear: la firma vale, el verde es sobre otro árbol."
 [ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el diff staged." \
                     || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."

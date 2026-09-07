@@ -62,7 +62,26 @@ if faltan:
 print("✅ los scripts de los hooks existen y son ejecutables")
 PY
 
-# 5. Los agentes y comandos tienen frontmatter
+# 5. Todo script citado por un comando o un agente existe
+#
+# El hueco que tapa: el punto 4 solo mira los hooks, y un comando nuevo que invoque un
+# script mal escrito se publica sin que nada chiste — el fallo aparece el día que alguien
+# usa el comando, en otro proyecto, sin contexto para diagnosticarlo.
+python3 - <<'PY2' || FALLOS=$((FALLOS+1))
+import os, re, sys, glob
+faltan = []
+for f in glob.glob("commands/*.md") + glob.glob("agents/*.md") + glob.glob("skills/*/SKILL.md"):
+    for ruta in re.findall(r'\$\{CLAUDE_PLUGIN_ROOT\}/([^\s"`\')]+)', open(f).read()):
+        if not os.path.exists(ruta):
+            faltan.append(f"{f} → {ruta}")
+if faltan:
+    print("❌ comandos/agentes citan ficheros que no existen:")
+    for x in faltan: print(f"     {x}")
+    sys.exit(1)
+print("✅ los scripts que citan comandos y agentes existen")
+PY2
+
+# 6. Los agentes y comandos tienen frontmatter
 for f in agents/*.md commands/*.md skills/*/SKILL.md; do
     head -1 "$f" | grep -q '^---$' && continue
     mal "$f no empieza con frontmatter ---"

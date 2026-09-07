@@ -123,12 +123,39 @@ tiene el cambio delante.
 
 ## 5. El reviewer — *¿esto rompe algo?*
 
+```
+/kit-revisa
+```
+
 Sub-agente con contexto fresco y solo el diff delante. Corrección, seguridad, o un
 requisito explícito del encargo. Estilo y refactors oportunistas se mencionan en una línea
 y **no bloquean**: un revisor que reporta preferencias enseña a quien lo lee a ignorarlo, y
 entonces deja de servir para lo que sí importa.
 
-Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED.
+Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED. Con GREEN o AMBER
+se marca el punto (`rodaja.sh --revisada`); con RED no, para que lo arreglado entre en la
+revisión siguiente en vez de darse por bueno.
+
+### Se revisa al cerrar cada tarea, no al final
+
+Esto es lo que más cambia respecto a lo que uno haría por instinto, y salió de medirlo.
+
+Revisar al final significa revisar el cambio **entero**, y volver a revisarlo entero en cada
+vuelta: el coste es «tamaño de lo revisado × número de rondas», y así los dos factores están
+al máximo. En un cambio real fueron 700 líneas pasando nueve veces entre revisor y juez,
+cuando los bugs vivían en tres tareas concretas.
+
+Y el coste no es lo peor. Un hallazgo al final llega cuando el contexto ya se perdió, cuando
+el arreglo toca código escrito encima, y cuando devolver una cosa devuelve las que venían
+detrás.
+
+No hace falta proceso nuevo: `tasks.md` ya trocea el trabajo. `rodaja.sh` solo recuerda
+dónde acabó la revisión anterior —con un objeto de `git stash create`, sin tocar tu índice
+ni obligarte a commitear cada tarea— y te enseña lo que hay desde ahí, junto con las tareas
+cerradas desde entonces.
+
+La primera rodaja siempre es la más grande. Si una pasa de 400 líneas, el script lo dice:
+no rechaza la revisión, avisa de que se está revisando tarde.
 
 ---
 

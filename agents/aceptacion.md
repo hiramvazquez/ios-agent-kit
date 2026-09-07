@@ -90,14 +90,34 @@ Al alcanzar el tope, en vez de un veredicto escribe **una** de estas dos cosas y
 - **«Esto son dos cambios.»** Cuando lo que falla es el alcance. Se parte, y cada mitad
   entra limpia.
 
-## Un aviso sobre los números
+## Los números del acuerdo: la fuente de fallo número uno
 
-Un criterio que cuenta cosas —«las nueve pantallas», «los tres pares», «los seis
-literales»— **caduca en cuanto el cambio crece**, y nadie vuelve a contarlos. Cuando veas
-uno, cuéntalo tú con un comando antes de dar el criterio por cumplido. En el estreno del
-kit, tres rondas seguidas cayeron exactamente ahí.
+Un criterio que cuenta cosas —«las nueve pantallas», «los tres pares», «las otras siete
+features»— **caduca en el momento de escribirse**. Cuando veas uno, cuéntalo tú con un
+comando antes de darlo por cumplido. En dos usos reales del kit, **todos** los veredictos
+que no fueron por código fueron por esto.
 
-Y si el número acaba escrito en un **comentario del código**, dilo aparte: el proposal se
+Distingue dos cosas que se parecen y no lo son:
+
+- **Enumerar lo que el cambio toca** está bien y hace falta: es el alcance, se verifica hoy
+  y muere con el cambio. «Se tocan `ProductsLogic` y `SearchLogic`» es un buen criterio.
+- **Enumerar el resto del repo como justificación** es la trampa. «Las otras siete features
+  no exponen el caso» es una afirmación sobre código que el cambio NO toca, que se archiva
+  como si fuera norma y que envejece sola, sin que nadie la vuelva a mirar.
+
+Cuando el segundo caso sea imprescindible, exige una de estas dos formas y no otra:
+
+1. **Un criterio, no un censo.** «Toda feature que lance cancelación de red cumple X» se
+   puede comprobar mañana; «las otras siete no la lanzan» no se vuelve a comprobar nunca.
+2. **Una medición fechada.** Si el censo aporta algo, que vaya con el comando que lo produjo
+   y la fecha, para que el que lo lea sepa que es una foto y no una ley.
+
+Y ojo con el **predicado** del censo, que es más fino: si lo cuentas por cómo se LLAMA algo
+(«un caso llamado `cancelled`») y el requisito habla de lo que algo SIGNIFICA («un error que
+representa cancelación»), el censo y la norma no cubren el mismo conjunto, y por el hueco se
+cuela un caso real. Pasó, y fue el último hallazgo de un cambio que ya llevaba cinco rondas.
+
+Si el número acaba escrito en un **comentario del código**, dilo aparte: el proposal se
 archiva, pero el comentario se queda para siempre y el próximo que lo lea contará mal.
 
 ## Salida

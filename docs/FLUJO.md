@@ -207,6 +207,33 @@ sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.
 
 Los tres corren fuera del contexto del modelo: no cuestan tokens.
 
+## Cuánto proceso pide cada cambio
+
+No todo cambio necesita los seis pasos, y forzarlos es la forma más rápida de que la gente
+deje de usar esto. La regla salió de medir un cambio de cuatro líneas con el flujo entero:
+
+| tamaño del cambio | qué escribes | ¿juez? |
+|---|---|---|
+| menos de ~5 ficheros, alcance claro | **proposal + delta**. Salta `tasks.md` | solo si el alcance se movió al implementar |
+| varios ficheros, o toca varias capas | proposal + delta + tasks | sí |
+| el alcance creció a mitad | lo que ya tuvieras, **más la enmienda por escrito** | **sí, siempre** |
+
+Lo que **nunca** se salta es el **«Fuera de alcance»** y el **delta de spec**, aunque el
+cambio sea de una línea. En el cambio de cuatro líneas que sirvió para medir esto, el
+«Fuera de alcance» decía *«regenerar imágenes de referencia: el texto no cambia, así que no
+deben cambiar»* — y esa frase es la que convirtió «cambia cuatro fixtures» en «cambia cuatro
+fixtures y demuestra que ni un píxel se movió». El reflejo ante un snapshot que se queja es
+regrabarlo, y regrabar ahí habría destruido en silencio la única señal que el cambio existía
+para proteger.
+
+`tasks.md`, en cambio, fue el único artefacto que hubo que enmendar dos veces sin aportar
+nada que el proposal no dijera ya. Para un cambio pequeño es un documento cuyo único efecto
+posible es quedarse desincronizado.
+
+**Y no escribas números de línea en la prosa.** Caducan durante la propia implementación que
+los cita: en ese mismo cambio, añadir un `import` los desplazó y llegaron falsos al juicio.
+`grep` los encuentra siempre; el markdown los conserva mal para siempre.
+
 ## Los tres sitios donde decide un humano
 
 1. **Aprobar el acuerdo** (paso 2). Dos minutos, y evita la tarde perdida.

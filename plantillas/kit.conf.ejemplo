@@ -18,7 +18,27 @@ verificaciones() {
     # paso "build"  swift build
     # paso "tests"  swift test
 
-    # Y si quieres el build de la app de verdad (tarda más):
-    # paso "app" xcodebuild build -scheme MiApp \
-    #     -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO
+    # LO QUE VIVE FUERA DE LOS PAQUETES SPM NO SE VERIFICA SI NO LO PONES AQUÍ.
+    #
+    # Un proyecto iOS típico tiene targets de Xcode —la app, sus tests unitarios, los de
+    # snapshot, los de UI— que `swift build` NO toca. Si no los nombras, la firma dice
+    # "verificado" sobre un árbol donde esos ficheros no se han ni compilado. Comprobado en
+    # un repo real: con `AppSnapshotTests` conteniendo texto que ni siquiera era Swift
+    # válido, la verificación salía VERDE.
+    #
+    # Encadena build y tests con `&&` en UN SOLO paso: separados, un build en rojo deja al
+    # segundo corriendo contra el bundle anterior y estampando un ✅ sobre artefactos
+    # viejos. Un informe con un verde falso dentro es peor que uno todo rojo.
+    #
+    # paso "app · build + tests" bash -c '
+    #     set -e
+    #     D="platform=iOS Simulator,name=iPhone 17"
+    #     xcodebuild build-for-testing -project MiApp.xcodeproj -scheme MiApp \
+    #         -destination "$D" CODE_SIGNING_ALLOWED=NO -quiet
+    #     xcodebuild test-without-building -project MiApp.xcodeproj -scheme MiApp \
+    #         -destination "$D" -only-testing:MiAppTests CODE_SIGNING_ALLOWED=NO -quiet'
+    #
+    # Los UI tests suelen quedarse fuera (arrancan simulador, tardan minutos): van en CI.
+    # Pero decláralo como límite en un comentario — si no, alguien creerá que un cambio de
+    # UI está cubierto por esta firma, y no lo está.
 }

@@ -27,10 +27,18 @@ case "${1:-}" in
     [ -f "$MARKER" ] && cat "$MARKER" || echo "sin informe: nadie ha corrido verifica todavía"
     exit 0 ;;
 --comprueba)
+    # DOS condiciones, no una. La firma tiene que ser de este diff Y de una verificación
+    # que salió VERDE. Antes solo se comprobaba el diff, asi que tras una verificacion en
+    # rojo el marker seguia ahi con su linea `diff:` y esto respondia "firma valida": la
+    # puerta que debe parar un cambio roto lo dejaba pasar. Lo caz0 un juez de aceptacion
+    # comprobando un criterio que decia "sale en rojo y no firma" — la segunda mitad era
+    # falsa.
     [ -f "$MARKER" ] || { echo "❌ nada verificado todavía"; exit 1; }
     grep -q "^diff: $(huella)$" "$MARKER" \
-        && { echo "✅ firma válida para el diff staged"; exit 0; } \
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
+    grep -q "^resultado: verde$" "$MARKER" \
+        || { echo "❌ la última verificación salió en ROJO — arréglalo y vuelve a verificar"; exit 1; }
+    echo "✅ firma válida para el diff staged"; exit 0
     ;;
 esac
 
@@ -98,6 +106,9 @@ fi
     echo "verificado: $(date -u +%FT%TZ)"
     echo "diff: $(huella)"
     echo "rama: $(git rev-parse --abbrev-ref HEAD)"
+    # Lo lee `--comprueba`. Sin esta línea, un marker de una corrida en rojo era
+    # indistinguible de uno verde para la puerta de commit.
+    [ "$FALLOS" -eq 0 ] && echo "resultado: verde" || echo "resultado: rojo ($FALLOS paso(s))"
     echo
     printf '%s' "$INFORME"
 } > "$MARKER"

@@ -152,7 +152,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. Los tiene la puerta, el hook de contexto, el detector de duplicados, la rodaja, la verificación y la propia autocomprobación — esta última fue la que más tardó en tenerlo, y su punto ciego dejó pasar mientras tanto una invocación muerta en el prompt del juez. `ls scripts/` los lista; escribirlos aquí era un inventario a mano y ya se había quedado corto |
+| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. **Toda pieza con lógica tiene el suyo**, que es la regla — y las dos últimas en tenerlo lo confirmaron por las malas: la autocomprobación estuvo dejando pasar una invocación muerta en el prompt del juez, y `doc-paquetes.sh` fue a la vez el último sin banco y el único con una rama muerta dentro. Cuáles hay se cuenta con `ls scripts/verifica-*.sh`; enumerarlos aquí ya se quedó corto dos veces |
 
 ### Para mejorar el kit
 
@@ -183,6 +183,14 @@ sobre el trabajo en curso— en «en este repositorio, sin cambio activo», que 
 repositorio sin `openspec/` recibe además eso mismo dicho, en vez de la orden de abrir una
 propuesta que allí nadie puede seguir. Y el hook no escribe nada dentro del repositorio que
 observa: su caché vive en `~/.cache/ios-agent-kit`, con la ruta del repositorio en la clave.
+
+Las dependencias que te anuncia son **las de tu repositorio**, no las de tu máquina. Parece
+obvio y no lo era: durante un tiempo el caché era uno por repositorio y su contenido, el de
+toda la máquina, así que este mismo kit —que no tiene un solo fichero Swift— anunciaba las
+dependencias de otro proyecto abierto en Xcode. Se acotan casando el nombre de tu carpeta con
+el `<Proyecto>-<hash>` de DerivedData, que es una heurística y falla hacia el lado seguro: si
+tu `.xcodeproj` se llama distinto de la carpeta que lo contiene, el hook se calla en vez de
+anunciarte las de otro.
 
 `PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único
 hook que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.

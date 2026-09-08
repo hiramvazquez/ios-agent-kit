@@ -2,7 +2,7 @@
   "name": "ios-agent-kit",
   "displayName": "iOS Agent Kit",
   "description": "Trabajo con agentes sobre proyectos iOS: OpenSpec para acordar antes de construir, un juez de aceptación que compara lo entregado contra lo acordado, un revisor de corrección, detector de lógica repetida y verificación firmada contra el diff. Tres hooks, ninguno de adorno.",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "author": {
     "name": "Hiram Vazquez"
   },

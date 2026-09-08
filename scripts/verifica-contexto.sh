@@ -39,6 +39,22 @@ repo() {
                     > openspec/changes/mi-cambio/tasks.md
                 printf '# P\n\n## Fuera de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
                     > openspec/changes/mi-cambio/proposal.md ;;
+            dos)
+                # CINCO cambios abiertos a la vez, creados en orden inverso al
+                # alfabético. OpenSpec permite varios, y el kit elegía uno con `head -1`
+                # sobre un `find`: por el orden del sistema de ficheros.
+                #
+                # Cinco y no dos, y esto salió de la revisión: con dos, el orden que APFS
+                # devuelve coincidía con el alfabético y el caso pasaba igual con el código
+                # roto — cobertura decorativa. Con cinco no coincide (`find` devuelve
+                # `ccc-tercero` primero aquí), así que el caso distingue de verdad.
+                for c in ccc-tercero eee-quinto bbb-segundo ddd-cuarto aaa-primero; do
+                    mkdir -p "openspec/changes/$c"
+                    printf '# Tareas\n\n- [ ] 1. pendiente de %s\n' "$c" \
+                        > "openspec/changes/$c/tasks.md"
+                    printf '# P\n\n## Fuera de alcance\n\n- nada\n\n## Otra\n' \
+                        > "openspec/changes/$c/proposal.md"
+                done ;;
             sin) : ;;
         esac
         if [ -n "$dep" ]; then
@@ -76,6 +92,7 @@ repo con_cambio  activo si  PaqueteUno
 repo sin_cambio  vacio  si
 repo ajeno       sin    no
 repo otro_dep    vacio  si  PaqueteDos
+repo dos_cambios dos    si
 
 mkdir -p "$TMP/home"
 
@@ -159,10 +176,54 @@ else
         "vio una dependencia añadida tras el primer turno (recorrió otra vez), o dejó de inyectar la línea"
 fi
 
-REPOS=4
+echo "▶ con varios cambios activos, elige estable y lo dice"
+
+D1="$(digest "$TMP/dos_cambios")"
+D2="$(digest "$TMP/dos_cambios")"
+E1="$(printf '%s' "$D1" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
+E2="$(printf '%s' "$D2" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
+# Se exige el MÍNIMO por `LC_ALL=C`, no solo que dos corridas coincidan entre sí.
+#
+# La primera versión de este caso comparaba `E1` con `E2` y ya está, y el revisor de la
+# rodaja lo cazó: dos `find` seguidos sobre un directorio que no ha cambiado devuelven el
+# mismo orden en cualquier sistema de ficheros, así que la aserción pasaba igual con el
+# código roto. Cobertura decorativa. Los directorios se crean a propósito en orden inverso
+# al alfabético (`bbb-segundo` antes que `aaa-primero`), que es lo que separa «ordenado» de
+# «lo que devolvió el sistema de ficheros».
+if [ "$E1" = "aaa-primero" ] && [ "$E1" = "$E2" ]; then
+    caso 0 "elige el primero por orden estable, no el que devuelva el sistema de ficheros"
+else
+    caso 1 "elige el primero por orden estable, no el que devuelva el sistema de ficheros" \
+        "elegía con head -1 sobre un find: el orden lo ponía el sistema de ficheros [$E1|$E2]"
+fi
+
+contiene "$D1" "5 cambios activos"; caso $? \
+    "con varios cambios activos, avisa de cuántos hay" \
+    "elegía uno y se lo callaba: el digest hablaba de un acuerdo mientras se trabajaba en el otro"
+
+echo "▶ no escribe en directorios compartidos"
+
+# LÍMITE DECLARADO de este caso: es LÉXICO, no dinámico. El fichero que había se creaba y se
+# borraba dentro de la misma corrida, así que mirar qué queda en el temporal del sistema no
+# lo habría visto nunca. Lo que se comprueba es que el hook no NOMBRE `/tmp`, que es la
+# única señal mecánica disponible de que vuelva a escribir ahí.
+if grep -v '^[[:space:]]*#' "$HOOK" | grep -q '/tmp/'; then
+    caso 1 "el hook no escribe en el temporal compartido del sistema" \
+        "usaba /tmp/.ic.\$\$ —nombre derivable del PID— en cada turno de cualquier repositorio"
+else
+    caso 0 "el hook no escribe en el temporal compartido del sistema"
+fi
+
+# El número de repos se CUENTA. Escrito a mano decía 4 cuando ya había 5, y solo pasaba
+# porque el quinto se digestaba después de contar: se rompía en cuanto alguien moviera un
+# bloque. Es el mismo censo a mano que este kit prohíbe en los acuerdos.
+REPOS="$(find "$TMP" -maxdepth 2 -name .git -type d 2>/dev/null | wc -l | tr -d ' ')"
 CACHES="$(find "$TMP/cache/ios-agent-kit" -type f 2>/dev/null | wc -l | tr -d ' ')"
-[ "$CACHES" -eq "$REPOS" ]
-caso $? "el caché vive fuera del repo, un fichero por repositorio ($CACHES de $REPOS)" \
+if [ "$CACHES" -eq "$REPOS" ]; then IGUALES=0; else IGUALES=1; fi
+caso "$IGUALES" "el caché vive fuera del repo, un fichero por repositorio ($CACHES de $REPOS)" \
     "vivía en .agent-kit/ dentro del repo observado, así que fuera no hay ninguno"
 
-resumen "el hook" "el-contexto-dice-de-que-repo-habla"
+# Los rojos que quedan por cerrar son de ESTE cambio, no del que trajo el banco: los tres
+# casos nuevos —orden estable, aviso de varios activos, y no escribir en /tmp— los añadió
+# `el-kit-se-aplica-a-si-mismo`.
+resumen "el hook" "el-kit-se-aplica-a-si-mismo"

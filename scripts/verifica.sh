@@ -8,6 +8,11 @@
 # Los comandos concretos NO viven aquí: los pone cada proyecto en `kit.conf`. Este script
 # es del kit y es igual en todos.
 #
+# LÍMITE DECLARADO: ese `kit.conf` se CARGA con `.`, así que verificar ejecuta código del
+# repositorio en el que estés. Es la única forma de que cada proyecto declare sus propios
+# pasos, y no se puede cerrar sin perder eso. En los repositorios de uno da igual; sobre un
+# repositorio clonado de fuera, `kit.conf` es código que nadie ha leído.
+#
 # Uso:  verifica.sh              verifica y firma
 #       verifica.sh --informe    imprime el último informe, sin volver a correr
 #       verifica.sh --comprueba  ¿hay firma válida para el diff staged? (exit 1 si no)
@@ -174,4 +179,14 @@ printf '%s' "$INFORME"
 [ -n "$SUCIO" ] && echo "⚠️  el árbol tenía cambios sin stagear: la firma vale, el verde es sobre otro árbol."
 [ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el diff staged." \
                     || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."
-exit "$FALLOS"
+
+# 0 verde · 1 rojo · 3 «no pude mirar». El rojo es 1 SIEMPRE, no el número de pasos.
+#
+# Antes salía con `$FALLOS`, y entonces exactamente TRES pasos en rojo eran indistinguibles
+# de «no hay kit.conf» —los dos daban 3—, mientras `docs/PIEZAS.md` prometía por escrito que
+# se distinguían. Comprobado en un repositorio temporal el 2026-09-08: los dos salían 3.
+#
+# Se rompe el contrato que nadie consume (el número de pasos) y se conserva el que está
+# publicado (el 3). El recuento no se pierde: sigue en el informe y en la línea `resultado:`
+# de la firma, que es donde se lee de verdad.
+[ "$FALLOS" -eq 0 ] && exit 0 || exit 1

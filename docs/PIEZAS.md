@@ -68,16 +68,36 @@ diff staged. Tres modos: verificar y firmar, `--informe` (imprime sin volver a c
 que pudo cambiar después de correrlos. Es error de proceso, no mala fe, y es el que menos
 rastro deja.
 
-**Códigos de salida:** `0` verde · `N` número de pasos en rojo · `3` **no pude mirar** (no
-hay `kit.conf`, o no define `verificaciones()`). El 3 es deliberado: "no pude mirar" no es
-lo mismo que "está mal", y confundirlos hace que un gate roto parezca un proyecto roto.
+**Límite declarado:** `verifica.sh` **ejecuta** tu `kit.conf` (lo carga con `.`), porque esa
+es la forma de que cada proyecto declare sus propios pasos. Verificar es, por tanto, correr
+código del repositorio en el que estás. En los tuyos da igual; el día que corras
+`/kit-verifica` sobre un repositorio clonado de fuera, `kit.conf` es código que no has leído.
+Trátalo como tal.
+
+**Códigos de salida:** `0` verde · `1` hay pasos en rojo · `3` **no pude mirar** (no hay
+`kit.conf`, o no define `verificaciones()`). El 3 es deliberado: "no pude mirar" no es lo
+mismo que "está mal", y confundirlos hace que un gate roto parezca un proyecto roto.
+
+El rojo es `1` sea cual sea el número de pasos fallidos, y eso también es deliberado: aquí
+ponía que el código de salida era **el número de pasos en rojo**, y entonces exactamente
+tres fallos eran indistinguibles de «no pude mirar». El recuento vive en el informe y en la
+línea `resultado:` de la firma, que es donde se lee.
 
 ### `busca-duplicados.py` — el mismo cuerpo en dos sitios
 
 Extrae cada `func`/`var` con cuerpo, lo normaliza (fuera comentarios y espacios) y agrupa
 por huella. Dos cuerpos idénticos en **ficheros distintos** son un duplicado; en el mismo
-fichero, no (sobrecargas legítimas). Ignora cuerpos de menos de 3 líneas o 60 caracteres
-normalizados: por debajo de eso, coincidir es normal.
+fichero, no (sobrecargas legítimas). Y un fichero real cuenta **una vez**, aunque se llegue
+a él por dos rutas: seguir un symlink y leerlo dos veces producía 21 de los 28 grupos del
+informe de `spm-pro`.
+
+Ignora cuerpos de menos de 3 líneas o 60 caracteres normalizados: por debajo de eso,
+coincidir es normal. Ese 3 sobrevivió a un intento de subirlo: con 4 se quitaba un
+falso positivo —dos dobles de test de `AppStarter`— y se perdían `pascalCase()` y
+`displayPath()`, copiados de verdad entre un target y un plugin; con 5 se perdían además
+`loadingView()`, `errorView()`, `emptyView()` y un `load()` copiado entre dos snippets. «N líneas» cuenta saltos de línea del cuerpo,
+que son N−1 sentencias. Lo fijan tres casos del banco, y el ruido
+conocido que queda se asume.
 
 Aparte, agrupa las `extension` del **mismo tipo** declaradas en 3+ ficheros — que es la
 forma que toma el problema **antes** de que los cuerpos sean idénticos.
@@ -89,12 +109,36 @@ distintas. El caso que lo motivó: tres `extension Date` en tres view models.
 **No hace:** detección semántica. Dos funciones que hacen lo mismo escritas distinto no se
 parecen para él.
 
-**Y mide ESTRUCTURA, no contenido** — esto hay que saberlo antes de escribir un criterio de
-aceptación sobre él. Sustituir un literal por una constante (`"Sin conexión"` →
-`ErrorCopy.Offline.title`) **no cambia la huella**: los dos cuerpos siguen siendo el mismo
-`switch`. Un criterio del tipo «el informe dejará de listar X» tras extraer constantes es
-inalcanzable por construcción, y se escribió uno así en el estreno del kit. Solo desaparece
-del informe lo que deja de existir como cuerpo repetido.
+**Mide el TEXTO del cuerpo**, y hay que saberlo antes de escribir un criterio de aceptación
+sobre él. La huella es el `sha1` del cuerpo con los comentarios y los espacios fuera: si
+cambia un token, cambia la huella. Comprobado sobre el mismo `switch`:
+
+| cuerpo | huella |
+|---|---|
+| con `"Sin conexión"` | `4c99aae25e` |
+| con `ErrorCopy.Offline.title` | `b2e55c1316` |
+
+Las dos salen de este cuerpo, cambiando solo el literal de la primera rama, y se recalculan
+con la misma fórmula que usa el detector — `sha1` del cuerpo sin comentarios y con los
+espacios colapsados, diez caracteres:
+
+```swift
+switch error {
+case .offline: return "Sin conexión"
+case .server: return "Error del servidor"
+default: return "Algo ha ido mal"
+}
+```
+
+Lo que **no** cambia es el GRUPO, que es lo que se reporta: si extraes la constante en las
+dos copias, las dos cambian igual, siguen siendo idénticas entre sí, y el informe las sigue
+listando. Por eso un criterio del tipo «el informe dejará de listar X» tras extraer
+constantes es inalcanzable por construcción —se escribió uno así en el estreno del kit—: del
+informe solo desaparece lo que deja de existir como cuerpo repetido.
+
+Aquí ponía que sustituir un literal por una constante «no cambia la huella». La conclusión
+que sacaba era correcta y el mecanismo que enseñaba no, y alguien iba a razonar desde el
+mecanismo.
 
 ### `inyecta-contexto.sh` — contra la deriva
 
@@ -107,6 +151,13 @@ verificación corresponde al árbol actual.
 **Por qué así:** contra la deriva no sirve obligar a releer una skill — el modelo cree que
 se acuerda y no relee. Sirve que el texto esté delante **otra vez**, y que sea **corto**: un
 digest que se lee, no un documento que se ignora.
+
+**Lo que cuesta, medido el 2026-09-08** (`/usr/bin/time` sobre tres corridas, DerivedData de
+2,6 GB): el recorrido que busca las dependencias tarda **0,39 s en frío y 0,08 s en caliente**,
+y solo se hace **una vez al día** — el resto de turnos leen el caché. Corre antes de que salga
+tu prompt, así que ese cuarto de segundo lo pagas tú una vez cada mañana. Se declara porque
+el coste de la puerta sí estaba medido y el de este hook no, y un coste que nadie mide acaba
+siendo el que sorprende.
 
 ### `puerta-commit.sh` — el único que bloquea
 
@@ -139,7 +190,9 @@ arquitectura no le dejaron pasar. **La regla que se cumple sola es la que está 
 
 ## Coste
 
-`claude plugin details ios-agent-kit`:
+**Medición del 2026-09-07**, con `claude plugin details ios-agent-kit`. Va fechada a
+propósito: es una foto, no una ley, y cambia en cuanto se añade o se recorta una pieza.
+Cuando necesites el número de hoy, corre el comando en vez de leer esta tabla.
 
 | | |
 |---|---|

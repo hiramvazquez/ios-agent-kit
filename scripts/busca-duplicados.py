@@ -12,7 +12,7 @@ distintos son un duplicado; en el mismo fichero, no (sobrecargas legítimas).
 Y aparte: agrupa las `extension` del MISMO tipo declaradas en módulos distintos, que es
 la forma que toma el problema antes de que los cuerpos sean idénticos.
 
-Uso:  python3 Scripts/busca-duplicados.py [rutas...]   (por defecto: App y Packages)
+Uso:  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/busca-duplicados.py" [rutas...]
       ... --tocados <fichero> ...  solo los grupos que toca el cambio en curso
 
 Sobre `--tocados`: un proyecto vivo arrastra duplicados preexistentes que ya se miraron y
@@ -41,7 +41,23 @@ RAICES = [Path(p) for p in (argv or ["App", "Sources", "Packages"]) if Path(p).e
 def tocado(*rutas):
     """¿Alguna de estas rutas está en el diff? Sin `--tocados`, todo cuenta como tocado."""
     return True if TOCADOS is None else any(str(r) in TOCADOS for r in rutas)
-MIN_LINEAS = 3  # un cuerpo de 1-2 líneas coincide por casualidad demasiado a menudo
+# El suelo de ruido, y por qué se queda donde estaba.
+#
+# El 2026-09-08 se subió de 3 a 4 para quitarse un falso positivo observado en AppStarter:
+# dos dobles de test cuyo cuerpo de tres líneas es un `return` armado. La medición que lo
+# justificaba contaba GRUPOS, no cuáles: 28→5 en spm-pro, 6→5 en AppStarter, y los tres de
+# iOSandbox intactos. Cuadraba.
+#
+# El juez de aceptación fue a mirar CUÁLES desaparecían, y ahí se cayó: en spm-pro el suelo
+# de 4 se llevaba por delante dos duplicados REALES de tres líneas —`pascalCase()` y
+# `displayPath()`, copiados entre `Sources/ArchInitSupport` y `Plugins/GenerateFeature`—,
+# que son exactamente la clase que este detector existe para cazar. El trato era perder dos
+# hallazgos verdaderos para quitarse uno falso: malo.
+#
+# Así que 3, con el ruido conocido y asumido: un par de dobles de test en AppStarter. Y la
+# lección, que vale más que el número — un recuento agregado no dice si lo que se fue era lo
+# que sobraba. Mídelo por identidad o no lo has medido.
+MIN_LINEAS = 3
 
 def sin_ruido(txt):
     txt = re.sub(r"//[^\n]*", "", txt)
@@ -71,8 +87,27 @@ def extensiones(ruta):
     for m in re.finditer(r"^\s*(?:public\s+|internal\s+)?extension\s+(\w+)", ruta.read_text(errors="replace"), re.M):
         yield m.group(1), ruta.name
 
-ficheros = sorted({f for r in RAICES for f in r.rglob("*.swift")
-                   if ".build" not in f.parts and "checkouts" not in f.parts})
+# Un fichero real se cuenta UNA vez, aunque se llegue a él por dos rutas.
+#
+# Un symlink no es una copia deliberada: es el mismo fichero. Enlazar las fuentes es el
+# apaño estándar cuando un build tool plugin de SwiftPM no puede depender de un target de
+# librería, así que esto aparece en cualquier repositorio de paquetes. Medido el 2026-09-08
+# en `spm-pro`: cuatro symlinks producían 21 de los 28 grupos del informe, y lo dejaban
+# ilegible en `/kit-duplicados`.
+#
+# Se deduplica por identidad del fichero —`resolve()`— y no por una lista de directorios a
+# ignorar: una lista hay que mantenerla y envejece, y la pregunta que hay que responder no
+# es «¿salto este directorio?» sino «¿son dos ficheros o es uno?».
+_vistos = {}
+for _r in RAICES:
+    for _f in sorted(_r.rglob("*.swift")):
+        if ".build" in _f.parts or "checkouts" in _f.parts:
+            continue
+        _real = _f.resolve()
+        if _real in _vistos:
+            continue
+        _vistos[_real] = _f
+ficheros = sorted(_vistos.values())
 por_huella, por_tipo = defaultdict(list), defaultdict(set)
 for f in ficheros:
     for nombre, h, linea, n in cuerpos(f):

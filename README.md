@@ -3,11 +3,11 @@
 Trabajo con agentes sobre proyectos iOS, sin que el andamiaje se coma el proyecto.
 
 Se apoya en [OpenSpec](https://github.com/Fission-AI/OpenSpec) para acordar qué se va a
-construir **antes** de construirlo, y le añade las cuatro piezas que OpenSpec no trae y que
-en la práctica hacen falta.
+construir **antes** de construirlo, y le añade lo que OpenSpec no trae y que en la práctica
+hace falta: está en la tabla de aquí abajo, que es la que manda.
 
 **En tu app acaban dos cosas:** la carpeta `openspec/` (que es tuya: son tus specs) y un
-fichero `kit.conf` de diez líneas. Nada más. Los agentes, los comandos, los hooks y los
+`kit.conf` corto. Nada más. Los agentes, los comandos, los hooks y los
 scripts viven en el plugin, no en tu repo.
 
 ---
@@ -51,7 +51,7 @@ Reinicia la sesión después: los plugins se cargan al arrancar.
 ```bash
 claude plugin marketplace add hiramvazquez/ios-agent-kit
 claude plugin install ios-agent-kit@hiram-kits -y
-claude plugin details ios-agent-kit      # 5 skills, 2 agentes, 3 hooks
+claude plugin details ios-agent-kit      # el inventario de piezas, contado por el CLI
 claude plugin list                       # Status ✔ enabled
 ```
 
@@ -63,8 +63,11 @@ puede teclear comandos de barra: los escribe el humano.
 (`/opsx:propose`, `/kit-verifica`, `/kit-acepta`…). La terminal solo hace falta para
 instalar, actualizar y diagnosticar.
 
-Coste: **~469 tokens siempre activos** por sesión. Los agentes y comandos solo cuestan
-cuando se invocan; los tres hooks corren fuera del contexto del modelo y no cuestan nada.
+Coste: lo que quede siempre activo por sesión te lo dice ese mismo `plugin details`; la
+medición fechada está en [PIEZAS.md](docs/PIEZAS.md#coste) y aquí no se copia, que es como
+se acabó teniendo el mismo número en tres sitios y uno de ellos viejo. Lo estructural sí se
+puede decir sin número: los agentes y comandos solo cuestan cuando se invocan, y los hooks
+corren fuera del contexto del modelo, así que no cuestan nada.
 
 ### Una vez por proyecto
 
@@ -117,7 +120,7 @@ tu-app/
 │   ├── specs/<dominio>/spec.md
 │   ├── changes/<cambio>/{proposal,tasks}.md + specs/
 │   └── config.yaml    ← las reglas del proyecto
-├── kit.conf           ← 10 líneas: qué verifica este proyecto y dónde vive el código
+├── kit.conf           ← qué verifica este proyecto y dónde vive el código
 └── .agent-kit/        ← firma de verificación (gitignored)
 ```
 
@@ -149,7 +152,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `analiza-invocacion.py`, `lib-banco.sh`, `verifica-puerta.sh`, `verifica-contexto.sh`, `doc-paquetes.sh`, `rodaja.sh` |
+| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. No hay uno por pieza: los tiene la puerta, el hook de contexto, el detector de duplicados, la rodaja y la propia verificación — `autocomprueba.sh` sigue sin banco, y su punto ciego dejó pasar una invocación muerta durante las diez versiones publicadas. `ls scripts/` los lista; escribirlos aquí era un inventario a mano y ya se había quedado corto |
 
 ### Para mejorar el kit
 

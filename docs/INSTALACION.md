@@ -45,9 +45,14 @@ Comprueba qué quedó instalado:
 claude plugin details ios-agent-kit
 ```
 
-Tiene que inventariar **5 skills, 2 agentes y 3 hooks**. Coste: **~469 tokens siempre
-activos** por sesión, más lo que cueste cada pieza cuando se invoca (el agente de aceptación
-es el más caro, ~1,6k, y solo se paga al usarlo).
+Ese comando inventaría las piezas —skills, agentes y hooks— y dice cuántos tokens quedan
+siempre activos por sesión. Los números salen de ahí y **no se escriben aquí**: un inventario
+copiado a un documento caduca en el momento de escribirse, y este llegó a quedarse corto sin
+que nadie se enterara. La tabla de coste, con su fecha, está en
+[PIEZAS.md](PIEZAS.md#coste).
+
+Lo que sí conviene saber sin correr nada: lo caro se paga al invocarlo, no por estar
+instalado, y los hooks no cuestan contexto porque corren fuera del modelo.
 
 ## 3. Tu proyecto — una vez por proyecto
 
@@ -62,7 +67,7 @@ Mira el repo antes de escribir nada —qué paquetes hay, qué comandos de build
 | qué | dónde | qué es |
 |---|---|---|
 | `openspec/` | raíz | tus specs y tus cambios. **Tuyo**, no del kit |
-| `kit.conf` | raíz | 10 líneas: qué verifica este proyecto y dónde vive el código |
+| `kit.conf` | raíz | qué verifica este proyecto y dónde vive el código |
 | `openspec/config.yaml` | dentro de `openspec/` | las reglas: criterios de aceptación obligatorios, etc. |
 | `.agent-kit/` en `.gitignore` | raíz | la firma de verificación es estado local |
 
@@ -126,4 +131,4 @@ claude plugin marketplace remove hiram-kits
 ```
 
 En tu proyecto quedan `openspec/` y `kit.conf`. El primero es documentación tuya que sigue
-teniendo sentido sin el kit; el segundo son diez líneas que puedes borrar.
+teniendo sentido sin el kit; el segundo es un fichero corto que puedes borrar.

@@ -24,6 +24,12 @@
 # caché, en cualquier repositorio por el que pasara una sesión, usara el kit o no.
 set -uo pipefail
 
+# `$DIR` se resuelve ANTES del `cd`: después, una invocación relativa desde un subdirectorio
+# ya no encontraría la lib.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$DIR/lib-kit.sh"
+
 RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -n "$RAIZ" ] || exit 0
 cd "$RAIZ" || exit 0
@@ -47,15 +53,27 @@ add "    - Fuera de alcance es fuera de alcance, incluso si 'ya que estamos'."
 if [ ! -d openspec ]; then
     add "· Este repositorio no usa OpenSpec — aquí no hay acuerdo que consultar."
 else
-    ACT="$(find openspec/changes -maxdepth 1 -mindepth 1 -type d ! -name archive 2>/dev/null | head -1)"
+    cambio_activo
+    ACT="$ACTIVO"
     if [ -n "$ACT" ]; then
         add "· Cambio activo: ${ACT##*/}"
+        # Callarse cuál de los dos se ha elegido es peor que elegir: el digest afirmaría
+        # cosas de un acuerdo mientras se trabaja en el otro, que es el mismo fallo que
+        # arregló la línea de atribución del repositorio.
+        [ "$ACTIVOS_N" -gt 1 ] && add "    ⚠️  hay $ACTIVOS_N cambios activos; este es el primero por orden, no necesariamente el tuyo."
         PEND="$(grep -c '^- \[ \]' "$ACT/tasks.md" 2>/dev/null || echo 0)"
         TOT="$(grep -cE '^- \[[ x]\]' "$ACT/tasks.md" 2>/dev/null || echo 0)"
         add "    tareas: $((TOT-PEND))/$TOT hechas"
-        [ "$PEND" -gt 0 ] && grep '^- \[ \]' "$ACT/tasks.md" 2>/dev/null | head -3 | sed 's/^/    /' \
-            | while IFS= read -r t; do printf '%s\n' "$t"; done > /tmp/.ic.$$ && \
-            { L="${L}$(cat /tmp/.ic.$$)"$'\n'; rm -f /tmp/.ic.$$; }
+        # Sin fichero intermedio. Esto pasaba por `/tmp/.ic.$$`: un nombre derivable del
+        # identificador de proceso, en un directorio donde escribe cualquiera, y escrito por
+        # un hook que corre en CADA turno de CUALQUIER repositorio por el que pase una
+        # sesión. Para componer tres líneas de texto no hace falta tocar el disco, y menos
+        # ahí. Es la misma regla que este hook ya cumplía —no escribir dentro del repositorio
+        # observado— aplicada al único sitio donde todavía escribía.
+        if [ "$PEND" -gt 0 ]; then
+            PENDIENTES="$(grep '^- \[ \]' "$ACT/tasks.md" 2>/dev/null | head -3 | sed 's/^/    /')"
+            [ -n "$PENDIENTES" ] && L="${L}${PENDIENTES}"$'\n'
+        fi
         FUERA="$(sed -n '/## Fuera de alcance/,/^## /p' "$ACT/proposal.md" 2>/dev/null | grep '^- ' | head -3)"
         [ -n "$FUERA" ] && { add "    FUERA de alcance:"; L="${L}$(printf '%s\n' "$FUERA" | sed 's/^/      /')"$'\n'; }
     else

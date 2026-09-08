@@ -81,12 +81,110 @@ if faltan:
 print("✅ los scripts que citan comandos y agentes existen")
 PY2
 
+# 5b. Y que se citen POR LA RAÍZ DEL PLUGIN, no por una ruta del proyecto.
+#
+# El hueco que tapa, y que estuvo abierto desde que existe el punto 5: aquella comprobación
+# solo mira las rutas que YA empiezan por `${CLAUDE_PLUGIN_ROOT}`. Verifica que lo bien
+# citado exista, y no ve lo mal citado — que es el error más probable de los dos, porque los
+# scripts vivieron dentro del proyecto antes de vivir en el plugin.
+#
+# Lo que costó: `agents/aceptacion.md` llevaba `bash Scripts/verifica.sh --informe`. Esa ruta
+# no existe en ningún proyecto —`AppStarter` tiene un `Scripts/` con otra cosa dentro—, así
+# que el juez de aceptación se quedaba sin el informe de duplicados y seguía dictaminando.
+# Publicado en verde desde la 1.0.0 hasta la 1.6.1: las diez versiones que existen. Este
+# punto 5 nació en la 1.0.1, así que estuvo ciego ante él nueve de ellas. (El «seis» que hay
+# más abajo, en el punto 7, es de otro hallazgo distinto y sí es correcto: el «5 skills»
+# dejó de cuadrar en la 1.3.0. Estuvo copiado aquí una ronda, y lo cazó un juez contando.)
+#
+# Solo mira DENTRO de los bloques de código: en la prosa, `rodaja.sh` es un nombre, no una
+# invocación, y exigirle la raíz del plugin obligaría a escribir peor.
+python3 - <<'PY3' || FALLOS=$((FALLOS+1))
+import os, re, sys, glob
+kit = {os.path.basename(p) for p in glob.glob("scripts/*") if os.path.isfile(p)}
+malas = []
+for f in glob.glob("commands/*.md") + glob.glob("agents/*.md") + glob.glob("skills/*/SKILL.md"):
+    dentro = False
+    for n, linea in enumerate(open(f).read().splitlines(), 1):
+        if linea.lstrip().startswith("```"):
+            dentro = not dentro
+            continue
+        if not dentro:
+            continue
+        for tok in re.findall(r"[\w./${}-]+\.(?:sh|py)", linea):
+            if os.path.basename(tok) not in kit:
+                continue          # no es un fichero del kit: será del proyecto
+            if "CLAUDE_PLUGIN_ROOT" in tok:
+                continue
+            malas.append(f"{f}:{n} → {tok}")
+if malas:
+    print("❌ comandos/agentes invocan ficheros del kit sin ${CLAUDE_PLUGIN_ROOT}:")
+    for x in malas: print(f"     {x}")
+    print("     los scripts viven en el plugin, no en el repo del proyecto")
+    sys.exit(1)
+print("✅ los ficheros del kit se invocan por la raíz del plugin")
+PY3
+
 # 6. Los agentes y comandos tienen frontmatter
 for f in agents/*.md commands/*.md skills/*/SKILL.md; do
     head -1 "$f" | grep -q '^---$' && continue
     mal "$f no empieza con frontmatter ---"
 done
 [ "$FALLOS" -eq 0 ] && bien "agentes, comandos y skills con frontmatter"
+
+# 7. Que ningún documento escriba a mano cuántas piezas trae el kit.
+#
+# La clase ya falló dos veces. La primera: «once casos» escrito a mano en el banco de la
+# puerta y en `kit.conf`, y «diez» en el README, contradiciéndose los tres el mismo día — se
+# cerró haciendo que el banco CUENTE sus casos. La segunda: `README.md` e `INSTALACION.md`
+# anunciaban cinco skills, dos agentes y tres hooks cuando ya eran seis comandos y una
+# skill, y nadie lo vio en seis versiones.
+#
+# Es la misma regla que el juez de aceptación le impone a cualquier acuerdo: un criterio que
+# cuenta cosas caduca en el momento de escribirse. Aquí se aplica al kit, que es de donde
+# salió la regla. Y por eso mismo se admite la salida que la regla admite: una MEDICIÓN
+# FECHADA. Una línea con una fecha ISO al lado del número pasa, porque el que la lea sabe
+# que es una foto. Sin eso, el mensaje de error ofrecería una salida que no existe — lo probó
+# el revisor escribiendo «6 comandos (medición del 2026-09-07)» y viéndolo salir en rojo.
+#
+# LÍMITE DECLARADO. Caza el número pegado a la pieza, con o sin adornos de markdown en medio
+# (`**6** comandos`, «6 `comandos`»), y **también** «10 casos» — eso es deliberado y no un
+# accidente: «once casos» contra «diez casos» fue la primera vez que esta clase falló. Si
+# alguna vez hay que escribir cuántos casos tiene un banco, se fecha o se deja que lo cuente
+# el banco, que es lo que ya hace.
+#
+# NO caza:
+#   - el censo escrito con letra («tres hooks»), y eso es deliberado: `hooks.json` dice
+#     «tres hooks y ninguno de adorno» como invariante de diseño, no como recuento;
+#   - el número separado de la pieza por otras palabras («los 3 primeros hooks»);
+#   - la tabla que pone la pieza en una celda y el número en otra;
+#   - los ficheros que no son markdown: un censo dentro de un `.sh` o de `kit.conf` no lo ve
+#     nadie, y ahí ya ha envejecido alguno.
+# Ensanchar más el patrón empieza a cazar «3 líneas» o «en 3+ ficheros», y un detector que
+# grita lo que no se va a arreglar deja de leerse.
+#
+# Y la exención por fecha es GRUESA: basta una fecha ISO en cualquier punto de la línea, no
+# se comprueba que acompañe al número ni que venga con el comando que lo produjo, que es lo
+# que la regla pide. Es un lint de publicación, no una prueba: lo que evita es reintroducir
+# sin darse cuenta el número copiado de la salida de un comando.
+python3 - <<'PY4' || FALLOS=$((FALLOS+1))
+import glob, re, sys
+PIEZAS = r"(?:skills?|agentes?|hooks?|comandos?|scripts?|casos?)"
+CENSO = re.compile(r"\b\d+[\s*_`~]*" + PIEZAS + r"\b")
+FECHA = re.compile(r"\d{4}-\d{2}-\d{2}")
+malas = []
+for f in (["README.md"] + glob.glob("docs/*.md") + glob.glob("agents/*.md")
+          + glob.glob("commands/*.md") + glob.glob("skills/*/SKILL.md")):
+    for n, linea in enumerate(open(f).read().splitlines(), 1):
+        m = CENSO.search(linea)
+        if m and not FECHA.search(linea):
+            malas.append(f"{f}:{n} → «{m.group(0).strip()}»")
+if malas:
+    print("❌ documentos con un censo de piezas escrito a mano:")
+    for x in malas: print(f"     {x}")
+    print("     sustitúyelo por el comando que lo cuenta, o féchalo en la misma línea")
+    sys.exit(1)
+print("✅ ningún documento cuenta las piezas del kit a mano")
+PY4
 
 echo
 [ "$FALLOS" -eq 0 ] && echo "✅ kit sano — se puede publicar." || echo "❌ $FALLOS problema(s): NO publiques."

@@ -149,7 +149,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `doc-paquetes.sh`, `rodaja.sh` |
+| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `verifica-puerta.sh`, `doc-paquetes.sh`, `rodaja.sh` |
 
 ### Para mejorar el kit
 
@@ -169,10 +169,22 @@ Los proyectos que lo usan no tocan nada, salvo que cambie el contrato de `kit.co
 |---|---|
 | `UserPromptSubmit` | inyecta el acuerdo vigente y las tareas pendientes, en cada turno |
 | `SessionStart(compact)` | lo reinyecta tras compactar, que es cuando se pierde |
-| `PreToolUse` | **bloquea** `git commit` sin firma de verificación válida |
+| `PreToolUse` | **bloquea** un commit sin firma de verificación válida |
 
 `PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único
 hook que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.
+
+La puerta juzga **el repositorio al que va el commit**, no el directorio desde el que corre
+la sesión: analiza la invocación y sigue la pista de un `-C`, un `--git-dir` o un `cd`
+encadenado por delante. Y se desentiende de los repositorios sin `kit.conf` — ahí no hay
+flujo que proteger, y exigir una firma que `verifica.sh` tampoco puede crear allí dejaría el
+commit sin salida.
+
+Lo que **no** frena, dicho porque un límite que no se declara se convierte en una promesa
+falsa: `--no-verify`, un commit desde otra terminal, y una invocación construida en tiempo
+de ejecución (`$CMD`, un alias, un `eval`), que cae al directorio heredado. Frena el olvido,
+y el olvido tiene formas comunes. Los diez casos que sí cubre están fijados en
+`scripts/verifica-puerta.sh`.
 
 ---
 

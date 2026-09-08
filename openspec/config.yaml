@@ -1,0 +1,24 @@
+schema: spec-driven
+
+context: |
+  Language: es
+  All artifacts must be written in es.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  ESTE repo es el plugin ios-agent-kit, no una app iOS. No hay Swift ni build:
+  es bash (`scripts/`), markdown (`commands/`, `agents/`, `skills/`, `docs/`,
+  `plantillas/`) y un `busca-duplicados.py`. `hooks/hooks.json` declara los hooks
+  y `.claude-plugin/plugin.json` la versión.
+
+  El kit se INSTALA en las apps del usuario; lo que acaba en la app es `openspec/`
+  y `kit.conf`. Este `openspec/` es el del propio kit — el kit se come su comida.
+
+  Reglas de este repo, que ya estaban escritas y siguen mandando:
+  - `hooks/hooks.json` lo dice en su `_nota`: tres hooks y ninguno de adorno. Cada
+    uno existe porque resuelve un fallo observado. Un cuarto tiene que traer escrito
+    el fallo que lo motiva.
+  - Los límites se declaran, no se disimulan: `puerta-commit.sh` ya escribe en su
+    cabecera qué NO puede frenar. Un arreglo que estreche ese límite tiene que
+    reescribir la declaración, no borrarla.
+  - `README.md` y `docs/` describen el kit a quien lo instala. Si el comportamiento
+    cambia, cambian con él en el mismo cambio.

@@ -370,7 +370,9 @@ juez, que este cambio declaró fuera de alcance, y merece su propio cambio con e
 
 ## Cierre
 
-- [ ] 13. **`/kit-verifica` en verde con los bancos nuevos dentro** —son los de
+- [x] 13. **`/kit-verifica` en verde con los bancos nuevos dentro** —son los de
       `busca-duplicados.py`, `rodaja.sh` y `verifica.sh`, y el recuento lo imprime cada uno—, y `/kit-acepta`
-      sobre este cambio — que será la primera vez que el juez corra con una entrada que de
-      verdad contiene lo entregado.
+      sobre este cambio — que fue, en efecto, la primera vez que el juez corrió con una
+      entrada que de verdad contenía lo entregado: 1.496 líneas donde `git diff main...HEAD`
+      daba 0. Cerrado con la verificación en verde y cinco rondas de juicio, la última de las
+      cuales paró en el tope y devolvió la decisión al owner.

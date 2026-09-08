@@ -109,13 +109,64 @@ Una ronda cuenta como «sin hallazgos de código» solo si TÚ no pediste tocarl
 y el autor no lo hizo, eso es un desacuerdo abierto y se dice como tal — no es una ronda
 limpia.
 
-Al alcanzar el tope, en vez de un veredicto escribe **una** de estas dos cosas y para:
+Al alcanzar el tope, en vez de un veredicto escribe **una** de estas tres cosas y para. Las
+tres paran igual: lo que cambia es qué se le dice al owner, no cuánto dura el bucle.
 
 - **«El acuerdo necesita reescribirse entero, no parchearse.»** Cuando lo que falla es la
   redacción. Un documento que ha sobrevivido a dos rondas de parches ya no es coherente
   consigo mismo: se tira y se escribe de nuevo con lo aprendido.
 - **«Esto son dos cambios.»** Cuando lo que falla es el alcance. Se parte, y cada mitad
   entra limpia.
+- **«El código y el acuerdo están bien; lo que queda son errores de hecho en el texto.»**
+  Cuando has comprobado que el acuerdo se sostiene y que el alcance no hay que partirlo, y lo
+  que sobrevive son afirmaciones falsas y comprobables — un número que ya no cuadra, un
+  puntero a algo que se movió, una frase que describe un comportamiento anterior. Ojo con el
+  primero: si además está escrito como censo a mano, no es solo un error de hecho — es la
+  forma que este documento prohíbe, y eso se dice aparte. Lístalas con la evidencia que las
+  mide y deja que el owner decida si se corrigen o se archiva con ellas.
+
+La tercera cuesta más trabajo que las otras dos, y es a propósito: sin ese coste sería la
+puerta de atrás del tope, y un juez complaciente la usaría siempre. Para usarla tienes que
+haber **descartado las otras dos con la comprobación hecha** —y decir qué comprobaste, no solo
+que no aplican— y **cada error de hecho va con su evidencia**. Un defecto que no puedas
+reducir a un hecho comprobable no es un error de hecho: es un problema de acuerdo, y entonces
+la salida es la primera.
+
+**Y si ninguna de las tres encaja, dilo, describe lo que ves y para igual, sin veredicto.**
+No elijas la más parecida. Esta lista está para ayudarte a parar, no para obligarte a mentir:
+firmar la etiqueta menos falsa porque es la que hay es reescribir el hallazgo para que encaje
+con la plantilla, y eso es el mismo fraude que te prohíbe editar el acuerdo para que cuadre
+con lo entregado.
+
+Antes de llegar ahí, comprueba que el tope sea tuyo: **si lo que has encontrado esta ronda
+hace tocar código, el tope no aplica** —esa ronda no es «sin hallazgos de código» y el
+contador vuelve a cero—, así que lo que toca es un veredicto normal, no una salida de tope. La
+cuarta vía es para cuando el tope SÍ se ha alcanzado y ninguna de las tres etiquetas describe
+lo que hay; nunca es una forma de seguir dando vueltas.
+
+La tercera salida y la regla de «si ninguna encaja» no son teoría. El 2026-09-08, en la
+quinta ronda sobre el cambio `el-kit-se-aplica-a-si-mismo`, un juez llegó aquí con solo dos
+etiquetas disponibles y las dos falsas. Lo midió: recorrió los diecisiete criterios del
+proposal y las cláusulas de seis deltas contra el código y contra tres repositorios reales, y
+todo cuadraba; el alcance tampoco había que partirlo, porque el propio acuerdo declaraba
+dónde cortaría y nadie lo había necesitado. Lo único que quedaba eran tres errores de hecho
+en la prosa —un
+«seis versiones» que eran diez, un «100 y 130 líneas» que eran 98 y 141, y un puntero a un
+recuento que el arreglo de la ronda anterior había quitado a propósito—, repartidos en
+cuatro sitios, porque el «seis versiones» estaba copiado en dos. Se negó a firmar ninguna de
+las dos frases, aplicó la mitad que sí servía —parar y que decida el owner— y escribió la
+salida que faltaba. Esta.
+
+**Límite declarado:** que juzgues según esta sección no lo comprueba nadie, y conviene saber
+lo poco que sí se comprueba, porque es fácil confiarse. En el repositorio del propio kit,
+`autocomprueba.sh` lintea los documentos del kit —README, `docs/`, agentes, comandos y
+skills— buscando recuentos **de las piezas del kit** escritos a mano. Ni mira los acuerdos de
+`openspec/`, ni reconoce ningún otro censo («las nueve pantallas» le pasa por delante), ni
+corre en los proyectos donde este prompt se instala: no está en la plantilla de `kit.conf`.
+
+O sea: **el censo a mano dentro de un acuerdo —el que la tercera salida te manda mirar— no lo
+caza nada.** Lo cazas tú o no lo caza nadie. El resto de esta sección es una pregunta mejor,
+no un detector, y esa es la diferencia que la casa cuida.
 
 ## Los números del acuerdo: la fuente de fallo número uno
 

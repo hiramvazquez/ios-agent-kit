@@ -1,1 +1,7 @@
 .DS_Store
+
+# Firma de verificación del kit: estado local, ligado a un diff de esta máquina.
+.agent-kit/
+
+# Lo deja el paso «sintaxis · python» de kit.conf al compilar busca-duplicados.py.
+__pycache__/

@@ -149,7 +149,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `verifica-puerta.sh`, `doc-paquetes.sh`, `rodaja.sh` |
+| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `verifica-puerta.sh`, `verifica-contexto.sh`, `doc-paquetes.sh`, `rodaja.sh` |
 
 ### Para mejorar el kit
 
@@ -170,6 +170,16 @@ Los proyectos que lo usan no tocan nada, salvo que cambie el contrato de `kit.co
 | `UserPromptSubmit` | inyecta el acuerdo vigente y las tareas pendientes, en cada turno |
 | `SessionStart(compact)` | lo reinyecta tras compactar, que es cuando se pierde |
 | `PreToolUse` | **bloquea** un commit sin firma de verificación válida |
+
+El digest que se inyecta empieza diciendo **de qué repositorio habla**, y no es un adorno:
+el plugin se instala para el usuario, no para un proyecto, así que el hook lee el
+repositorio del directorio que hereda la sesión — que no tiene por qué ser aquel en el que
+estás trabajando. Nombrarlo no elimina ese desfase (no hay ninguna señal de dónde trabaja
+el modelo, y adivinarla sería peor que callarse), pero convierte «sin cambio activo» —falso
+sobre el trabajo en curso— en «en este repositorio, sin cambio activo», que es cierto. Un
+repositorio sin `openspec/` recibe además eso mismo dicho, en vez de la orden de abrir una
+propuesta que allí nadie puede seguir. Y el hook no escribe nada dentro del repositorio que
+observa: su caché vive en `~/.cache/ios-agent-kit`, con la ruta del repositorio en la clave.
 
 `PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único
 hook que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.

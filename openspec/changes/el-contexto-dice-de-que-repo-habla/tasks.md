@@ -24,5 +24,7 @@ Cada tarea se cierra con `/kit-revisa` sobre su rodaja, no al final del cambio.
 - [x] 6. La cabecera del script, al día: hoy dice que inyecta «tres cosas y ninguna más» y
       no menciona que escribe en disco. Si sigue escribiendo, lo dice; y dice dónde.
 
-- [x] 7. Banco de pruebas en verde, y comprobado que cada prueba nueva falla contra el
-      script sin arreglar. Una a una, no en bloque.
+- [x] 7. Banco de pruebas en verde, y comprobado que cada prueba QUE FIJA UN FALLO sale
+      roja contra el script sin arreglar, mientras las de no-regresión salen verdes contra
+      ambas versiones. Una a una, no en bloque. Redacción alineada con el criterio
+      renegociado el 2026-09-08, por el mismo motivo que en el cambio de la puerta.

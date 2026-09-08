@@ -30,5 +30,13 @@ Cada tarea se cierra con `/kit-revisa` sobre su rodaja, no al final del cambio.
 - [x] 6. La cabecera del script y la sección del README, reescritas con los límites reales.
       `git -C` sale de la lista de lo que se cuela; lo que siga colándose entra en ella.
 
-- [x] 7. `scripts/verifica-puerta.sh` en verde, y comprobado que cada prueba nueva falla
-      contra el script sin arreglar. Uno a uno, no en bloque.
+- [x] 7. `scripts/verifica-puerta.sh` en verde, y comprobado que cada prueba QUE FIJA UN
+      FALLO sale roja contra el script sin arreglar, mientras las de no-regresión salen
+      verdes contra ambas versiones. Uno a uno, no en bloque. Redacción alineada con el
+      criterio renegociado el 2026-09-08: esta tarea decía «cada prueba nueva falla», que
+      es la redacción imposible que el proposal ya había corregido — el acuerdo se
+      contradecía consigo mismo en el fichero que nadie volvió a mirar.
+
+- [x] 8. Nota en el proposal sobre lo que este cambio trajo además de su alcance. Sale del
+      juez: el commit `b2d6961` se titula `fix(puerta)` y lleva dentro ~2.300 líneas que no
+      responden a ningún criterio ni a ninguna tarea. Sin la nota son deuda anónima.

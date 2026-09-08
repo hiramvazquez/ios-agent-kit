@@ -149,15 +149,20 @@ fi
 mkdir -p "$TMP/con_cambio/.build/checkouts/PaqueteTardio"
 echo reglas > "$TMP/con_cambio/.build/checkouts/PaqueteTardio/AGENTS.md"
 D3="$(digest "$TMP/con_cambio")"
-if contiene "$D3" "PaqueteTardio"; then
-    caso 1 "el segundo turno no vuelve a recorrer: usa el caché" \
-        "vio una dependencia añadida después del primer turno, así que recorrió otra vez"
-else
+# Se exige la PRESENCIA de la vieja además de la ausencia de la nueva. Solo con la
+# ausencia, un hook que dejara de inyectar la línea de paquetes pasaría este caso sin
+# haber cacheado nada — lo encontró un juez probando ese mutante.
+if contiene "$D3" "PaqueteUno" && ! contiene "$D3" "PaqueteTardio"; then
     caso 0 "el segundo turno no vuelve a recorrer: usa el caché"
+else
+    caso 1 "el segundo turno no vuelve a recorrer: usa el caché" \
+        "vio una dependencia añadida tras el primer turno (recorrió otra vez), o dejó de inyectar la línea"
 fi
 
+REPOS=4
 CACHES="$(find "$TMP/cache/ios-agent-kit" -type f 2>/dev/null | wc -l | tr -d ' ')"
-[ "$CACHES" -ge 2 ]
-caso $? "el caché vive fuera del repo, un fichero por repositorio (hay $CACHES)"
+[ "$CACHES" -eq "$REPOS" ]
+caso $? "el caché vive fuera del repo, un fichero por repositorio ($CACHES de $REPOS)" \
+    "vivía en .agent-kit/ dentro del repo observado, así que fuera no hay ninguno"
 
 resumen "el hook" "el-contexto-dice-de-que-repo-habla"

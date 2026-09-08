@@ -149,3 +149,25 @@ firma sigue bloqueado. Eso no es el bug, eso es la puerta.
       2026-09-08: el commit anterior dejó «once casos» en `kit.conf` y en el propio banco, y
       «diez casos» en el README, contradiciéndose a sí mismo el mismo día. Un censo a mano
       envejece en cuanto alguien añade un caso.
+
+## Lo que este cambio trajo además de su alcance (2026-09-08)
+
+Queda escrito porque, si no, dentro de un año son deuda anónima: el commit `b2d6961` se
+titula `fix(puerta)` y lleva dentro ~2.300 líneas que **no responden a ningún criterio ni a
+ninguna tarea** de este acuerdo.
+
+- `.claude/commands/opsx/*` y `.claude/skills/openspec-*` (~2.300 líneas): las genera
+  `openspec init`. El repositorio del kit no usaba OpenSpec —predica que `openspec/` va «en
+  tu app», y él no es una app—, y hacía falta para poder escribir este acuerdo antes de
+  tocar código. Es adopción del propio flujo, no parte del arreglo.
+- `kit.conf` (73 líneas): sin él, `verifica.sh` aborta y este repositorio no puede firmar
+  nada, así que no habría podido commitearse ni el arreglo. Su propia cabecera lo explica.
+- El acuerdo completo de `el-contexto-dice-de-que-repo-habla`: se escribió a la vez, porque
+  los dos hooks compartían el mismo defecto de origen y separar el diagnóstico habría hecho
+  que el segundo se descubriera dos veces.
+
+Y lo mismo para `29d1e04`, que entrega **los dos cambios a la vez** —`analiza-invocacion.py`
+y `puerta-commit.sh` de este, `verifica-contexto.sh` del otro, `lib-banco.sh` compartido—.
+El coste está dicho por el juez y se acepta con conocimiento: ya no se puede aislar por diff
+qué se entregó para cada acuerdo. Lo correcto habría sido un commit por cambio, con el
+fichero compartido en el primero.

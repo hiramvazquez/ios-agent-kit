@@ -53,11 +53,17 @@ def tokeniza(cmd):
 def analiza(cmd, profundidad=0):
     """Devuelve la ruta de destino si `cmd` invoca un commit, o None."""
     if profundidad > LIMITE_RECURSION:
+        # Fallo ABIERTO: pasado este nivel de anidamiento el comando pasa sin
+        # comprobar nada. El límite existe para que un `bash -c` recursivo no cuelgue
+        # el hook, y cuatro niveles no los alcanza ningún commit que alguien escriba
+        # sin querer — que es lo que esta puerta frena.
         return None
     try:
         tokens = tokeniza(cmd)
     except ValueError:
-        # Comillas sin cerrar: no es un comando que vaya a ejecutarse tal cual.
+        # Fallo ABIERTO: comillas sin cerrar, así que no es un comando que vaya a
+        # ejecutarse tal cual. Bloquear ante algo que ni siquiera va a correr
+        # convertiría un fallo del analizador en una sesión inutilizable.
         return None
 
     segmentos, actual = [], []
@@ -137,6 +143,8 @@ def main():
         # hook en una sesión inutilizable.
         print("NO")
         return
+    # Fallo ABIERTO si `command` no es una cadena: el hook recibiría algo que no es un
+    # comando, y no hay invocación que juzgar. Mismo argumento que arriba.
     destino = analiza(cmd) if isinstance(cmd, str) else None
     print("NO" if destino is None else "COMMIT " + destino)
 

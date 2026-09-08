@@ -8,7 +8,8 @@ del que lo ha leído.
 1. El digest SHALL nombrar ese repositorio, incluso cuando no haya nada que contar sobre él.
 2. Un repositorio sin `openspec/` SHALL producir un digest que lo diga, y que NO ordene
    abrir una propuesta.
-3. Un repositorio con `openspec/` SHALL producir el mismo digest que produce hoy.
+3. Un repositorio con `openspec/` SHALL producir el mismo digest que producía antes de
+   este cambio, **salvo las líneas de atribución que exige la cláusula 1**.
 
 La 1 no es cosmética y no arregla el desfase: el hook no puede saber en qué repositorio
 trabaja el modelo. Lo que hace es convertir una afirmación falsa sobre el trabajo en curso

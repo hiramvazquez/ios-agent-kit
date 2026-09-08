@@ -9,9 +9,22 @@
 # La regla del README dice que un detector solo nace si la clase ya falló dos veces. Esta
 # falló dos veces el mismo día, así que se lo ha ganado.
 #
-# Uso:  bash scripts/autocomprueba.sh     (desde la raíz del kit)
+# Uso:  bash scripts/autocomprueba.sh            comprueba SU kit
+#       bash scripts/autocomprueba.sh <raíz>     comprueba el árbol de kit que le digas
+#
+# La raíz opcional existe para poder probarlo. Mientras este script solo supiera ir a su
+# propia raíz, cualquier banco habría comprobado el kit de verdad en vez de fixtures rotos —
+# y por eso fue, hasta que existió su banco, la única pieza con lógica sin nadie que la
+# mirase — justo la que dice «se puede publicar». `kit.conf` lo invoca sin argumentos y no se entera.
 set -uo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
+RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# La guarda es por si la resolución por defecto falla: si ese `cd … && pwd` no imprime nada,
+# `RAIZ` queda vacía, y `cd ""` devuelve 0 en bash — comprobaría el directorio actual en
+# silencio. (Un argumento vacío NO llega hasta aquí: `${1:-…}` sustituye cuando está sin
+# definir *o* vacío, al revés de lo que ponía esta nota antes. Lo midió un juez corriendo
+# `autocomprueba.sh ""`.)
+[ -n "$RAIZ" ] || { echo "❌ raíz vacía: pásame un directorio o ningún argumento"; exit 1; }
+cd "$RAIZ" || { echo "❌ no existe la raíz «$RAIZ»"; exit 1; }
 FALLOS=0
 mal() { printf '❌ %s\n' "$1"; FALLOS=$((FALLOS+1)); }
 bien() { printf '✅ %s\n' "$1"; }
@@ -158,7 +171,17 @@ done
 #   - el número separado de la pieza por otras palabras («los 3 primeros hooks»);
 #   - la tabla que pone la pieza en una celda y el número en otra;
 #   - los ficheros que no son markdown: un censo dentro de un `.sh` o de `kit.conf` no lo ve
-#     nadie, y ahí ya ha envejecido alguno.
+#     nadie, y ahí ya ha envejecido alguno;
+#   - **`openspec/`, y esto es una decisión, no un olvido**, con dos razones distintas para
+#     sus dos mitades. El **archivo** no se lintea porque es historia: sus números describen
+#     lo que se midió aquel día, no envejecen ellos, envejece el repositorio. Medido: al pasar
+#     este patrón por `openspec/**`, casi todos los disparos caen ahí. El **acuerdo vivo** no
+#     se lintea porque ya tiene quien lo mire —un juez de aceptación, y es su trabajo—, no
+#     porque el patrón se equivocaría: cuando se midió, el único disparo sobre un acuerdo
+#     activo era un acierto, un recuento caducado que el juez cazó él mismo. Si algún día el
+#     juez deja de cazarlos, la respuesta es extender esto, y entonces habrá que aceptar que
+#     el patrón no distingue el alcance legítimo de un cambio —«se tocan estos dos ficheros»—
+#     del censo usado como justificación.
 # Ensanchar más el patrón empieza a cazar «3 líneas» o «en 3+ ficheros», y un detector que
 # grita lo que no se va a arreglar deja de leerse.
 #

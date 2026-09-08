@@ -152,7 +152,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. No hay uno por pieza: los tiene la puerta, el hook de contexto, el detector de duplicados, la rodaja y la propia verificación — `autocomprueba.sh` sigue sin banco, y su punto ciego dejó pasar una invocación muerta durante las diez versiones publicadas. `ls scripts/` los lista; escribirlos aquí era un inventario a mano y ya se había quedado corto |
+| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. Los tiene la puerta, el hook de contexto, el detector de duplicados, la rodaja, la verificación y la propia autocomprobación — esta última fue la que más tardó en tenerlo, y su punto ciego dejó pasar mientras tanto una invocación muerta en el prompt del juez. `ls scripts/` los lista; escribirlos aquí era un inventario a mano y ya se había quedado corto |
 
 ### Para mejorar el kit
 

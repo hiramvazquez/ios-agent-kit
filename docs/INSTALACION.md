@@ -93,6 +93,22 @@ con una versión tuya modificada, el mensaje del CLI nombra la clave concreta.
 **`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1. Es deliberado: "no
 pude mirar" no es lo mismo que "está mal". Créalo con `/kit-init`.
 
+**`Unknown command: /opsx:apply`** (o `/opsx:propose`, o `/opsx:archive`), mientras los
+`/kit-*` sí funcionan — **la sesión está abierta en el directorio equivocado**. Ábrela en la
+raíz del repositorio, no un nivel por encima.
+
+Los dos juegos de comandos vienen de sitios distintos y por eso fallan por separado, que es
+lo que despista:
+
+| comandos | de dónde vienen | dónde funcionan |
+|---|---|---|
+| `/kit-verifica`, `/kit-acepta`… | del **plugin**, instalado para tu usuario | desde cualquier directorio |
+| `/opsx:propose`, `/opsx:apply`… | de `.claude/commands/` **del proyecto**, que instala `openspec init` | solo si la sesión tiene ese repo como raíz |
+
+Con la sesión un nivel por encima te queda medio flujo funcionando y la otra mitad
+respondiendo «Unknown command», que no dice nada de la causa. Los ficheros están donde tienen
+que estar; simplemente nadie los ha cargado.
+
 **La puerta bloquea un commit que crees válido** — la firma es de OTRO diff. Pasa siempre
 por lo mismo: encadenar `git add && git commit`. Stagea, verifica y commitea en **tres
 comandos separados**; entre la firma y el commit el diff no puede cambiar.

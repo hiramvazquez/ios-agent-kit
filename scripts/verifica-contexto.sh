@@ -39,6 +39,19 @@ repo() {
                     > openspec/changes/mi-cambio/tasks.md
                 printf '# P\n\n## Fuera de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
                     > openspec/changes/mi-cambio/proposal.md ;;
+            activo_cero)
+                # La rama que ningún fixture montaba: un cambio activo con CERO tareas
+                # pendientes, que es el estado normal cuando el cambio está terminado y se
+                # va a llamar al juez. `grep -c` sobre cero coincidencias imprime "0" Y sale
+                # con 1; el `$(... || echo 0)` de antes de este cambio no lo sabía y sumaba
+                # un segundo "0", lo que en bash 3.2 abortaba el `if` entero y se perdían
+                # "tareas:", la lista de pendientes y "FUERA de alcance" en silencio. Este
+                # fixture existe para que ese caso deje de pasar por accidente.
+                mkdir -p openspec/changes/mi-cambio
+                printf '# Tareas\n\n- [x] 1. hecha\n- [x] 2. tambien hecha\n' \
+                    > openspec/changes/mi-cambio/tasks.md
+                printf '# P\n\n## Fuera de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
+                    > openspec/changes/mi-cambio/proposal.md ;;
             dos)
                 # CINCO cambios abiertos a la vez, creados en orden inverso al
                 # alfabético. OpenSpec permite varios, y el kit elegía uno con `head -1`
@@ -72,11 +85,15 @@ repo() {
 # HOME se fija al temporal a propósito: el hook rastrea `DerivedData` bajo $HOME y en una
 # máquina real eso tarda y contamina el resultado con dependencias que no son del test.
 # XDG_CACHE_HOME va aparte para poder comprobar dónde acaba el caché.
+#
+# `</dev/null` a propósito: el hook ahora lee stdin para saber qué evento lo invocó, y sin
+# redirigir aquí heredaría el stdin de ESTE banco. Si algún día se corre a mano desde una
+# terminal en vez de en CI, sin esto el banco entero se quedaría esperando EOF.
 digest() {
     local r="$1"
     (
         cd "$r" || exit 1
-        HOME="$TMP/home" XDG_CACHE_HOME="$TMP/cache" bash "$HOOK" 2>/dev/null \
+        HOME="$TMP/home" XDG_CACHE_HOME="$TMP/cache" bash "$HOOK" </dev/null 2>/dev/null \
             | python3 -c 'import json,sys
 try:
     d = json.load(sys.stdin)
@@ -86,15 +103,57 @@ except Exception:
     )
 }
 
+# digest_stderr <repo> → imprime SOLO lo que el hook escribió en stderr, para el caso que
+# exige que con cero tareas pendientes no escriba nada ahí. `digest()` lo descarta a
+# propósito porque el resto de casos no lo necesitan; separarlo evita tocar su firma.
+digest_stderr() {
+    local r="$1"
+    (
+        cd "$r" || exit 1
+        HOME="$TMP/home" XDG_CACHE_HOME="$TMP/cache" bash "$HOOK" </dev/null 2>&1 1>/dev/null
+    )
+}
+
+# evento_emitido <repo> <hook_event_name> → el hookEventName que el hook devuelve cuando
+# stdin trae ese campo. Simula lo que Claude Code manda de verdad: un JSON con
+# `hook_event_name`, no una bandera ni una variable de entorno.
+evento_emitido() {
+    local r="$1" nombre="$2"
+    (
+        cd "$r" || exit 1
+        printf '{"hook_event_name":"%s"}' "$nombre" \
+            | HOME="$TMP/home" XDG_CACHE_HOME="$TMP/cache" bash "$HOOK" 2>/dev/null \
+            | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+    print(d["hookSpecificOutput"]["hookEventName"])
+except Exception:
+    print("")'
+    )
+}
+
 # --- los repos --------------------------------------------------------------------------
 
-repo con_cambio  activo si  PaqueteUno
-repo sin_cambio  vacio  si
-repo ajeno       sin    no
-repo otro_dep    vacio  si  PaqueteDos
-repo dos_cambios dos    si
+repo con_cambio       activo      si  PaqueteUno
+repo sin_cambio       vacio       si
+repo ajeno            sin         no
+repo otro_dep         vacio       si  PaqueteDos
+repo dos_cambios      dos         si
+repo con_cambio_hecho activo_cero si
+repo sin_deps_propias vacio       si
 
 mkdir -p "$TMP/home"
+
+# Un DerivedData de una máquina con OTROS proyectos Xcode, ninguno de los cuales es un repo
+# de este banco: el nombre no coincide con nada de aquí a propósito. Si el `find` del hook
+# recorriera la máquina entera en vez de acotarse al repositorio observado, cualquier
+# repositorio de este banco lo vería — empezando por `sin_deps_propias`, que no tiene ni una
+# dependencia propia. Medido el 2026-09-08 con el repo real: `ios-agent-kit` (cero .swift)
+# anunciaba paquetes de `AppStarter` y `DemoMulti`, y un repositorio vacío en /tmp recibía la
+# misma frase.
+mkdir -p "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-a1b2c3/SourcePackages/checkouts/PaqueteAjeno"
+echo "reglas de un proyecto que no es ninguno de estos repos" \
+    > "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-a1b2c3/SourcePackages/checkouts/PaqueteAjeno/AGENTS.md"
 
 # --- los casos --------------------------------------------------------------------------
 
@@ -115,6 +174,31 @@ contiene "$D" "Sin cambio OpenSpec activo"; caso $? \
     "con openspec/ y sin cambio activo, lo dice"
 contiene "$D" "/opsx:propose"; caso $? \
     "con openspec/ y sin cambio activo, manda proponer"
+
+echo "▶ el cambio terminado no rompe el digest (cero tareas pendientes)"
+
+# La rama que ningún fixture montaba: `con_cambio` (arriba) siempre tuvo UNA tarea
+# pendiente, y con cero — el estado normal cuando el cambio está terminado y se va a llamar
+# al juez — `grep -c` imprime "0" Y sale con 1. El `$(... || echo 0)` de antes de este
+# cambio no distinguía eso de "no hubo salida" y sumaba un segundo "0", que en bash 3.2
+# aborta el `if` entero: se perdían "tareas:", la lista de pendientes y "FUERA de alcance"
+# en el mismo turno en que más importan. Reproducido el 2026-09-08 contra el hook de antes
+# de este cambio con `HOOK_BAJO_PRUEBA`.
+D="$(digest "$TMP/con_cambio_hecho")"
+contiene "$D" "tareas:"; caso $? \
+    "con cero tareas pendientes, el digest sigue diciendo cuántas hay hechas" \
+    "el compound abortaba antes de llegar a esta línea: el digest saltaba directo a la verificación"
+contiene "$D" "FUERA de alcance:"; caso $? \
+    "con cero tareas pendientes, el digest sigue incluyendo el bloque FUERA de alcance" \
+    "era la línea que más costaba perder: una de las tres reglas innegociables que este hook existe para inyectar"
+
+ERR="$(digest_stderr "$TMP/con_cambio_hecho")"
+if [ -z "$ERR" ]; then
+    caso 0 "con cero tareas pendientes, el hook no escribe nada en stderr"
+else
+    caso 1 "con cero tareas pendientes, el hook no escribe nada en stderr" \
+        "escribía el error de expansión aritmética ahí: $(printf '%s' "$ERR" | tr '\n' ' ')"
+fi
 
 echo "▶ el digest dice de qué repo habla"
 
@@ -176,6 +260,45 @@ else
         "vio una dependencia añadida tras el primer turno (recorrió otra vez), o dejó de inyectar la línea"
 fi
 
+echo "▶ las dependencias son las de ESTE repositorio, no las de la máquina"
+
+# `sin_deps_propias` no depende de ningún paquete y se digesta aquí por PRIMERA vez, con el
+# DerivedData ajeno ya montado — así el `find` corre de verdad y no se limita a leer un
+# caché escrito antes de montar `PaqueteAjeno`. Medido el 2026-09-08 contra el hook de antes
+# de este cambio: `ios-agent-kit` (cero ficheros .swift) anunciaba paquetes de AppStarter y
+# DemoMulti, y un repositorio vacío en /tmp recibía la misma frase — el `find` recorría todo
+# `~/Library/Developer/Xcode/DerivedData` sin filtrar por proyecto.
+D="$(digest "$TMP/sin_deps_propias")"
+if contiene "$D" "PaqueteAjeno"; then
+    caso 1 "un repo sin dependencias propias no recibe las de otro proyecto de la máquina" \
+        "el find recorría TODO DerivedData sin acotar al repositorio observado"
+else
+    caso 0 "un repo sin dependencias propias no recibe las de otro proyecto de la máquina"
+fi
+
+echo "▶ el JSON declara el evento que lo invoca"
+
+# El mismo script está registrado en dos eventos de `hooks.json`: `UserPromptSubmit` en
+# cada turno y `SessionStart` con el matcher `compact`. Antes de este cambio, `hookEventName`
+# era literal en el script y salía "UserPromptSubmit" sin mirar el JSON de stdin — así que
+# el segundo caso de abajo salía en rojo contra esa versión, y el primero pasaba por
+# casualidad (es el mismo valor que el literal de antes).
+E="$(evento_emitido "$TMP/con_cambio" UserPromptSubmit)"
+if [ "$E" = "UserPromptSubmit" ]; then
+    caso 0 "invocado como UserPromptSubmit, el hookEventName emitido es UserPromptSubmit"
+else
+    caso 1 "invocado como UserPromptSubmit, el hookEventName emitido es UserPromptSubmit" \
+        "emitió «$E»"
+fi
+
+E="$(evento_emitido "$TMP/con_cambio" SessionStart)"
+if [ "$E" = "SessionStart" ]; then
+    caso 0 "invocado como SessionStart, el hookEventName emitido es SessionStart"
+else
+    caso 1 "invocado como SessionStart, el hookEventName emitido es SessionStart" \
+        "emitía siempre UserPromptSubmit, aunque hooks.json registra el mismo script también en SessionStart(compact) — emitió «$E»"
+fi
+
 echo "▶ con varios cambios activos, elige estable y lo dice"
 
 D1="$(digest "$TMP/dos_cambios")"
@@ -226,4 +349,45 @@ caso "$IGUALES" "el caché vive fuera del repo, un fichero por repositorio ($CAC
 # Los rojos que quedan por cerrar son de ESTE cambio, no del que trajo el banco: los tres
 # casos nuevos —orden estable, aviso de varios activos, y no escribir en /tmp— los añadió
 # `el-kit-se-aplica-a-si-mismo`.
-resumen "el hook" "el-kit-se-aplica-a-si-mismo"
+echo "▶ no se cuelga esperando una entrada que no llega"
+
+# El hook lee stdin desde que declara el evento invocante, y `[ -t 0 ]` solo reconoce el caso
+# terminal: con un pipe ABIERTO que nunca cierra, esperar EOF es esperar para siempre. Corre
+# ANTES de cada turno, así que colgarlo es colgar la sesión. Lo encontró una medición de coste
+# que se quedó parada ocho minutos, no una prueba — que es justo por qué este caso existe.
+#
+# Contra la versión de HEAD sale VERDE, y es correcto: allí el hook no leía stdin y no podía
+# colgarse. Lo que fija no es un fallo vivo, es que la lectura nueva no traiga el cuelgue.
+#
+# `set -m` pone el job en su PROPIO grupo de procesos, y se mata el GRUPO —no el pid—. Sin
+# eso, matar el shell del hook deja vivo el proceso que está leyendo el pipe, y es él quien
+# cuelga a este banco: el primer intento de escribir este caso detectaba el cuelgue
+# correctamente y luego se colgaba él, que es peor que no tenerlo.
+# Y corre DENTRO de un repo de fixture, con el `HOME` y el caché del banco, como los otros
+# casos. La primera versión no lo hacía y el revisor la cazó por partida doble: escribía en el
+# caché REAL del usuario, y —peor— pasaba en falso desde cualquier cwd sin repositorio git,
+# porque el hook sale en `git rev-parse` ANTES de llegar a leer stdin. Un caso que protege
+# contra colgar la sesión y pierde los dientes según desde dónde se le invoque no protege nada.
+MARCA_FIN="$TMP/hook-termino"
+rm -f "$MARCA_FIN"
+set -m
+{ cd "$TMP/con_cambio" && HOME="$TMP/home" XDG_CACHE_HOME="$TMP/cache" \
+      bash "$HOOK" >/dev/null 2>&1; : > "$MARCA_FIN"; } < <(sleep 30) &
+GRUPO=$!
+set +m
+# El tope del hook es de un segundo; se le dan cuatro antes de declararlo colgado, para que
+# una máquina cargada no dé un rojo falso.
+ESPERAS=0
+while [ "$ESPERAS" -lt 8 ] && [ ! -f "$MARCA_FIN" ]; do sleep 0.5; ESPERAS=$((ESPERAS+1)); done
+kill -9 -"$GRUPO" 2>/dev/null
+wait "$GRUPO" 2>/dev/null
+
+if [ -f "$MARCA_FIN" ]; then
+    caso 0 "con stdin abierto y sin EOF, termina solo en vez de esperar para siempre"
+else
+    caso 1 "con stdin abierto y sin EOF, termina solo en vez de esperar para siempre" \
+        "esperaba EOF sin tope, y este hook corre antes de CADA turno: cuelga la sesión"
+fi
+rm -f "$MARCA_FIN"
+
+resumen "el hook" "donde-la-regla-solo-llego-a-un-hermano"

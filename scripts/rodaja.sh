@@ -34,7 +34,13 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$DIR/lib-kit.sh"
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "❌ no es un repo git"; exit 1; }
+# `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo: `cd ""` devuelve 0 en bash, así
+# que la guarda nunca ve el fallo de git. Con eso, este script seguía hasta `mkdir -p
+# .agent-kit` en el directorio donde estuvieras — fuera de cualquier repositorio. Comprobado
+# el 2026-09-08 en un directorio pelado. La asignación SÍ propaga el código de git —
+# `verifica.sh` ya lo hace así—, así que se comprueba la resolución, no el `cd`.
+RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "❌ no es un repo git"; exit 1; }
+cd "$RAIZ" || exit 1
 
 ESTADO=".agent-kit"; mkdir -p "$ESTADO"
 MARCA="$ESTADO/.ultima-revision"

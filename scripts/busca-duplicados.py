@@ -59,6 +59,25 @@ def tocado(*rutas):
 # que sobraba. Mídelo por identidad o no lo has medido.
 MIN_LINEAS = 3
 
+# El segundo suelo, declarado igual que el de arriba y no quitado.
+#
+# Sin él, un cuerpo de tres líneas cuya única sustancia normalizada es una llave, una
+# asignación trivial y un `return` se reporta como duplicado: coincidencia de forma, no la
+# lógica repetida que este detector existe para cazar. Estaba en el script desde el
+# principio, pero sin comentario —a diferencia del de arriba—, aunque `docs/PIEZAS.md` ya lo
+# documentaba con su número: el kit lo conocía y se lo contaba a quien lo instala, y lo que
+# faltaba era el acuerdo, no el conocimiento.
+#
+# Se declara en vez de quitarse por la misma razón que el de 3 se queda en 3: quitarlo cambia
+# el detector en proyectos reales sin la medición por identidad que la cláusula 4 de
+# `deteccion-de-duplicados` exige antes de mover cualquiera de los dos suelos —moverlo hoy sin
+# esa medición sería romper esa cláusula para «cumplir» la 3—. El caso exacto que este número
+# decide está montado en `verifica-duplicados.sh` —un cuerpo de tres líneas por debajo del
+# suelo, que no se reporta—, y va ahí a propósito: la primera versión de esta nota citaba una
+# medición del 2026-09-08 sobre un cuerpo que no estaba en ningún fixture, así que nadie podía
+# reproducirla. Un número con fecha y sin fixture envejece igual que uno sin fecha.
+MIN_CARACTERES = 60
+
 def sin_ruido(txt):
     txt = re.sub(r"//[^\n]*", "", txt)
     txt = re.sub(r"/\*.*?\*/", "", txt, flags=re.S)
@@ -80,7 +99,7 @@ def cuerpos(ruta):
         n = cuerpo.count("\n")
         if n < MIN_LINEAS: continue
         norm = sin_ruido(cuerpo)
-        if len(norm) < 60: continue
+        if len(norm) < MIN_CARACTERES: continue
         yield m.group(1), hashlib.sha1(norm.encode()).hexdigest()[:10], src[:m.start()].count("\n") + 1, n
 
 def extensiones(ruta):

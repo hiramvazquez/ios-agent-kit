@@ -160,4 +160,34 @@ else
         "sin --follow, el git mv contaba como la adición del proposal y el trabajo anterior desaparecía sin aviso"
 fi
 
-resumen "rodaja.sh" "el-kit-se-aplica-a-si-mismo"
+echo "▶ fuera de un repositorio git"
+
+# `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo, porque `cd ""` devuelve 0 en
+# bash: la guarda que este script llevaba escrita no se ejecutaba nunca. Y dos líneas después
+# hay un `mkdir -p .agent-kit`, así que el script CREABA un directorio en el sitio donde
+# estuvieras, fuera de cualquier repositorio, y luego volcaba el `usage` de `git diff` en vez
+# de su mensaje. Comprobado el 2026-09-08 en un directorio pelado.
+#
+# Es la misma regla que el hook de contexto ya cumplía —no escribir donde nadie pidió el
+# kit— sin haber llegado a este hermano. Los dos casos van juntos a propósito: el mensaje sin
+# el «no deja nada escrito» dejaría pasar una versión que avisa y ensucia igual.
+PELADO="$TMP/pelado"
+mkdir -p "$PELADO"
+S="$( cd "$PELADO" && bash "$ROD" 2>&1 )"
+COD=$?
+if contiene "$S" "no es un repo git" && [ "$COD" -ne 0 ]; then
+    caso 0 "fuera de un repositorio, lo dice y sale distinto de 0 (cod $COD)"
+else
+    caso 1 "fuera de un repositorio, lo dice y sale distinto de 0 (cod $COD)" \
+        "la guarda no disparaba: seguía y volcaba el usage de git diff con codigo 0"
+fi
+
+RESTOS="$(find "$PELADO" -mindepth 1 2>/dev/null)"
+if [ -z "$RESTOS" ]; then
+    caso 0 "fuera de un repositorio, no deja ningun fichero ni directorio"
+else
+    caso 1 "fuera de un repositorio, no deja ningun fichero ni directorio" \
+        "creaba .agent-kit/ donde estuvieras: $(printf '%s' "$RESTOS" | tr '\n' ' ')"
+fi
+
+resumen "rodaja.sh" "donde-la-regla-solo-llego-a-un-hermano"

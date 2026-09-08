@@ -26,6 +26,14 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AUTO="$DIR/autocomprueba.sh"
 [ -f "$AUTO" ] || { echo "no encuentro autocomprueba.sh en $AUTO"; exit 2; }
 
+# Los tres códigos que este cambio le da a `autocomprueba.sh`, con la misma forma —y la misma
+# razón— que ya tenía `scripts/verifica.sh`: 0 sano, 1 hay problemas (sea cual sea cuántos), 3
+# no pude mirar. Antes de este cambio el «hay problemas» era `$FALLOS`, así que un único
+# problema y una raíz inexistente competían por el mismo 1.
+COD_SANO=0
+COD_PROBLEMAS=1
+COD_NO_PUDE_MIRAR=3
+
 # --- montaje ------------------------------------------------------------------------------
 
 # kit_sano <nombre>   → un árbol de kit mínimo y correcto, que pasa TODAS las comprobaciones
@@ -68,6 +76,11 @@ falla_con() {
     S="$(comprueba "$arbol")"; codigo=$?
     if [ "$codigo" -eq 0 ]; then
         caso 1 "$desc — lo DIJO pero salió con 0, y kit.conf solo mira el código: habría publicado"
+    elif [ "$codigo" -ne "$COD_PROBLEMAS" ]; then
+        # Cada fixture de aquí abajo monta UN defecto distinto; si alguno saliera con un código
+        # que no es el fijo de «hay problemas», ya no se distinguiría de «no pude mirar» —que
+        # es exactamente la cláusula 2 del delta: el código no puede depender de CUÁL problema.
+        caso 1 "$desc — lo dijo, pero con código $codigo en vez de $COD_PROBLEMAS: se confunde con «no pude mirar»"
     elif contiene "$S" "$patron"; then
         caso 0 "$desc"
     else
@@ -183,10 +196,35 @@ echo "▶ y el árbol sano, que es el que impide que todo lo anterior pase por c
 
 kit_sano sano
 S="$(comprueba sano)"; CODIGO=$?
-if [ "$CODIGO" -eq 0 ] && contiene "$S" "kit sano"; then
-    caso 0 "un árbol de kit correcto sale limpio, y con código 0"
+if [ "$CODIGO" -eq "$COD_SANO" ] && contiene "$S" "kit sano"; then
+    caso 0 "un árbol de kit correcto sale limpio, y con código $COD_SANO"
 else
     caso 1 "un árbol de kit correcto sale limpio — si falla, los casos de arriba pasan por construcción: $(printf '%s' "$S" | grep '❌' | head -1)"
+fi
+
+echo "▶ los tres códigos de salida, que es lo que arregla este cambio"
+
+# El escenario del delta: MÁS DE UN problema real, y el código tiene que seguir siendo el
+# mismo «hay problemas» que un solo defecto — no el número de fallos, que es lo que rompía
+# esto antes de este cambio.
+kit_sano varios_defectos
+printf '{ esto no es json\n' > "$TMP/varios_defectos/.claude-plugin/marketplace.json"
+printf '{\n  "name": "k",\n  "version": "1.0.0",\n  "agents": "./agents"\n}\n' \
+    > "$TMP/varios_defectos/.claude-plugin/plugin.json"
+S="$(comprueba varios_defectos)"; CODIGO=$?
+if [ "$CODIGO" -eq "$COD_PROBLEMAS" ] && contiene "$S" "2 problema"; then
+    caso 0 "un árbol con VARIOS defectos sale con el mismo código que uno solo, y dice cuántos"
+else
+    caso 1 "un árbol con varios defectos — código $CODIGO (se esperaba $COD_PROBLEMAS) o no contó bien: $(printf '%s' "$S" | tail -1)"
+fi
+
+# La raíz inexistente: antes de este cambio salía con 1, el MISMO código que un único
+# problema real. Es la colisión que dispara todo el arreglo.
+S="$(bash "$AUTO" "$TMP/esta-raiz-no-existe" 2>&1)"; CODIGO=$?
+if [ "$CODIGO" -eq "$COD_NO_PUDE_MIRAR" ] && contiene "$S" "no existe la raíz"; then
+    caso 0 "una raíz que no existe sale con el código de «no pude mirar», no con el de «hay problemas»"
+else
+    caso 1 "una raíz que no existe — código $CODIGO (se esperaba $COD_NO_PUDE_MIRAR): $(printf '%s' "$S" | tail -1)"
 fi
 
 # El escenario «sin argumento» del delta no lo ejercía ningún caso: todos los de arriba pasan
@@ -207,4 +245,4 @@ else
     caso 1 "sin argumento resuelve su propia raíz — desde / dijo otra cosa que apuntándolo a ella"
 fi
 
-resumen "autocomprueba.sh" "el-que-comprueba-tambien-se-comprueba"
+resumen "autocomprueba.sh" "donde-la-regla-solo-llego-a-un-hermano"

@@ -94,11 +94,24 @@ EOF
     esac
 }
 
+# cuerpo_corto <fichero>   → 3 líneas, como cuerpo_de 3, pero BAJO los 60 caracteres
+#                            normalizados: 25, medido — el segundo suelo del detector
+cuerpo_corto() {
+    cat > "$1" <<'EOF'
+struct Breve {
+    func iguales(_ a: Int, _ b: Int) -> Bool {
+        let ok = a == b
+        return ok
+    }
+}
+EOF
+}
+
 # detecta <directorio> [args...]   → la salida del detector sobre ese árbol
 detecta() { local d="$1"; shift; (cd "$d" && python3 "$DETECTOR" . "$@" 2>&1); }
 
 mkdir -p "$TMP/enlazado/Sources" "$TMP/enlazado/Plugins" \
-         "$TMP/copias" "$TMP/limpio" "$TMP/suelo2" "$TMP/suelo3" "$TMP/suelo4"
+         "$TMP/copias" "$TMP/limpio" "$TMP/suelo2" "$TMP/suelo3" "$TMP/suelo4" "$TMP/suelo3_corto"
 
 # El mismo fichero, alcanzable por dos rutas. Es el caso de `spm-pro`.
 cuerpo_largo "$TMP/enlazado/Sources/Real.swift" describeError
@@ -114,6 +127,7 @@ cuerpo_largo "$TMP/limpio/Solo.swift" describeError
 cuerpo_de 2 "$TMP/suelo2/A.swift"; cp "$TMP/suelo2/A.swift" "$TMP/suelo2/B.swift"
 cuerpo_de 3 "$TMP/suelo3/A.swift"; cp "$TMP/suelo3/A.swift" "$TMP/suelo3/B.swift"
 cuerpo_de 4 "$TMP/suelo4/A.swift"; cp "$TMP/suelo4/A.swift" "$TMP/suelo4/B.swift"
+cuerpo_corto "$TMP/suelo3_corto/A.swift"; cp "$TMP/suelo3_corto/A.swift" "$TMP/suelo3_corto/B.swift"
 
 echo "A.swift"    > "$TMP/tocados-suyo.txt"
 echo "ajeno.swift" > "$TMP/tocados-ajeno.txt"
@@ -165,6 +179,13 @@ contiene "$S" "sin lógica repetida"; caso $? \
 S="$(detecta "$TMP/suelo3")"
 contiene "$S" "cuerpo(s) repetido(s)"; caso $? \
     "un ayudante de TRES líneas copiado en dos ficheros SÍ se reporta"
+
+# El segundo suelo, el que hasta este cambio no tenía ni comentario: mismo largo en líneas que
+# el caso de arriba, pero por debajo de los 60 caracteres normalizados. Por él NO se reporta,
+# y eso es lo que la spec `deteccion-de-duplicados` pasa a declarar en vez de dejarlo mudo.
+S="$(detecta "$TMP/suelo3_corto")"
+contiene "$S" "sin lógica repetida"; caso $? \
+    "un cuerpo de TRES líneas por DEBAJO del suelo de caracteres no se reporta"
 
 S="$(detecta "$TMP/suelo4")"
 contiene "$S" "cuerpo(s) repetido(s)"; caso $? \

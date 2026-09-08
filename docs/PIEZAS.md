@@ -144,24 +144,42 @@ mecanismo.
 
 **Cuándo:** en cada turno (`UserPromptSubmit`) y tras cada compactación.
 
-Inyecta tres cosas y ninguna más: las reglas que ningún linter puede comprobar, el cambio
-OpenSpec activo con sus tareas pendientes y su «fuera de alcance», y si la firma de
-verificación corresponde al árbol actual.
+Inyecta cinco cosas y ninguna más: de qué repositorio habla —el plugin se instala para el
+usuario, no para un proyecto, así que no es un dato gratis—, las reglas que ningún linter
+puede comprobar, el cambio OpenSpec activo con sus tareas pendientes y su «fuera de alcance»,
+qué dependencias traen reglas propias, y si la firma de verificación corresponde al árbol
+actual. La de las dependencias solo aparece si las hay, así que en un repositorio sin ninguna
+verás cuatro.
 
 **Por qué así:** contra la deriva no sirve obligar a releer una skill — el modelo cree que
 se acuerda y no relee. Sirve que el texto esté delante **otra vez**, y que sea **corto**: un
 digest que se lee, no un documento que se ignora.
 
-**Lo que cuesta, medido el 2026-09-08** (`/usr/bin/time` sobre tres corridas, DerivedData de
-2,6 GB): el recorrido que busca las dependencias tarda **0,39 s en frío y 0,08 s en caliente**,
-y solo se hace **una vez al día** — el resto de turnos leen el caché. Corre antes de que salga
-tu prompt, así que ese cuarto de segundo lo pagas tú una vez cada mañana. Se declara porque
-el coste de la puerta sí estaba medido y el de este hook no, y un coste que nadie mide acaba
-siendo el que sorprende.
+**Las dependencias que anuncia son las de TU repositorio**, no las de la máquina. Se acotan
+por el nombre de la carpeta del repo contra el `<Proyecto>-<hash>` de DerivedData, que es una
+heurística y falla hacia el lado seguro: si tu `.xcodeproj` se llama distinto de la carpeta
+que lo contiene, el hook calla en vez de anunciarte las dependencias de otro proyecto. El
+detalle, con lo que se pierde, está declarado en el script.
+
+**Lo que cuesta, medido el 2026-09-08** (tres corridas, DerivedData de 2,6 GB): el recorrido
+que busca las dependencias tarda **entre 0,1 y 0,45 s en frío según el repositorio, y menos
+de 0,1 s en caliente**, y solo se hace **una vez al día** — el resto de turnos leen el caché.
+Corre antes de que salga tu prompt, así que esa fracción de segundo la pagas una vez cada
+mañana.
+
+Va como rango y no como número único a propósito: el intento de dar un antes/y-después exacto
+del acotado salió contaminado —la primera corrida deja DerivedData caliente en la caché del
+sistema y la segunda mide eso—, así que lo que se publica es lo que se pudo medir sin
+trampa. Se declara porque el coste de la puerta sí estaba medido y el de este hook no, y un
+coste que nadie mide acaba siendo el que sorprende.
 
 ### `puerta-commit.sh` — el único que bloquea
 
-**Cuándo:** `PreToolUse` sobre Bash. Si el comando contiene `git commit`, exige firma válida.
+**Cuándo:** `PreToolUse` sobre Bash. Analiza la invocación con `shlex` —no busca la subcadena
+`git commit`— y exige firma válida del repositorio al que va el commit: el que señale `-C`,
+`--git-dir` o un `cd` encadenado por delante, o si no hay pista, el del directorio heredado.
+Qué formas de invocación cubre y cuáles no, declarado en la cabecera de
+`scripts/puerta-commit.sh` y `scripts/analiza-invocacion.py`.
 
 `PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único hook
 que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.

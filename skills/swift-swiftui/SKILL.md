@@ -6,11 +6,14 @@ description: Reglas de Swift y SwiftUI para código escrito por agentes, adaptad
 # Swift y SwiftUI — reglas de código
 
 Adaptado de [SwiftAgents](https://github.com/twostraws/SwiftAgents) (Paul Hudson).
-**Ojo:** el original apunta a **iOS 26+**; esta app despliega en **iOS 17**, así que las
-reglas que exigen APIs más nuevas están marcadas como NO aplicables.
+**Ojo:** el original apunta a **iOS 26+**. El objetivo de despliegue (deployment target) lo
+declara CADA proyecto —no esta skill—, así que las reglas de aquí que exigen una versión de
+iOS más nueva que ESE objetivo están marcadas aparte, al final, para revisarlas contra el
+tuyo antes de aplicarlas.
 
-Medido el 2026-09-05 sobre los 88 ficheros Swift de este repo: **cero infracciones**. Esto
-no es una lista de deuda, es una barandilla para el código que se escriba a partir de ahora.
+Medido el 2026-09-05 sobre los 88 ficheros Swift del proyecto donde se probó esta skill:
+**cero infracciones**. Esto no es una lista de deuda, es una barandilla para el código que
+se escriba a partir de ahora.
 
 ## Swift
 
@@ -39,17 +42,27 @@ no es una lista de deuda, es una barandilla para el código que se escriba a par
 - Lógica de vista en el view model, para que se pueda testear.
 - Sin colores de UIKit en SwiftUI.
 
-## NO aplicables a este proyecto (iOS 17)
+## Marcadas aparte: exigen más iOS del que tu proyecto quizá declare
 
-- ~~`Tab` API en vez de `tabItem()`~~ — requiere iOS 18.
-- ~~"usa las ScrollView APIs más nuevas"~~ — `ScrollPosition` es iOS 18.
-- ~~"target iOS 26.0 o superior"~~ — este proyecto despliega en iOS 17.
+Aplícalas solo si el `deployment target` de TU proyecto ya las cubre; si tu proyecto
+despliega en una versión anterior a la que cada una pide, quedan fuera:
 
-## Este proyecto, además
+- `Tab` API en vez de `tabItem()` — requiere iOS 18.
+- "usa las ScrollView APIs más nuevas" — `ScrollPosition` es iOS 18.
+- "target iOS 26.0 o superior" — es el objetivo del propio SwiftAgents, no un hecho de tu
+  proyecto: usa el `deployment target` que tu proyecto declare, sea cual sea.
 
-- La arquitectura manda: ver `AGENTS.md` (capas, imports permitidos, R13/R16) y
-  `.archlint.yml`. Donde SwiftAgents y `AGENTS.md` discrepen, gana `AGENTS.md`.
-- SwiftLint sin avisos antes de commitear.
-- SwiftData: solo `DiagnosticsFeature`. Si algún día va a CloudKit, aplican las tres
-  reglas del original (nada de `@Attribute(.unique)`, propiedades con default u opcionales,
-  relaciones opcionales).
+## Por encima de esta skill: las reglas de tu proyecto
+
+Esta skill viaja instalada en el plugin, así que no sabe nada de tu repositorio. Lo que
+sigue es la precedencia, que sí vale en cualquiera:
+
+- **Donde SwiftAgents y las reglas de tu proyecto discrepen, ganan las de tu proyecto.**
+  Búscalas donde tu repositorio las tenga —un `AGENTS.md`, un `CLAUDE.md`, la configuración
+  de tu linter de arquitectura— y léelas antes que esto.
+- **El linter que tenga tu proyecto, en verde antes de commitear.** Cuál es, y si lo hay,
+  lo dice tu repositorio.
+
+Y una regla del original que no depende de ningún proyecto: si un modelo de SwiftData va a
+CloudKit, aplican las tres de SwiftAgents — nada de `@Attribute(.unique)`, propiedades con
+valor por defecto u opcionales, y relaciones opcionales.

@@ -16,6 +16,16 @@
 # propia raíz, cualquier banco habría comprobado el kit de verdad en vez de fixtures rotos —
 # y por eso fue, hasta que existió su banco, la única pieza con lógica sin nadie que la
 # mirase — justo la que dice «se puede publicar». `kit.conf` lo invoca sin argumentos y no se entera.
+#
+# Códigos de salida: 0 sano · 1 hay problemas, SEA CUAL SEA cuántos · 3 no pude mirar.
+#
+# Hereda la forma de `scripts/verifica.sh` — está documentada, con su razón, en
+# `openspec/specs/verificacion-firmada/spec.md`: «confundirlos hace que un gate roto parezca
+# un proyecto roto, y al revés». Hasta el 2026-09-08 esta puerta —la de publicación, y no la
+# de commit, que es la que ya tenía la regla— salía con `exit "$FALLOS"`, y las dos guardas de
+# abajo salían con 1: un ÚNICO problema real y «no existe la raíz» daban el mismo código. La
+# regla ya existía en el repo; no había llegado a este hermano. El recuento de problemas no se
+# pierde: sigue impreso más abajo, que es donde de verdad se lee.
 set -uo pipefail
 RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # La guarda es por si la resolución por defecto falla: si ese `cd … && pwd` no imprime nada,
@@ -23,8 +33,8 @@ RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # silencio. (Un argumento vacío NO llega hasta aquí: `${1:-…}` sustituye cuando está sin
 # definir *o* vacío, al revés de lo que ponía esta nota antes. Lo midió un juez corriendo
 # `autocomprueba.sh ""`.)
-[ -n "$RAIZ" ] || { echo "❌ raíz vacía: pásame un directorio o ningún argumento"; exit 1; }
-cd "$RAIZ" || { echo "❌ no existe la raíz «$RAIZ»"; exit 1; }
+[ -n "$RAIZ" ] || { echo "❌ raíz vacía: pásame un directorio o ningún argumento"; exit 3; }
+cd "$RAIZ" || { echo "❌ no existe la raíz «$RAIZ»"; exit 3; }
 FALLOS=0
 mal() { printf '❌ %s\n' "$1"; FALLOS=$((FALLOS+1)); }
 bien() { printf '✅ %s\n' "$1"; }
@@ -138,11 +148,16 @@ print("✅ los ficheros del kit se invocan por la raíz del plugin")
 PY3
 
 # 6. Los agentes y comandos tienen frontmatter
+#
+# Se compara contra el contador de ANTES de este punto, no contra 0: comparar con 0 hace que
+# un fallo de un punto anterior (un JSON roto, por ejemplo) silencie este ✅ aunque el
+# frontmatter esté perfecto — el acumulado no es el de este punto.
+ANTES_DEL_6=$FALLOS
 for f in agents/*.md commands/*.md skills/*/SKILL.md; do
     head -1 "$f" | grep -q '^---$' && continue
     mal "$f no empieza con frontmatter ---"
 done
-[ "$FALLOS" -eq 0 ] && bien "agentes, comandos y skills con frontmatter"
+[ "$FALLOS" -eq "$ANTES_DEL_6" ] && bien "agentes, comandos y skills con frontmatter"
 
 # 7. Que ningún documento escriba a mano cuántas piezas trae el kit.
 #
@@ -211,4 +226,8 @@ PY4
 
 echo
 [ "$FALLOS" -eq 0 ] && echo "✅ kit sano — se puede publicar." || echo "❌ $FALLOS problema(s): NO publiques."
-exit "$FALLOS"
+
+# El rojo es 1 SIEMPRE, no `$FALLOS` — igual que en `verifica.sh` y por la misma razón: si
+# saliera con el recuento, tres problemas y una raíz inexistente (3) serían indistinguibles
+# para quien solo mira el código. El número ya se imprimió arriba, que es donde se lee.
+[ "$FALLOS" -eq 0 ] && exit 0 || exit 1

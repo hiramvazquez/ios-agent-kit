@@ -1,47 +1,6 @@
-# deteccion-de-duplicados Specification
+# deteccion-de-duplicados — delta
 
-## Purpose
-
-Cazar el mismo cuerpo de función escrito en dos sitios. Ningún linter lo ve —cada copia es
-correcta por separado— y ninguna revisión lo caza, porque el revisor mira UN diff y las
-copias nacieron en semanas distintas. El caso que lo motivó fueron tres `extension Date` en
-tres view models.
-
-Lo que **no** pretende: detección semántica. Dos funciones que hacen lo mismo escritas
-distinto no se parecen para él. Y no distingue la copia deliberada de la accidental — eso lo
-decide quien tiene el cambio delante, por eso avisa y no bloquea.
-
-Lo que sí exige de sí mismo: contar una vez lo que es un fichero, y no mover su suelo de
-ruido con una medición que solo cuente grupos. Las dos cosas nacen del mismo error, cometido
-aquí: un recuento agregado se lee perfectamente bien mientras esconde que lo que se fue era
-justo lo que había que ver.
-
-## Requirements
-
-### Requirement: Un fichero real cuenta una vez
-
-El detector de lógica repetida SHALL contar una sola vez un fichero alcanzable por más de
-una ruta.
-
-1. Dos rutas que resuelven al mismo fichero real NO SHALL producir un grupo de duplicados.
-2. La deduplicación SHALL hacerse por identidad del fichero, no por una lista de directorios
-   excluidos escrita a mano.
-
-Un symlink no es una copia deliberada: es el mismo fichero. Enlazar fuentes es el apaño
-estándar cuando un build tool plugin de SwiftPM no puede depender de un target de librería,
-así que esto reaparece en cualquier repositorio de paquetes. Medido el 2026-09-08 en
-`spm-pro`: cuatro symlinks producían 21 de los 28 grupos reportados.
-
-La 2 existe porque una lista de excepciones envejece y hay que mantenerla, y porque la
-pregunta que hay que responder no es «¿ignoro este directorio?» sino «¿son dos ficheros o
-uno?».
-
-#### Scenario: Fuentes enlazadas desde un plugin de SwiftPM
-
-- **WHEN** el detector recorre un repositorio donde un directorio de plugin enlaza las
-  fuentes de un target
-- **THEN** no reporta ningún grupo por esas rutas enlazadas
-- **AND** sigue reportando los duplicados que sí son ficheros distintos
+## MODIFIED Requirements
 
 ### Requirement: El suelo de ruido está declarado, y medido por identidad
 

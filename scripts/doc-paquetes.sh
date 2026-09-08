@@ -15,12 +15,33 @@
 # Esto imprime las rutas que existen AHORA MISMO, resueltas. Nada más. No resume la doc ni
 # la inyecta: un digest de documentación ajena envejece y miente. Da direcciones.
 set -uo pipefail
-cd "$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "no es un repo git"; exit 1; }
+# `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo: `cd ""` devuelve 0 en bash, así
+# que la guarda nunca ve el fallo de git y este script seguiría buscando `.build/checkouts` a
+# partir de donde se le invoque. La asignación SÍ propaga el código de git —`verifica.sh` ya
+# lo hace así—, así que se comprueba la resolución, no el `cd`.
+RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "no es un repo git"; exit 1; }
+cd "$RAIZ" || exit 1
 
 # Los dos sitios donde SPM deja las fuentes resueltas, más las dependencias por ruta local.
 CHECKOUTS=()
 while IFS= read -r d; do CHECKOUTS+=("$d"); done < <(
-    find . -maxdepth 5 -type d -path "*/.build/checkouts/*" -depth 1 2>/dev/null
+    # `-depth 1` en el `find` de BSD (macOS) significa profundidad EXACTAMENTE 1, incompatible
+    # con `-path "*/.build/checkouts/*"` (necesita profundidad ≥3): la condición era
+    # insatisfacible y esa rama nunca devolvió nada. Comprobado el 2026-09-08 montando
+    # `.build/checkouts/MiPaquete/` con su `Package.swift` y su `AGENTS.md`: no aparecía.
+    #
+    # El `! -path ".../*/*"` es lo que impide que quitarlo ensanche de más, y no es teórico:
+    # `-path "*/.build/checkouts/*"` casa también con los subdirectorios DE DENTRO de un
+    # checkout, así que cualquier `Package.swift` anidado se anunciaba como dependencia del
+    # proyecto. Medido el 2026-09-08 con el layout real de `swift-syntax`, que trae
+    # `CodeGeneration/` y `SwiftParserCLI/` con el suyo: tres directorios internos de UN
+    # paquete listados como tres dependencias. Lo encontró el revisor; la primera versión de
+    # este arreglo afirmaba en este mismo comentario que no ensanchaba, y era falso.
+    #
+    # Es lo que la rama de DerivedData de abajo ya consigue con su `-maxdepth 1 -mindepth 1`:
+    # quedarse en el nivel del checkout y no bajar.
+    find . -maxdepth 5 -type d -path "*/.build/checkouts/*" \
+         ! -path "*/.build/checkouts/*/*" 2>/dev/null
     find "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 3 -type d \
          -name checkouts -path "*SourcePackages*" 2>/dev/null \
       | while read -r c; do find "$c" -maxdepth 1 -mindepth 1 -type d; done

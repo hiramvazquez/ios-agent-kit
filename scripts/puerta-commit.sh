@@ -26,101 +26,27 @@
 #     máquina, y fingir lo contrario es peor que no tenerlo.
 #   - Un commit desde otra terminal, o desde un git que no pase por la herramienta Bash de
 #     Claude Code, no lo ve nadie.
-#   - El análisis es sintáctico. Cubre la invocación directa, la dirigida con `-C` o
-#     `--git-dir`, y un `cd <ruta>` encadenado por delante. Una construida en tiempo de
-#     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable— cae al
-#     directorio heredado, que es el comportamiento de antes. El olvido tiene formas
-#     comunes, no retorcidas.
+#   - El análisis es sintáctico, y esta lista es lo que de verdad cubre —no lo que sería
+#     bonito que cubriera—: la invocación directa; la dirigida con `-C`, `--git-dir` o
+#     `--git-dir=`; un `cd`/`pushd` encadenado por delante, también dentro de `( … )` o
+#     `{ …; }`; y un `bash -c '…'` (o `sh`/`zsh`) analizado por dentro, hasta 4 niveles.
+#     La primera versión de esta lista decía «un `cd` encadenado por delante» a secas y era
+#     FALSA: `(cd X && …)` caía al directorio heredado, porque el primer token del segmento
+#     era `(` y el `cd` no se registraba. Lo encontró un juez de aceptación, no las pruebas.
+#   - Lo que NO cubre, y cae al directorio heredado: una invocación construida en tiempo de
+#     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable—, y
+#     cualquier envoltorio que no sea un shell de la lista. El olvido tiene formas comunes,
+#     no retorcidas; estas no son las comunes.
 set -uo pipefail
 
-# El comando se lee ANTES y aparte, porque el analizador de abajo llega por stdin: si se
-# leyera el JSON allí, `python3 -` estaría usando stdin para el programa y para los datos a
-# la vez, y el JSON no llegaría nunca. Pasó en la primera versión de este arreglo y el
-# síntoma era mudo — el analizador respondía «no es un commit» a todo y la puerta dejaba
-# pasar cualquier cosa. Lo cazó `verifica-puerta.sh`.
+# El análisis vive en `analiza-invocacion.py`, en su propio fichero y con UNA sola
+# invocación de python: antes eran dos —una para leer el JSON, otra para analizar— y eso
+# costaba +12,6 ms en CADA comando de la sesión, medidos sobre 30 iteraciones.
 #
-# Fallo ABIERTO si el JSON no se puede leer: sin entrada no se puede afirmar que haya un
-# commit, y bloquear ante un JSON raro convertiría un fallo del hook en una sesión
-# inutilizable.
-CMD="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("command",""))' 2>/dev/null)" || CMD=""
-
-# El análisis va en python: `shlex` sabe de comillas y de operadores, y bash no sin
-# reimplementarlo mal. Imprime una línea:
-#   NO                → esto no es un commit
-#   COMMIT <ruta>     → sí lo es, y la ruta es la pista de dónde (o "." si no hay pista)
-ANALISIS="$(python3 - "$CMD" <<'PY'
-import shlex, sys
-
-cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-
-try:
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
-    lex.whitespace_split = True
-    tokens = list(lex)
-except ValueError:
-    # Comillas sin cerrar: no es un comando que vaya a ejecutarse tal cual. Fallo ABIERTO,
-    # mismo argumento que arriba.
-    print("NO"); sys.exit(0)
-
-SEPARADORES = {";", "&&", "||", "|", "&", "\n"}
-
-# Trocea en comandos simples. Un `cd` solo manda sobre lo que viene después de él.
-segmentos, actual = [], []
-for t in tokens:
-    if t in SEPARADORES:
-        segmentos.append(actual); actual = []
-    else:
-        actual.append(t)
-segmentos.append(actual)
-
-# Opciones globales de git que se COMEN el argumento siguiente. Sin esta lista, en una
-# invocación dirigida con `-C /ruta` el subcomando parecería ser "/ruta".
-CON_VALOR = {"-C", "--git-dir", "--work-tree", "-c", "--exec-path", "--namespace",
-             "--super-prefix", "--config-env"}
-
-cd_pendiente = None   # último `cd <ruta>` visto en la cadena
-
-for seg in segmentos:
-    if not seg:
-        continue
-    # Saltar asignaciones que preceden al comando: FOO=bar git …
-    i = 0
-    while i < len(seg) and "=" in seg[i] and not seg[i].startswith("-") \
-            and "/" not in seg[i].split("=")[0]:
-        i += 1
-    if i >= len(seg):
-        continue
-    base = seg[i].rsplit("/", 1)[-1]
-
-    if base == "cd" and i + 1 < len(seg):
-        cd_pendiente = seg[i + 1]
-        continue
-
-    if base != "git":
-        continue
-
-    ruta = None
-    j = i + 1
-    while j < len(seg):
-        a = seg[j]
-        if a in CON_VALOR:
-            if a in ("-C", "--git-dir") and j + 1 < len(seg):
-                ruta = seg[j + 1]
-            j += 2
-            continue
-        if a.startswith("--git-dir="):
-            ruta = a.split("=", 1)[1]; j += 1; continue
-        if a.startswith("-"):
-            j += 1; continue
-        # Primer argumento que no es opción ni valor de opción: el subcomando.
-        if a == "commit":
-            print("COMMIT " + (ruta or cd_pendiente or "."))
-            sys.exit(0)
-        break   # es otro subcomando de git; este segmento no nos interesa
-
-print("NO")
-PY
-)"
+# Fallo ABIERTO si algo va mal ahí dentro: sin poder leer la entrada no se puede afirmar
+# que haya un commit, y bloquear ante un JSON raro convertiría un fallo del hook en una
+# sesión inutilizable.
+ANALISIS="$(python3 "$(dirname "${BASH_SOURCE[0]}")/analiza-invocacion.py" 2>/dev/null)" || ANALISIS="NO"
 
 case "$ANALISIS" in
     COMMIT*) ;;

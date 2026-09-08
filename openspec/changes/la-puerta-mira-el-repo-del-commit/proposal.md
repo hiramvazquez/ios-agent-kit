@@ -106,8 +106,11 @@ firma sigue bloqueado. Eso no es el bug, eso es la puerta.
       pasa. Fijado por una prueba que falla contra el script actual.
 - [ ] Un commit dirigido con `-C` a otro repo CON firma válida para su diff staged SHALL
       pasar.
-- [ ] Un `cd <otro-repo> && …` seguido de commit SHALL comportarse igual que los dos
-      anteriores.
+- [ ] Un `cd`/`pushd <otro-repo>` seguido de commit SHALL comportarse igual que los dos
+      anteriores, **también agrupado** —`(cd X && …)`, `{ cd X && …; }`— y **envuelto** en
+      un `bash -c '…'`. Añadido en la renegociación del 2026-09-08: la redacción anterior
+      decía «`cd <otro-repo> && …`» y se cumplía solo en su forma desnuda, mientras la
+      cabecera del script afirmaba cubrir «un `cd` encadenado por delante» a secas.
 - [ ] Un commit a secas en el repo de la sesión SHALL comportarse exactamente como hoy:
       verde si hay firma, bloqueo si no. Es el caso que no puede romperse.
 - [ ] Un comando que solo MENCIONA las palabras sin invocar git —un `echo`, un `grep`, un
@@ -117,8 +120,32 @@ firma sigue bloqueado. Eso no es el bug, eso es la puerta.
       allí. Fijado por prueba que falla contra el script actual.
 - [ ] Un commit en un repositorio CON `kit.conf` y sin firma válida SHALL seguir
       bloqueado. Es el caso que este cambio no puede aflojar.
-- [ ] Un comando que no es un commit SHALL seguir saliendo por `exit 0` sin coste medible.
-- [ ] Cada `exit 0` del script SHALL llevar escrito si falla abierto o cerrado y por qué.
+- [ ] Un comando que no es un commit SHALL salir por `exit 0` **sin costar más que la
+      versión anterior del hook**, medido sobre 30 iteraciones del mismo comando.
+      Renegociado el 2026-09-08: decía «sin coste medible», que no tiene umbral ni método y
+      por tanto no se puede cumplir — todo coste es medible. El juez lo midió y encontró
+      +12,6 ms (+34 %), porque el arreglo pasó de un `git` + un `python3` a dos `python3`.
+      El umbral nuevo es comparativo y falsificable, y obliga a lo que había que hacer:
+      dejarlo en UNA sola invocación de intérprete.
+- [ ] Cada salida que deje pasar el comando sin comprobar la firma SHALL llevar escrito, en
+      el propio código, si falla abierto o cerrado y por qué. Renegociado el 2026-09-08:
+      decía «cada `exit 0` del script», que es un criterio léxico y dejaba fuera el
+      `sys.exit(0)` del analizador en python; el requisito 4 del delta de spec ya lo decía
+      en forma semántica y es la que manda.
 - [ ] La cabecera del script y la doc del README SHALL describir los límites reales tras el
       cambio; ningún límite hoy declarado SHALL desaparecer sin sustituto escrito.
-- [ ] Ninguna prueba nueva SHALL pasar contra el script sin arreglar. Verificado una a una.
+- [ ] Cada prueba que fija uno de los fallos SHALL salir ROJA contra el script sin
+      arreglar, y las de no-regresión SHALL salir verdes contra ambas versiones. Verificado
+      una a una. Renegociado el 2026-09-08: decía «ninguna prueba nueva SHALL pasar contra
+      el script sin arreglar», y eso **contradecía** al criterio del caso que no puede
+      romperse — sus pruebas también son nuevas, y tienen que pasar contra las dos
+      versiones. No había código capaz de satisfacer los dos a la vez. La distinción que
+      siempre se quiso está en el propio banco, que marca 🔴 los casos que fijan un fallo y
+      ✅ los demás.
+- [ ] El motivo del bloqueo SHALL nombrar el repositorio comprobado, y una prueba SHALL
+      fijarlo. Añadido el 2026-09-08: el delta de spec ya lo exigía y ninguna prueba lo
+      miraba — el banco solo casaba contra `permissionDecision: deny`.
+- [ ] El recuento de casos del banco NO SHALL escribirse a mano en ningún sitio. Añadido el
+      2026-09-08: el commit anterior dejó «once casos» en `kit.conf` y en el propio banco, y
+      «diez casos» en el README, contradiciéndose a sí mismo el mismo día. Un censo a mano
+      envejece en cuanto alguien añade un caso.

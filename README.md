@@ -149,7 +149,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `verifica-puerta.sh`, `verifica-contexto.sh`, `doc-paquetes.sh`, `rodaja.sh` |
+| `scripts/` | `verifica.sh`, `busca-duplicados.py`, `inyecta-contexto.sh`, `puerta-commit.sh`, `analiza-invocacion.py`, `lib-banco.sh`, `verifica-puerta.sh`, `verifica-contexto.sh`, `doc-paquetes.sh`, `rodaja.sh` |
 
 ### Para mejorar el kit
 
@@ -190,11 +190,17 @@ encadenado por delante. Y se desentiende de los repositorios sin `kit.conf` — 
 flujo que proteger, y exigir una firma que `verifica.sh` tampoco puede crear allí dejaría el
 commit sin salida.
 
+Sigue la pista también cuando el `cd` va agrupado —`(cd X && …)`, `{ cd X && …; }`— o
+envuelto en un `bash -c '…'`. Esa lista no es de adorno: la primera versión decía «un `cd`
+encadenado por delante» a secas y era **falsa**, porque el primer token del segmento era `(`
+y el `cd` no se registraba. Lo encontró un juez de aceptación con el banco en verde.
+
 Lo que **no** frena, dicho porque un límite que no se declara se convierte en una promesa
 falsa: `--no-verify`, un commit desde otra terminal, y una invocación construida en tiempo
 de ejecución (`$CMD`, un alias, un `eval`), que cae al directorio heredado. Frena el olvido,
-y el olvido tiene formas comunes. Los diez casos que sí cubre están fijados en
-`scripts/verifica-puerta.sh`.
+y el olvido tiene formas comunes. Los casos que sí cubre están fijados en
+`scripts/verifica-puerta.sh`, que imprime cuántos son — aquí no se escribe el número, que
+es como se acabó diciendo «diez» donde el banco decía once.
 
 ---
 

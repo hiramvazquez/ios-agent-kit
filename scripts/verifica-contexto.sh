@@ -7,43 +7,30 @@
 # mientras el repositorio donde se trabajaba tenía uno con siete tareas hechas, y además
 # dejó un `.agent-kit/` en un repositorio que no usa el kit.
 #
-# Se escribe ANTES del arreglo: contra la versión sin arreglar tiene que salir rojo en los
-# casos que fijan esos dos fallos, y verde en los que no pueden romperse.
-#
 # Uso:  bash scripts/verifica-contexto.sh
 #
 # Se puede apuntar a otra versión con HOOK_BAJO_PRUEBA, para comprobar caso por caso que
-# cada prueba nueva falla contra la versión vieja:
+# cada prueba que fija un fallo sale roja contra la versión sin arreglar:
 #
 #   git show <commit>:scripts/inyecta-contexto.sh > scripts/.contexto-viejo.sh
 #   HOOK_BAJO_PRUEBA="$PWD/scripts/.contexto-viejo.sh" bash scripts/verifica-contexto.sh
 set -uo pipefail
 
-HOOK="${HOOK_BAJO_PRUEBA:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/inyecta-contexto.sh}"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$DIR/lib-banco.sh"
+
+HOOK="${HOOK_BAJO_PRUEBA:-$DIR/inyecta-contexto.sh}"
 [ -f "$HOOK" ] || { echo "no encuentro el hook en $HOOK"; exit 2; }
 
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
-
-FALLOS=0
-ROJOS_ESPERADOS=0
-
-# --- utilidades -------------------------------------------------------------------------
+# --- montaje ----------------------------------------------------------------------------
 
 # repo <nombre> <openspec:sin|vacio|activo> <kit_conf:si|no> [nombre_dependencia]
 repo() {
     local nombre="$1" ospec="$2" conf="$3" dep="${4:-}"
-    local r="$TMP/$nombre"
-    mkdir -p "$r" || return 1
+    repo_base "$nombre" "$conf" || return 1
     (
-        cd "$r" || exit 1
-        git init -q .
-        git config user.email t@t.t
-        git config user.name t
-        echo base > base.txt
-        git add base.txt
-        git commit -qm base
-        [ "$conf" = "si" ] && echo 'verificaciones() { :; }' > kit.conf
+        cd "$TMP/$nombre" || exit 1
         case "$ospec" in
             vacio)  mkdir -p openspec/changes/archive ;;
             activo)
@@ -59,7 +46,8 @@ repo() {
             echo "reglas de $dep" > ".build/checkouts/$dep/AGENTS.md"
         fi
         git add -A >/dev/null 2>&1
-        git commit -qm contenido >/dev/null 2>&1
+        git -c user.name=t -c user.email=t@t.t commit -qm contenido >/dev/null 2>&1
+        exit 0
     )
 }
 
@@ -81,22 +69,6 @@ except Exception:
     print("")'
     )
 }
-
-# caso <nombre> <resultado:0|1> <descripción> [conocido]
-caso() {
-    local ok="$1" desc="$2" conocido="${3:-}"
-    if [ "$ok" -eq 0 ]; then
-        printf '  ✅ %s\n' "$desc"
-    elif [ -n "$conocido" ]; then
-        printf '  🔴 %s\n     %s\n' "$desc" "$conocido"
-        ROJOS_ESPERADOS=$((ROJOS_ESPERADOS+1))
-    else
-        printf '  ❌ %s\n' "$desc"
-        FALLOS=$((FALLOS+1))
-    fi
-}
-
-contiene() { case "$1" in *"$2"*) return 0 ;; *) return 1 ;; esac; }
 
 # --- los repos --------------------------------------------------------------------------
 
@@ -127,38 +99,38 @@ contiene "$D" "Sin cambio OpenSpec activo"; caso $? \
 contiene "$D" "/opsx:propose"; caso $? \
     "con openspec/ y sin cambio activo, manda proponer"
 
-echo "▶ el digest dice de qué repo habla (criterio 1)"
+echo "▶ el digest dice de qué repo habla"
 
 for r in con_cambio sin_cambio ajeno; do
-    D="$(digest "$TMP/$r")"
-    contiene "$D" "$r"; caso $? \
+    D="$(digest "$TMP/${r}")"
+    contiene "$D" "${r}"; caso $? \
         "en «${r}», el digest nombra el repo" \
-        "hoy no lo nombra: sus afirmaciones flotan y se leen como si fueran del repo donde se trabaja"
+        "no lo nombraba: sus afirmaciones flotaban y se leían como del repo donde se trabaja"
 done
 
-echo "▶ un repo sin OpenSpec no recibe órdenes de OpenSpec (criterio 2)"
+echo "▶ un repo sin OpenSpec no recibe órdenes de OpenSpec"
 
 D="$(digest "$TMP/ajeno")"
 if contiene "$D" "/opsx:propose"; then caso 1 \
     "sin openspec/, NO manda proponer" \
-    "hoy da la misma orden que a un repo del kit, y ahí nadie puede seguirla"
+    "daba la misma orden que a un repo del kit, y ahí nadie puede seguirla"
 else caso 0 "sin openspec/, NO manda proponer"; fi
 
 if contiene "$D" "no usa OpenSpec" || contiene "$D" "no tiene OpenSpec"; then caso 0 \
     "sin openspec/, dice que ese repo no usa OpenSpec"
 else caso 1 \
     "sin openspec/, dice que ese repo no usa OpenSpec" \
-    "hoy sale por la misma rama que «sin cambio activo» y no distingue una cosa de la otra"; fi
+    "salía por la misma rama que «sin cambio activo» y no distinguía una cosa de la otra"; fi
 
-echo "▶ no escribir en repos ajenos (criterio 4)"
+echo "▶ no escribir en repos ajenos"
 
 digest "$TMP/ajeno" >/dev/null
 SUCIO="$(cd "$TMP/ajeno" && git status --porcelain)"
 if [ -z "$SUCIO" ]; then caso 0 "tras correr en un repo ajeno, git status sigue limpio"
 else caso 1 "tras correr en un repo ajeno, git status sigue limpio" \
-    "hoy le crea .agent-kit/ sin preguntar: $(printf '%s' "$SUCIO" | tr '\n' ' ')"; fi
+    "le creaba .agent-kit/ sin preguntar: $(printf '%s' "$SUCIO" | tr '\n' ' ')"; fi
 
-echo "▶ el caché no se sirve de un repo a otro (criterios 5-6)"
+echo "▶ el caché"
 
 D1="$(digest "$TMP/con_cambio")"     # depende de PaqueteUno
 D2="$(digest "$TMP/otro_dep")"       # depende de PaqueteDos
@@ -170,15 +142,22 @@ else
         "D1=[$(printf '%s' "$D1" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')] D2=[$(printf '%s' "$D2" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')]"
 fi
 
-# --- resumen ----------------------------------------------------------------------------
+# El criterio decía que el caché «evita el recorrido en turnos consecutivos» y NADIE lo
+# comprobaba: solo se afirmaba en un comentario. Lo señaló un juez de aceptación. Se fija
+# añadiendo una dependencia DESPUÉS del primer turno: si el segundo la ve, es que ha vuelto
+# a recorrer y el caché no sirve para nada.
+mkdir -p "$TMP/con_cambio/.build/checkouts/PaqueteTardio"
+echo reglas > "$TMP/con_cambio/.build/checkouts/PaqueteTardio/AGENTS.md"
+D3="$(digest "$TMP/con_cambio")"
+if contiene "$D3" "PaqueteTardio"; then
+    caso 1 "el segundo turno no vuelve a recorrer: usa el caché" \
+        "vio una dependencia añadida después del primer turno, así que recorrió otra vez"
+else
+    caso 0 "el segundo turno no vuelve a recorrer: usa el caché"
+fi
 
-echo
-if [ "$ROJOS_ESPERADOS" -gt 0 ]; then
-    printf '🔴 %s caso(s) en rojo por el fallo que este banco existe para fijar.\n' "$ROJOS_ESPERADOS"
-    printf '   Se cierran con el cambio «el-contexto-dice-de-que-repo-habla».\n'
-fi
-if [ "$FALLOS" -gt 0 ]; then
-    printf '❌ %s caso(s) fallan por algo que NO estaba previsto — míralos.\n' "$FALLOS"
-fi
-[ "$((FALLOS+ROJOS_ESPERADOS))" -eq 0 ] && echo "✅ el hook cumple los trece casos."
-exit $(( FALLOS + ROJOS_ESPERADOS > 0 ? 1 : 0 ))
+CACHES="$(find "$TMP/cache/ios-agent-kit" -type f 2>/dev/null | wc -l | tr -d ' ')"
+[ "$CACHES" -ge 2 ]
+caso $? "el caché vive fuera del repo, un fichero por repositorio (hay $CACHES)"
+
+resumen "el hook" "el-contexto-dice-de-que-repo-habla"

@@ -77,12 +77,34 @@ repositorio de la tarea, que hoy no existe; el día que exista, esto se sustituy
 - [ ] En un repositorio SIN `openspec/`, el digest SHALL decir que ese repositorio no usa
       OpenSpec, y NO SHALL ordenar `/opsx:propose`. Fijado por prueba.
 - [ ] En un repositorio CON `openspec/` y sin cambio activo, el digest SHALL seguir diciendo
-      exactamente lo que dice hoy. Es el caso que no puede romperse.
+      lo que dice hoy, **salvo las líneas de atribución que este cambio añade delante**. Es
+      el caso que no puede romperse. Renegociado el 2026-09-08: decía «exactamente lo que
+      dice hoy», y el primer requisito de este mismo cambio obliga a añadir esas líneas, así
+      que literalmente era imposible cumplir los dos. La palabra «exactamente» había que
+      corregirla, no reinterpretarla.
 - [ ] Tras correr el hook en un repositorio sin `kit.conf` ni `openspec/`, `git status`
       SHALL quedar como estaba: ningún fichero ni directorio nuevo. Fijado por prueba que
       falla contra el script actual.
 - [ ] El caché de paquetes SHALL seguir evitando el `find` sobre `DerivedData` en turnos
-      consecutivos, viviendo fuera del repositorio observado.
+      consecutivos, viviendo fuera del repositorio observado, **y una prueba SHALL fijarlo**.
+      Ampliado el 2026-09-08: la primera versión de este criterio no pedía prueba, y el
+      comportamiento quedó solo afirmado en un comentario. Lo comprueba añadiendo una
+      dependencia DESPUÉS del primer turno: si el segundo la ve, es que ha vuelto a recorrer.
 - [ ] Dos repositorios distintos SHALL tener cachés distintos; el de uno no SHALL servirse
       al otro. Fijado por prueba.
-- [ ] Ninguna prueba nueva SHALL pasar contra el script sin arreglar. Verificado una a una.
+- [ ] Cada prueba que fija uno de los dos fallos SHALL salir ROJA contra el script sin
+      arreglar, y las de no-regresión SHALL salir verdes contra ambas versiones. Verificado
+      una a una. Renegociado el 2026-09-08, por el mismo motivo y con la misma redacción que
+      en `la-puerta-mira-el-repo-del-commit`: decía «ninguna prueba nueva SHALL pasar contra
+      el script sin arreglar», y eso contradecía tanto al criterio del caché —cuyo
+      aislamiento YA existía, así que su prueba pasa contra las dos versiones— como a la
+      tarea 1, que pide explícitamente «verde en el caso que no puede romperse». El mensaje
+      del commit lo reinterpretó en vez de renegociarlo; un mensaje de commit no es el
+      acuerdo.
+- [ ] El arnés de los bancos de prueba NO SHALL estar duplicado entre ficheros. Añadido el
+      2026-09-08: este banco nació copiando ~33 líneas del de la puerta —`repo()`, `caso()`,
+      el montaje temporal y el resumen entero—, y lo encontró un juez, no el detector de
+      duplicados, que solo lee Swift. La regla que este mismo hook inyecta en cada turno
+      dice «antes de escribir una función, busca si ya existe».
+- [ ] El recuento de casos del banco NO SHALL escribirse a mano en ningún sitio. Añadido el
+      2026-09-08: «trece casos» quedó escrito en `kit.conf` y en el propio banco.

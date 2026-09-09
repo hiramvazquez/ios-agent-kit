@@ -209,6 +209,11 @@ arquitectura no le dejaron pasar. **La regla que se cumple sola es la que está 
 
 ## Coste
 
+Son **dos preguntas distintas** y conviene no mezclarlas, porque la respuesta a la primera hace
+pensar que la segunda es barata y no lo es.
+
+### Lo que cuesta tener el kit puesto
+
 **Medición del 2026-09-07**, con `claude plugin details ios-agent-kit`. Va fechada a
 propósito: es una foto, no una ley, y cambia en cuanto se añade o se recorta una pieza.
 Cuando necesites el número de hoy, corre el comando en vez de leer esta tabla.
@@ -220,3 +225,37 @@ Cuando necesites el número de hoy, corre el comando en vez de leer esta tabla.
 | `reviewer` al invocarlo | ~900 |
 | Los `/kit-*` al invocarlos | ~260–870 cada uno |
 | Los tres hooks | 0 — corren fuera del contexto del modelo |
+
+Esos números son el **prompt**: lo que ocupa cargar la pieza. No es lo que cuesta usarla.
+
+### Lo que cuesta una ronda de juicio
+
+**Medición del 2026-09-08.** Ese día hubo diecisiete rondas de juez en este repositorio; de
+nueve quedó cifra registrada, y son esas nueve las de la tabla. Las de revisor son dos, que es
+poco para dar un rango y se dice:
+
+| | muestra |
+|---|---|
+| una ronda de juez | **67k – 124k tokens** · 9 rondas de las 17 del día |
+| una ronda de revisor | 68k – 111k · **solo 2 rondas** |
+
+Un juez «cuesta ~1,6k» al cargarlo y entre **cuarenta y ochenta veces más** al usarlo, porque
+lo que se paga es la ronda entera: leer el acuerdo, correr los scripts, medir contra el repositorio y
+escribir el dictamen. Las dos cifras son ciertas y responden preguntas distintas; la que decide
+tu factura es esta.
+
+Y el tamaño del cambio la mueve **mucho menos de lo que parece**: el de veinticinco ficheros
+costó por ronda una vez y media lo que el de un fichero y una sección —112,1k contra 73,9k de
+media, un +52 %—. Veinticinco veces más grande por la mitad más de coste: el tamaño escala muy por debajo
+de lo lineal, así que **acotar las rondas rinde mucho más que acotar el alcance**. Por eso
+[FLUJO.md](FLUJO.md#cuántas-rondas-merece-esto) te pide presupuestarlas antes de empezar.
+
+**Límite declarado, y el primero es de procedencia:** estas cifras **no se pueden
+recomprobar**. Salen de las notificaciones de los sub-agentes de aquel día, que no están en el
+repositorio — al contrario que la tabla de arriba, que te manda correr un comando. Aquí no hay
+comando que correr.
+
+Además salen de un solo día, un solo repositorio y un solo tipo de artefacto —el propio kit,
+que es en buena parte prosa normativa, el caso que peor converge—, y de nueve rondas de las
+diecisiete de aquel día. **Léelas como un techo con muestra corta**, no como el coste típico de
+una ronda. Sobre código Swift con tests deberían bajar, y eso todavía no está medido.

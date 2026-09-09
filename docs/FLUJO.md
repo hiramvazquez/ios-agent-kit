@@ -268,6 +268,96 @@ posible es quedarse desincronizado.
 los cita: en ese mismo cambio, añadir un `import` los desplazó y llegaron falsos al juicio.
 `grep` los encuentra siempre; el markdown los conserva mal para siempre.
 
+---
+
+## Cuántas rondas merece esto
+
+La tabla de arriba decide qué artefactos escribes. Esta decide **cuántas vueltas de revisor y
+juez pagas**, que es donde de verdad se va el coste — y no es lo mismo.
+
+**Presupuéstalas antes de invocar a nadie**, según lo que vayas a poner bajo juicio:
+
+| lo que se pone bajo juicio | rondas a presupuestar |
+|---|---|
+| código con tests que pasan o fallan | **1–2** |
+| código sin tests, o cuyo efecto se ve leyendo | 2–3 |
+| prosa: un prompt, una spec, una norma | **2, y prepárate para parar** |
+| **las dos cosas** — código y una norma nueva | **manda la prosa**: presupuesta como si fuera solo eso |
+
+**Cuidado con la última fila, que es fácil aplicarla a todo y entonces no sirve de nada.** No
+dispara porque el cambio *tenga* delta de spec —el flujo nunca deja saltárselo, así que eso lo
+cumplen todos—. Dispara cuando la prosa es **lo que se juzga**, no la vara con la que se mide:
+
+- El delta describe cómo se comporta el código y el juez mide el código contra él → **filas 1
+  y 2**. Es el caso normal, y es donde el presupuesto de 1–2 tiene sentido.
+- El cambio **reescribe un prompt, una norma o una spec**, y eso es el producto entregado →
+  **fila 3**. Aquí no hay tests que cierren nada: la cierra alguien leyendo, y por eso no
+  converge sola.
+
+Los cuatro cambios que midieron esta tabla caen todos en el segundo caso, que es lo que hay que
+tener en cuenta al leer las cifras de abajo.
+
+**El eje es qué se juzga, no cuánto ocupa**, y eso está medido — con una muestra pequeña que
+conviene mirar antes de creerla. El 2026-09-08 hubo diecisiete rondas de juez en este
+repositorio; de nueve quedó registrada la cifra, y son esas nueve las que dan **67k–124k tokens
+por ronda**.
+
+Comparando dos cambios de esa tanda: el de veinticinco ficheros costó **124,3k y 100,0k** por
+ronda; el de un fichero y una sección, **67,7k y 80,0k**. De media, 112,1k contra 73,9k: una vez
+y media, **+52 %**. Veinticinco veces más grande y la mitad más de coste por vuelta — **el
+tamaño escala muy por debajo de lo lineal**, así que quien manda en la factura es el número de
+rondas.
+
+(Las cuatro cifras van con decimal a propósito: con ellas redondeadas a `124/100/68/80` la
+media pequeña sale 74k y el ratio 1,51, y quien rehiciera la cuenta encontraría números que no
+cuadran con estos. Un juez lo intentó y le pasó.)
+
+Ojo con leer eso de más: un 52 % no es nada. Lo que dice el dato es que **acotar el alcance
+rinde mucho menos que acotar las rondas**, no que el tamaño dé igual. La fórmula que este mismo
+documento usa más arriba —«tamaño de lo revisado × número de rondas»— sigue siendo la buena;
+lo que se aprende aquí es que su primer factor crece despacio y el segundo no.
+
+Y son dos cambios, cuatro rondas: según cómo se emparejen, el ratio va de 1,25 a 1,83. La
+dirección es clara; el número, no.
+
+**Y las filas de código no tienen ni una medición detrás.** Los cuatro cambios medidos ponían
+prosa normativa bajo juicio, así que la fila 3 se apoya en n=1 y las filas 1 y 2 en **n=0**: son
+una expectativa razonada —los tests cierran lo que la lectura no— y nada más. El número que
+falta es el de una ronda sobre Swift con tests, y hasta que exista, esas dos filas son una
+apuesta con la que empezar, no un dato.
+
+La fila de la prosa es la que muerde, y también está medida: un cambio de unas 300 líneas se
+llevó **seis rondas** sin converger, y de las nueve frases que se corrigieron, **cinco estaban
+en texto escrito por el arreglo de la ronda anterior**. Cuando el artefacto juzgado es prosa
+normativa, cada arreglo vuelve a redactar la norma, y redactarla es lo que fabrica el hallazgo
+siguiente. No es que el juez encuentre más: es que el autor produce más.
+
+### Qué hacer cuando se agote
+
+**Para y decide tú.** Puedes pagar otra vuelta con lo que ya sabes, archivar con la deuda
+anotada, o partir el cambio. Lo que no vale es seguir por inercia: a la tercera vuelta sin que
+el producto se mueva, lo que se está comprando ya no es rigor.
+
+Esto y el **tope del juez** son el mismo mecanismo por los dos lados: el tope lo detecta desde
+dentro y al final —dos rondas sin mover el comportamiento— y el presupuesto lo declaras tú
+desde fuera y antes. Los dos paran igual y los dos te entregan la misma decisión. Si el juez
+llega a su tope antes de que agotes el presupuesto, manda el tope.
+
+**Límite declarado, porque estas cifras se van a leer como ley y no lo son.** Empezando por lo
+que peor se ve: **no se pueden recomprobar.** Salen de las notificaciones que dejaron los
+sub-agentes de aquel día, que no viven en el repositorio, así que aquí no hay ningún comando que
+correr — al revés que la tabla de coste de las piezas, que sí te manda correr uno. Si alguien
+las necesita ciertas, tiene que volver a medirlas.
+
+Y se midieron en un solo día, sobre un solo repositorio y sobre un solo tipo de artefacto: el
+propio kit, cuyo producto es en buena parte prosa. Es el caso que peor converge, así que **son un techo, no una
+media**. Sobre código Swift con tests deberían bajar, y eso **no está medido**: cuando lo midas,
+esta tabla se corrige con el dato.
+
+Y no las cuenta nadie por ti. No hay contador de rondas ni de tokens en el kit: el presupuesto
+lo llevas a ojo, y si no lo declaras al empezar te quedas exactamente como antes de que esta
+tabla existiera.
+
 ## Los tres sitios donde decide un humano
 
 1. **Aprobar el acuerdo** (paso 2). Dos minutos, y evita la tarde perdida.

@@ -136,6 +136,28 @@ Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED. Con 
 se marca el punto (`rodaja.sh --revisada`); con RED no, para que lo arreglado entre en la
 revisión siguiente en vez de darse por bueno.
 
+**Y hay una segunda condición para marcar, que es la que más se olvida: si arreglar lo que el
+revisor encontró movió el comportamiento, ese código no lo ha visto nadie.** Marcar significa
+«desde aquí no se vuelve a revisar», así que hacerlo después de cambiar código convierte la
+marca en una afirmación sobre un árbol que ya no es el revisado — el mismo error que la puerta de commit y la
+firma de verificación existen para cerrar. Se vuelve a pasar, y se marca entonces.
+
+Qué cuenta como mover el comportamiento lo dice **la tabla del tope**, en
+`agents/aceptacion.md` — este documento no la repite, porque reenunciarla en otras palabras
+es como se ensanchó una vez. Y en la duda, cuenta como comportamiento: una pasada de más cuesta
+menos que marcar sobre algo que nadie ha visto.
+
+Salió de un caso real, y no del kit: el 2026-09-09, en un cambio de `AppStarter`, quien
+implementaba se dio cuenta solo y volvió a pasarlo. La segunda pasada encontró más, y una
+bloqueaba — la spec se contradecía consigo misma, y al archivar esa contradicción se
+habría fundido en la canónica, donde quien la implementara habría reintroducido el defecto que
+la primera pasada acababa de cerrar.
+
+**Anota la pasada en el acuerdo** —en `tasks.md`, o al final del `proposal.md`— con su veredicto
+y lo que encontró. **Encabézala como del revisor y no la numeres como ronda**: las rondas que el
+juez cuenta son las suyas, y si se mezclan contará pasadas de revisor y su tope puede dispararse
+antes de tiempo.
+
 ### Se revisa al cerrar cada tarea, no al final
 
 Esto es lo que más cambia respecto a lo que uno haría por instinto, y salió de medirlo.
@@ -190,6 +212,12 @@ Busca tres cosas **a propósito**, porque si no se buscan se escapan:
 2. **El requisito a medias.** Hecho para el camino feliz y no para el error, o en una de
    las tres pantallas que lo pedían.
 3. **Lo que nadie pidió.** Código que no responde a ningún criterio.
+
+**Anota la ronda en el acuerdo**, encabezada como del juez y —al contrario que la del
+revisor— **numerada**: son las que su tope cuenta,
+y de ahí las lee porque él empieza en blanco cada vez. Con un dato más: qué pasó con el
+comportamiento —se movió, no se movió, o él pidió moverlo y no se hizo—. Ese es el que su tope
+consume, y no puede saberlo desde dentro de su invocación: lo sabes tú, que arreglaste.
 
 ### Por qué no basta con el reviewer
 
@@ -354,9 +382,10 @@ propio kit, cuyo producto es en buena parte prosa. Es el caso que peor converge,
 media**. Sobre código Swift con tests deberían bajar, y eso **no está medido**: cuando lo midas,
 esta tabla se corrige con el dato.
 
-Y no las cuenta nadie por ti. No hay contador de rondas ni de tokens en el kit: el presupuesto
-lo llevas a ojo, y si no lo declaras al empezar te quedas exactamente como antes de que esta
-tabla existiera.
+Y no las cuenta nadie por ti. Rastro sí queda —cada pasada y cada ronda se anotan en el
+acuerdo, y de ahí las lee el juez—, pero **contarlas y compararlas con el presupuesto lo haces
+tú**: no hay contador de rondas ni de tokens en el kit. Si no lo declaras al empezar, te quedas
+exactamente como antes de que esta tabla existiera.
 
 ## Los tres sitios donde decide un humano
 

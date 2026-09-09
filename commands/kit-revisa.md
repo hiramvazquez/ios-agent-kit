@@ -48,6 +48,34 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh" --revisada
 Con **RED no se marca**: se arregla y se vuelve a pasar, y así lo arreglado entra en la
 siguiente revisión en vez de darse por bueno.
 
+**Y con GREEN o AMBER tampoco, si arreglar lo que encontró movió el comportamiento.** Marcar
+significa «desde aquí no se vuelve a revisar»: hacerlo después de cambiar código convierte la
+marca en una afirmación sobre un árbol que ya no es el revisado — el mismo error que la puerta
+de commit y la firma de verificación existen para cerrar, en un punto del bucle donde todavía
+cabía. Vuelve a pasarlo, y marca entonces.
+
+Qué cuenta como mover el comportamiento **no lo decidas a ojo, ni lo deduzcas de aquí**: es el
+mismo eje que usa el tope del juez, y su tabla está en `agents/aceptacion.md`, sección «Tope».
+Léela ahí. Este comando no la repite a propósito — reenunciarla en otras palabras es como se
+ensanchó una vez, eximiendo de repasar cláusulas del acuerdo que sí mandan algo nuevo.
+
+Lo que sí conviene saber sin ir a mirar: corregir una errata **no** obliga a repetir la pasada.
+Si obligara, una regla que pide lo obvio dejaría de aplicarse también en lo que importa.
+
+**Y en la duda, cuenta como comportamiento**: vuelve a pasarlo. Es el mismo desempate que esa
+tabla declara, y empuja hacia el mismo lado — una pasada de más cuesta menos que marcar sobre
+algo que nadie ha visto.
+
+Lo midió el 2026-09-09 quien implementaba un cambio en `AppStarter`, sin que el kit se lo
+pidiera: «la revisión fue AMBER, que se marcaría — pero he cambiado código después». Volvió a
+pasarlo, y **la segunda pasada encontró más cosas**. Una bloqueaba: la spec se
+contradecía consigo misma, y al archivar esa contradicción se habría fundido en la spec
+canónica, donde quien la implementara habría reintroducido el defecto que la primera pasada
+acababa de cerrar.
+
+Si el segundo arreglo vuelve a mover el comportamiento, toca otra — y lo que acota eso no es
+esta regla, es el presupuesto de rondas de `docs/FLUJO.md`. Cuando se agote, decide el owner.
+
 **Úsalo al cerrar cada tarea de `tasks.md`, no al final del cambio.** Revisar al final
 significa revisar todo, y volver a revisarlo todo en cada vuelta. Un hallazgo tardío además
 llega cuando el contexto se perdió y cuando devolver una cosa devuelve las que vinieran

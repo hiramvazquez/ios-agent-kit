@@ -155,6 +155,19 @@ mkdir -p "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-
 echo "reglas de un proyecto que no es ninguno de estos repos" \
     > "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-a1b2c3/SourcePackages/checkouts/PaqueteAjeno/AGENTS.md"
 
+# Y otro cuyo nombre EMPIEZA por el de un repo del banco, sin guion en medio:
+# `sin_deps_propiasextra-…`. Sin él, este banco no mide el borde del acotado, solo que se
+# distinguen dos nombres sin relación ninguna — «medir lo fácil».
+#
+# Y desde que la resolución vive en `lib-kit.sh` esto tiene una consecuencia concreta: los dos
+# bancos miden LA MISMA función. Medido el 2026-09-08 mutándola a `${proyecto}*` (sin el
+# guion): el banco de `doc-paquetes.sh` la cazaba y este pasaba en verde los suyos. Un banco
+# que dice «las dependencias son las de ESTE repositorio» y no mide dónde acaba «este» no está
+# midiendo lo que anuncia. Lo encontró el juez de aceptación.
+mkdir -p "$TMP/home/Library/Developer/Xcode/DerivedData/sin_deps_propiasextra-b4d1dea/SourcePackages/checkouts/PaqueteDePrefijo"
+echo "reglas de un proyecto cuyo nombre empieza por el de un repo del banco" \
+    > "$TMP/home/Library/Developer/Xcode/DerivedData/sin_deps_propiasextra-b4d1dea/SourcePackages/checkouts/PaqueteDePrefijo/AGENTS.md"
+
 # --- los casos --------------------------------------------------------------------------
 
 echo "▶ lo que ya hacía, y no puede romperse"
@@ -237,9 +250,9 @@ D1="$(digest "$TMP/con_cambio")"     # depende de PaqueteUno
 D2="$(digest "$TMP/otro_dep")"       # depende de PaqueteDos
 if contiene "$D1" "PaqueteUno" && contiene "$D2" "PaqueteDos" \
    && ! contiene "$D2" "PaqueteUno"; then
-    caso 0 "cada repo recibe SUS dependencias, no las del vecino"
+    caso 0 "cada repo recibe SUS dependencias, no las de un proyecto de OTRO nombre"
 else
-    caso 1 "cada repo recibe SUS dependencias, no las del vecino" \
+    caso 1 "cada repo recibe SUS dependencias, no las de un proyecto de OTRO nombre" \
         "D1=[$(printf '%s' "$D1" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')] D2=[$(printf '%s' "$D2" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')]"
 fi
 
@@ -260,7 +273,7 @@ else
         "vio una dependencia añadida tras el primer turno (recorrió otra vez), o dejó de inyectar la línea"
 fi
 
-echo "▶ las dependencias son las de ESTE repositorio, no las de la máquina"
+echo "▶ las dependencias se acotan al prefijo del repositorio"
 
 # `sin_deps_propias` no depende de ningún paquete y se digesta aquí por PRIMERA vez, con el
 # DerivedData ajeno ya montado — así el `find` corre de verdad y no se limita a leer un
@@ -270,10 +283,21 @@ echo "▶ las dependencias son las de ESTE repositorio, no las de la máquina"
 # `~/Library/Developer/Xcode/DerivedData` sin filtrar por proyecto.
 D="$(digest "$TMP/sin_deps_propias")"
 if contiene "$D" "PaqueteAjeno"; then
-    caso 1 "un repo sin dependencias propias no recibe las de otro proyecto de la máquina" \
+    caso 1 "un repo sin dependencias propias no recibe las de un proyecto de OTRO nombre" \
         "el find recorría TODO DerivedData sin acotar al repositorio observado"
 else
-    caso 0 "un repo sin dependencias propias no recibe las de otro proyecto de la máquina"
+    caso 0 "un repo sin dependencias propias no recibe las de un proyecto de OTRO nombre"
+fi
+
+# La otra mitad del borde, y la que mide de verdad la función compartida: un vecino cuyo
+# nombre empieza por el del repo pero SIN el guion. Tiene que ser sin guion — con él
+# (`sin_deps_propias-algo`) casaría también con el patrón correcto, que es el límite declarado
+# en `lib-kit.sh` y que este cambio deja abierto a propósito.
+if contiene "$D" "PaqueteDePrefijo"; then
+    caso 1 "ni las de uno cuyo nombre empieza por el suyo SIN guion" \
+        "sin el guion en el patrón, un repo 'App' se llevaría lo de 'AppStarter-<hash>'"
+else
+    caso 0 "ni las de uno cuyo nombre empieza por el suyo SIN guion"
 fi
 
 echo "▶ el JSON declara el evento que lo invoca"

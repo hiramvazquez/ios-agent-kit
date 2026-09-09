@@ -15,6 +15,13 @@
 # Esto imprime las rutas que existen AHORA MISMO, resueltas. Nada más. No resume la doc ni
 # la inyecta: un digest de documentación ajena envejece y miente. Da direcciones.
 set -uo pipefail
+
+# `$DIR` se resuelve ANTES del `cd`: después, una invocación relativa desde un subdirectorio
+# ya no encontraría la lib.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$DIR/lib-kit.sh"
+
 # `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo: `cd ""` devuelve 0 en bash, así
 # que la guarda nunca ve el fallo de git y este script seguiría buscando `.build/checkouts` a
 # partir de donde se le invoque. La asignación SÍ propaga el código de git —`verifica.sh` ya
@@ -42,7 +49,26 @@ while IFS= read -r d; do CHECKOUTS+=("$d"); done < <(
     # quedarse en el nivel del checkout y no bajar.
     find . -maxdepth 5 -type d -path "*/.build/checkouts/*" \
          ! -path "*/.build/checkouts/*/*" 2>/dev/null
-    find "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 3 -type d \
+    # ACOTADO AL REPOSITORIO. Sin esto, el `find` devolvía los paquetes de TODOS los
+    # proyectos de la máquina: medido el 2026-09-08 con la 1.8.0 ya publicada, `spm-pro` e
+    # `iOSandbox` —que no tienen dependencias propias resueltas— recibían las de `AppStarter`.
+    #
+    # Muerde más aquí que en el hook: la cola de esta salida manda leer las reglas de los
+    # paquetes que anuncia, así que anunciar los de otro proyecto no es una línea de ruido, es
+    # una instrucción falsa.
+    #
+    # La heurística vive en `lib-kit.sh` porque el hook hace esta misma búsqueda. Estuvo
+    # escrita solo allí una versión, y por eso este script siguió mintiendo después de que
+    # aquello se arreglara — el cambio que lo arregló se llama, sin ironía,
+    # `donde-la-regla-solo-llego-a-un-hermano`.
+    # Con el array VACÍO, este `find` se queda sin ninguna ruta. En el `find` de BSD (macOS)
+    # eso es un error de uso —lo traga el `2>/dev/null` y el pipe sale vacío, que es lo que se
+    # quiere—, pero **en GNU find recorrería el directorio actual**, y entonces esto listaría
+    # cosas del repo como si fueran dependencias. Se apoya en el `find` del sistema al que este
+    # kit apunta; el hermano de `inyecta-contexto.sh` no tiene el problema porque lleva un `.`
+    # delante. Lo señaló el revisor el 2026-09-08.
+    derivados_propios "$RAIZ"
+    find ${DD_PROPIO[@]+"${DD_PROPIO[@]}"} -maxdepth 3 -type d \
          -name checkouts -path "*SourcePackages*" 2>/dev/null \
       | while read -r c; do find "$c" -maxdepth 1 -mindepth 1 -type d; done
 )

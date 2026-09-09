@@ -163,36 +163,10 @@ if [ -z "$(find "$CACHE" -mtime -1 2>/dev/null)" ]; then
     # peor que el que arregla: el caché ya era uno por repositorio, pero los cachés de la
     # máquina contenían todos la misma respuesta de la máquina entera.
     #
-    # HEURÍSTICA, DECLARADA (no hay forma barata de hacerlo exacto): Xcode nombra cada
-    # carpeta de DerivedData "<Proyecto>-<hash>", donde <Proyecto> es el nombre del
-    # .xcodeproj o .xcworkspace — un dato que este script no tiene sin abrir el proyecto. Se
-    # aproxima con el nombre del directorio del repositorio (`${RAIZ##*/}`): coincide en el
-    # caso común, clonar y abrir sin renombrar la carpeta.
-    #
-    # QUÉ SE PIERDE. (a) Falso negativo: si el .xcodeproj se llama distinto del directorio
-    # que lo contiene —un monorepo, una carpeta renombrada tras clonar—, este repositorio no
-    # encuentra su propio DerivedData y el hook calla en vez de anunciar dependencias que sí
-    # existen. Es el lado seguro del error: callarse es preferible a servir la respuesta de
-    # otro proyecto, que es el fallo que este bloque corrige. (b) No llega a cero: dos
-    # repositorios distintos que compartan nombre de carpeta en la misma máquina seguirían
-    # compartiendo el filtro por prefijo —Xcode los distingue por el hash, no este script—,
-    # pero eso es una colisión de nombre, no el recorrido de la máquina entera de hoy.
-    #
-    # `nullglob` es lo que hace que, sin ninguna carpeta que empiece por "$PROYECTO-", el
-    # array quede VACÍO en vez de con el patrón literal sin expandir; y la expansión de más
-    # abajo es lo que evita que ese array vacío tumbe el script entero bajo `set -u` — en bash
-    # 3.2 (el de macOS) expandir "${arr[@]}" de un array con cero elementos es "unbound
-    # variable" y aborta el script, no solo esa línea. Probado el 2026-09-08 contra ese bash.
-    #
-    # Se usa `${arr[@]+"${arr[@]}"}` y no `"${arr[@]:-}"`, que es lo que había: el segundo pasa
-    # a `find` un argumento de ruta VACÍO cuando el array está vacío. BSD find lo tolera y
-    # sigue procesando `.`, pero es una tolerancia con la que no hay por qué contar — y el
-    # idiom correcto ya estaba escrito en `doc-paquetes.sh`, que es donde había que mirar
-    # antes de escribir el otro.
-    PROYECTO="${RAIZ##*/}"
-    shopt -s nullglob
-    DD_PROPIO=("$HOME/Library/Developer/Xcode/DerivedData/${PROYECTO}-"*)
-    shopt -u nullglob
+    # La heurística y sus límites viven en `lib-kit.sh`, con `doc-paquetes.sh`, que hace esta
+    # misma búsqueda. Estuvo escrita aquí y solo aquí una versión, y por eso `/kit-doc` siguió
+    # anunciando los paquetes de otros proyectos después de que esto se arreglara.
+    derivados_propios "$RAIZ"
 
     # `-print0` y un `while read -d ''`: el `xargs` de antes partía por espacios y se comía
     # cualquier ruta con un espacio dentro, que en DerivedData las hay.

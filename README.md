@@ -188,9 +188,11 @@ Las dependencias que te anuncia son **las de tu repositorio**, no las de tu máq
 obvio y no lo era: durante un tiempo el caché era uno por repositorio y su contenido, el de
 toda la máquina, así que este mismo kit —que no tiene un solo fichero Swift— anunciaba las
 dependencias de otro proyecto abierto en Xcode. Se acotan casando el nombre de tu carpeta con
-el `<Proyecto>-<hash>` de DerivedData, que es una heurística y falla hacia el lado seguro: si
-tu `.xcodeproj` se llama distinto de la carpeta que lo contiene, el hook se calla en vez de
-anunciarte las de otro.
+el `<Proyecto>-<hash>` de DerivedData. Es una heurística, y sus límites están escritos en
+`scripts/lib-kit.sh` — el que conviene saber: si tu `.xcodeproj` se llama distinto de la
+carpeta que lo contiene, el hook se calla en vez de anunciarte las de otro; pero si **otro**
+proyecto se llama como el tuyo más un guion (`spm` y `spm-pro`), todavía te puede anunciar los
+suyos.
 
 `PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único
 hook que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.

@@ -156,10 +156,11 @@ se acuerda y no relee. Sirve que el texto esté delante **otra vez**, y que sea 
 digest que se lee, no un documento que se ignora.
 
 **Las dependencias que anuncia son las de TU repositorio**, no las de la máquina. Se acotan
-por el nombre de la carpeta del repo contra el `<Proyecto>-<hash>` de DerivedData, que es una
-heurística y falla hacia el lado seguro: si tu `.xcodeproj` se llama distinto de la carpeta
-que lo contiene, el hook calla en vez de anunciarte las dependencias de otro proyecto. El
-detalle, con lo que se pierde, está declarado en el script.
+por el nombre de la carpeta del repo contra el `<Proyecto>-<hash>` de DerivedData. Es una
+heurística, y no todos sus límites son seguros: si tu `.xcodeproj` se llama distinto de la
+carpeta que lo contiene, el hook calla en vez de anunciarte las de otro —ese sí lo es—, pero un
+proyecto que se llame como el tuyo más un guion todavía se cuela. Están declarados en
+`scripts/lib-kit.sh`.
 
 **Lo que cuesta, medido el 2026-09-08** (tres corridas, DerivedData de 2,6 GB): el recorrido
 que busca las dependencias tarda **entre 0,1 y 0,45 s en frío según el repositorio, y menos

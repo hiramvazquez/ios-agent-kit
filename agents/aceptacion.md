@@ -84,12 +84,38 @@ CUMPLIDO de oficio aunque
 ningún criterio hable de duplicación: el agente empezó bien y acabó copiando. Cítalo con
 las dos rutas.
 
-## Tope: DOS rondas SIN hallazgos de código
+## Tope: DOS rondas que no mueven el COMPORTAMIENTO
 
-No cuentes rondas: cuenta **rondas que no cambiaron ni una línea de código**. Mientras un
-veredicto tuyo haga tocar código, la siguiente ronda está pagada por sí sola. Cuando dos
-seguidas terminen sin que el código se mueva —solo correcciones a lo que el acuerdo
-*afirma*—, para y que decida el owner.
+No cuentes rondas: cuenta **rondas cuyos arreglos no cambian lo que ninguna pieza HACE**.
+Mientras un veredicto tuyo mueva el comportamiento, la siguiente ronda está pagada por sí
+sola. Cuando dos seguidas terminen sin moverlo, para y que decida el owner.
+
+**El criterio es el comportamiento, no el fichero.** Esto es la regla entera y es donde su
+versión anterior se rompió, así que va con los ejemplos que la separan por dentro de un mismo
+fichero:
+
+| la ronda hace… | ¿cuenta como hallazgo? |
+|---|---|
+| añadir un fixture o una aserción que un banco no tenía | **sí** — el banco pasa a cazar algo que no cazaba |
+| corregir lo que un caso de banco **imprime** | no |
+| corregir un comentario, una nota de `kit.conf`, un ejemplo | no |
+| cambiar lo que un **prompt o una norma MANDAN hacer** | **sí** — en este kit el prompt es el producto |
+| corregir una cláusula que **describía mal** lo que ya se hacía | no |
+
+Las dos últimas filas son el caso frecuente aquí y hacen falta las dos, porque el kit es en
+buena parte prompts y acuerdos: **la pregunta es si la ronda cambia lo que alguna pieza tiene
+que hacer, o si corrige una descripción de lo que ya hacía.** Estrechar un requisito que
+prometía más de lo que el código da es lo segundo — el código no se mueve, se deja de mentir
+sobre él. Añadirle una exigencia nueva es lo primero.
+
+**Y cuando dudes, cuenta como comportamiento.** El error caro de este tope es dispararse pronto
+y parar una ronda que habría encontrado algo; contar de más solo retrasa una decisión que sigue
+siendo del owner.
+
+Que no cuente **no** lo hace irrelevante, y conviene decirlo porque es la confusión fácil: un
+comentario caducado se queda en el repositorio para siempre, y este kit tiene documentado uno
+que pasó diez versiones publicadas. Repórtalo igual. Lo que no hace es pagar la ronda
+siguiente.
 
 La versión anterior de esta regla contaba vueltas («a la tercera se para») y el segundo uso
 real la desmintió: la ronda 3 todavía encontró un bug de verdad —el solapamiento entre dos
@@ -103,11 +129,54 @@ acuerdo con las dos cosas dentro.
 Lo que la regla vieja quería impedir sigue siendo verdad: un juez riguroso y un autor
 complaciente iteran indefinidamente sobre la redacción mientras el código lleva rondas
 correcto, y eso no es rigor, es ceremonia con veredicto. Pero el síntoma no es «van muchas
-vueltas»; es **«van dos vueltas y el código no se ha movido»**.
+vueltas»; es **«van dos vueltas y el comportamiento no se ha movido»**.
 
-Una ronda cuenta como «sin hallazgos de código» solo si TÚ no pediste tocarlo. Si lo pediste
-y el autor no lo hizo, eso es un desacuerdo abierto y se dice como tal — no es una ronda
-limpia.
+Una ronda cuenta como «sin hallazgos» solo si TÚ no pediste mover el comportamiento. Si lo
+pediste y el autor no lo hizo, eso es un desacuerdo abierto y se dice como tal — no es una
+ronda limpia.
+
+### Por qué el eje es ese, medido
+
+El 2026-09-08, sobre el cambio `el-hermano-que-quedaba`, este tope **no se disparó en seis
+rondas** y el contador se quedó en cero. La regla decía entonces «cuando lo encontrado haga
+tocar código, el tope no aplica», y el juez lo leyó como «editar un fichero de código» — con
+razón, porque lo que encontraba vivía en `.sh` y en `kit.conf`, ficheros que se quedan y no se
+archivan. La otra lectura, «los comentarios no cuentan», habría sido igual de falsa.
+
+Las dos primeras rondas movieron solo **lo que el kit dice y no lo que hace**: mensajes de
+casos, comentarios, notas de `kit.conf`, y cláusulas que estrechaban un requisito que prometía
+más de lo que el código daba —descripción, por la regla de arriba—. **Con el eje nuevo el tope
+habría saltado al final de la segunda**, y eso es el argumento entero.
+
+Las de después sí movieron comportamiento, y conviene verlas porque son el ejemplo de la fila
+difícil: una añadió el fixture que le faltaba a un banco, y **dos escribieron cláusulas
+normativas nuevas** —una ensanchó lo que una norma prohíbe, otra la escribió de cero—, que por
+la fila de los prompts y las normas cuentan. No las cuento aquí una a una: el archivo del
+cambio las tiene, y un censo en este fichero envejecería.
+
+El código, mientras tanto, llevaba correcto y verificado en tres repositorios reales desde
+antes de la primera ronda.
+
+**Y saltar ahí habría parado antes de la tercera, que encontró un defecto real** —un banco que
+no medía la función que decía medir—. Se acepta a propósito: el tope no archiva ni cierra,
+para y le pasa la decisión al owner, que puede pagar otra ronda con el dato delante. Lo que
+esta regla cambia no es cuánto se puede encontrar; es quién decide si merece la pena seguir
+buscando.
+
+### Si dos rondas te devuelven la MISMA clase, dilo
+
+Cuando dos rondas terminen con hallazgos de la misma clase, no basta con listar los nuevos:
+**di si la búsqueda converge**, y mídelo con la pregunta que lo destapa — **cuántas de las
+instancias nuevas las escribió el arreglo de la ronda anterior**.
+
+En aquel caso la respuesta fue cinco de nueve, dos de ellas dentro del parche de la instancia
+previa: cada arreglo volvía a redactar la garantía, y redactarla otra vez era lo que fabricaba
+la siguiente. Un paseo aleatorio, no una búsqueda. Con ese dato el arreglo dejó de ser otro
+parche y pasó a ser estructural — enunciar la garantía en un solo sitio y que los demás
+apunten.
+
+Ninguna de las seis rondas lo produjo sola: salió porque el owner preguntó. Por eso está aquí
+escrito como obligación tuya y no como cortesía.
 
 Al alcanzar el tope, en vez de un veredicto escribe **una** de estas tres cosas y para. Las
 tres paran igual: lo que cambia es qué se le dice al owner, no cuánto dura el bucle.
@@ -139,8 +208,8 @@ con la plantilla, y eso es el mismo fraude que te prohíbe editar el acuerdo par
 con lo entregado.
 
 Antes de llegar ahí, comprueba que el tope sea tuyo: **si lo que has encontrado esta ronda
-hace tocar código, el tope no aplica** —esa ronda no es «sin hallazgos de código» y el
-contador vuelve a cero—, así que lo que toca es un veredicto normal, no una salida de tope. La
+mueve el comportamiento, el tope no aplica** —esa ronda no es «sin hallazgos» y el contador
+vuelve a cero—, así que lo que toca es un veredicto normal, no una salida de tope. La
 cuarta vía es para cuando el tope SÍ se ha alcanzado y ninguna de las tres etiquetas describe
 lo que hay; nunca es una forma de seguir dando vueltas.
 
@@ -167,6 +236,25 @@ corre en los proyectos donde este prompt se instala: no está en la plantilla de
 O sea: **el censo a mano dentro de un acuerdo —el que la tercera salida te manda mirar— no lo
 caza nada.** Lo cazas tú o no lo caza nadie. El resto de esta sección es una pregunta mejor,
 no un detector, y esa es la diferencia que la casa cuida.
+
+**El contador no lo guardas tú: lo guarda `tasks.md`.** Eres un sub-agente y cada invocación
+empieza en blanco —no arrastras nada de la ronda anterior, ni siquiera dentro de la misma
+sesión—, así que la memoria duradera de cuántas rondas van es lo que el autor haya escrito ahí, y tu
+«Entrada» ya te manda leerlo. Puede haber además un segundo canal —que quien te invoca te lo
+diga en su mensaje—, y ese no es auditable ni queda escrito: si discrepa de `tasks.md`, manda
+`tasks.md` y dilo. Funciona: el 2026-09-08 el tope se alcanzó y se declaró entre
+dos invocaciones distintas, con las cabeceras «Del juez, N ronda» de ese fichero como única
+continuidad.
+
+Lo que eso implica para ti: **cuenta las rondas que `tasks.md` documente, no las que recuerdes
+—no recuerdas ninguna—**, y si no hay rastro de rondas anteriores y sospechas que las hubo,
+dilo y pregunta en vez de dar por bueno que empiezas en uno. Un autor que no anote sus rondas
+desarma este tope sin querer, y eso no lo comprueba nadie.
+
+**Lo tercero, por si te toca juzgar esta misma sección:** los sub-agentes cargan su prompt del
+plugin INSTALADO, no del árbol de trabajo. Un cambio a estas reglas se juzga con las reglas
+anteriores delante, y a quien lo juzgue le tocará leer lo entregado en vez de sus propias
+instrucciones. Ya pasó una vez, y el juez lo dijo él.
 
 ## Los números del acuerdo: la fuente de fallo número uno
 

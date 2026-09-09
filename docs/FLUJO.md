@@ -154,7 +154,8 @@ habría fundido en la canónica, donde quien la implementara habría reintroduci
 la primera pasada acababa de cerrar.
 
 **Anota la pasada en el acuerdo** —en `tasks.md`, o al final del `proposal.md`— con su veredicto
-y lo que encontró. **Encabézala como del revisor y no la numeres como ronda**: las rondas que el
+y lo que encontró. **Encabézala como del revisor, escríbela al final de lo que haya, y no la numeres como
+ronda**: las rondas que el
 juez cuenta son las suyas, y si se mezclan contará pasadas de revisor y su tope puede dispararse
 antes de tiempo.
 
@@ -240,6 +241,31 @@ los tests pasaban; y el reviewer habría dicho GREEN, porque el diff **en sí** 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a
 `openspec/changes/archive/<fecha>-<nombre>/`. **No archiva con DEVUELTO ni con
 ACUERDO-ROTO**; con ACUERDO-ROTO se corrige el acuerdo primero, por escrito.
+
+**Y hay una condición más, hermana de la del paso 5: si arreglar lo que el juez señaló movió el
+comportamiento, ese código no lo ha visto ningún revisor** — el juez pregunta si es lo acordado,
+no si rompe algo. Pásalo antes de archivar. La respuesta a «¿falta una pasada?» no se recuerda,
+se lee: **si alguna ronda posterior a la última pasada de revisor dice que sí, falta** — y si no
+hay ninguna pasada anotada, todas cuentan como posteriores. Una ronda **sin** esa etiqueta no
+dice «no»: cuenta como «sí», o pregunta, porque la etiqueta llegó con la 1.9.2 y los acuerdos
+anteriores no la tienen. «Posterior» es por el orden de los bloques en el fichero, así que se
+escriben siempre al final.
+
+Qué cuenta como mover el comportamiento lo dice la tabla del tope, en `agents/aceptacion.md`;
+este documento no la repite.
+
+Build y tests lo acabarán viendo —la firma se invalida y la puerta de commit obliga a
+re-verificar en el paso 8, no aquí—; lo que no lo ve
+es la pregunta del revisor, que es la que caza lo que los tests no.
+
+**Nada de esto lo comprueba nadie, y aquí menos que en el paso 5:** aquel se apoya en
+`rodaja.sh --revisada`, que es un script del kit, y aquí no hay ninguno: **el kit no tiene
+ningún hook que intercepte el archivado**. Quien no lo siga archiva igual.
+
+Y no es que no se pueda: `/opsx:archive` corre por la herramienta Bash, que es justo donde la
+puerta de commit intercepta `git commit`. Lo que lo impide es una política escrita —
+`hooks/hooks.json` dice «tres hooks y ninguno más; un cuarto tiene que traer escrito el fallo
+que lo motiva»— y este no lo trae todavía.
 
 Tu spec viva acaba de crecer. Dentro de seis meses, cuando alguien pregunte *"¿esto se
 recarga al volver o no?"*, la respuesta está escrita, con la razón al lado.

@@ -24,8 +24,10 @@ no lleva lista de tareas— qué pasada fue, qué veredicto dio y qué encontró
 repositorio, y eso no se toca: un revisor con permiso de escritura en lo que revisa es
 superficie que no hace falta abrir. Tú ya escribes.
 
-Encabeza el bloque como **del revisor**, escríbelo **al final** de lo que haya —el orden en el
-fichero es lo único que dice qué vino antes— y no lo numeres como ronda: el tope del juez cuenta
+Encabeza el bloque como **del revisor**, escríbelo **al final de lo que haya y en el mismo
+fichero donde estén los demás** —el orden dentro del fichero es lo único que dice qué vino
+antes, y entre dos ficheros no hay orden: repartirlos hace que `pasada-pendiente.sh` conteste
+que no se puede leer— y no lo numeres como ronda: el tope del juez cuenta
 rondas de juicio, y si se mezclan puede contar pasadas de revisor y dispararse antes de tiempo.
 
 Por qué no es papeleo: el 2026-09-09, en el primer uso del kit fuera de su repositorio, el

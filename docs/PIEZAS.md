@@ -83,6 +83,42 @@ ponía que el código de salida era **el número de pasos en rojo**, y entonces 
 tres fallos eran indistinguibles de «no pude mirar». El recuento vive en el informe y en la
 línea `resultado:` de la firma, que es donde se lee.
 
+### `pasada-pendiente.sh` — ¿falta una pasada de revisor?
+
+Lee el registro de rondas de un cambio y contesta si falta pasarlo por el revisor antes de
+archivar. Se invoca; no bloquea nada.
+
+**Por qué existe, y por qué es un script:** esa pregunta estuvo escrita en prosa y llevaba
+cuatro rondas sin decidir, siempre por el mismo fallo a distinta profundidad — le faltaba el
+cuantificador, luego el ancla, luego el campo, luego el vocabulario del campo. El revisor que
+las cerró lo dijo mejor de lo que se puede parafrasear: **las cuatro puertas son casos en los
+que la respuesta correcta era «no se puede leer, pregunta» y el texto contestó «no falta»**.
+Una función parcial que se extiende caso a caso no converge en prosa, porque cada extensión la
+descubre el siguiente lector.
+
+**Códigos de salida:** `0` no falta · `1` falta · `3` **no se puede leer**. La tercera no es
+robustez, es el producto: un sí/no obliga a elegir un lado cuando la respuesta honesta es que
+no se sabe, y el lado por defecto es el que archiva.
+
+**Límite declarado, y tiene tres partes.** Un bloque es candidato por su **forma** —cabecera
+`## …` o item `- [x] N. **…**`— y por su **vocabulario** —que el título nombre al juez, al
+revisor o a una revisión—. Lo que falle cualquiera de las dos es invisible: ni cuenta como
+ronda ni dispara la tercera salida. Y por **contexto**: lee líneas, no markdown, así que una
+cabecera escrita dentro de una valla de código como ejemplo cuenta como bloque de verdad.
+
+No se cierra tratando todo encabezado con etiqueta como una ronda ilegible, que es lo obvio:
+`## Auditoría propia` lleva etiquetas y **no** es una ronda, en dos de los acuerdos archivados.
+El vocabulario es la única señal de que algo pretendía ser una ronda.
+
+**Lo que el script no puede deducir y le toca a quien escribe:** los bloques van al final del
+acuerdo y en un solo fichero, sin agrupar por tipo. «Posterior» lo decide el orden en el
+fichero. Repartirlos entre `tasks.md` y `proposal.md` sí lo detecta; agruparlos por tipo no lo
+detecta nadie.
+
+**Y el límite de fuerza:** que alguien lo invoque no lo comprueba nadie. Es un script, no una
+puerta — `hooks/hooks.json` declara tres hooks y ninguno más, y un cuarto tiene que traer
+escrito el fallo que lo motiva. Quien archive sin correrlo archiva igual.
+
 ### `busca-duplicados.py` — el mismo cuerpo en dos sitios
 
 Extrae cada `func`/`var` con cuerpo, lo normaliza (fuera comentarios y espacios) y agrupa

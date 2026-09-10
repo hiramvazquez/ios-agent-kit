@@ -154,8 +154,8 @@ habría fundido en la canónica, donde quien la implementara habría reintroduci
 la primera pasada acababa de cerrar.
 
 **Anota la pasada en el acuerdo** —en `tasks.md`, o al final del `proposal.md`— con su veredicto
-y lo que encontró. **Encabézala como del revisor, escríbela al final de lo que haya, y no la numeres como
-ronda**: las rondas que el
+y lo que encontró. **Encabézala como del revisor, escríbela al final de lo que haya y en el mismo fichero donde
+estén los demás, y no la numeres como ronda**: las rondas que el
 juez cuenta son las suyas, y si se mezclan contará pasadas de revisor y su tope puede dispararse
 antes de tiempo.
 
@@ -214,8 +214,9 @@ Busca tres cosas **a propósito**, porque si no se buscan se escapan:
    las tres pantallas que lo pedían.
 3. **Lo que nadie pidió.** Código que no responde a ningún criterio.
 
-**Anota la ronda en el acuerdo**, encabezada como del juez y —al contrario que la del
-revisor— **numerada**: son las que su tope cuenta,
+**Anota la ronda en el acuerdo**, encabezada como del juez, **al final de lo que haya y en el
+mismo fichero donde estén los demás** —el orden dentro del fichero es lo único que dice qué vino
+antes—, y —al contrario que la del revisor— **numerada**: son las que su tope cuenta,
 y de ahí las lee porque él empieza en blanco cada vez. Con un dato más: qué pasó con el
 comportamiento —se movió, no se movió, o él pidió moverlo y no se hizo—. Ese es el que su tope
 consume, y no puede saberlo desde dentro de su invocación: lo sabes tú, que arreglaste.
@@ -244,12 +245,18 @@ ACUERDO-ROTO**; con ACUERDO-ROTO se corrige el acuerdo primero, por escrito.
 
 **Y hay una condición más, hermana de la del paso 5: si arreglar lo que el juez señaló movió el
 comportamiento, ese código no lo ha visto ningún revisor** — el juez pregunta si es lo acordado,
-no si rompe algo. Pásalo antes de archivar. La respuesta a «¿falta una pasada?» no se recuerda,
-se lee: **si alguna ronda posterior a la última pasada de revisor dice que sí, falta** — y si no
-hay ninguna pasada anotada, todas cuentan como posteriores. Una ronda **sin** esa etiqueta no
-dice «no»: cuenta como «sí», o pregunta, porque la etiqueta llegó con la 1.9.2 y los acuerdos
-anteriores no la tienen. «Posterior» es por el orden de los bloques en el fichero, así que se
-escriben siempre al final.
+no si rompe algo. Pásalo antes de archivar. La respuesta a «¿falta una pasada?» no se recuerda
+ni se lee a ojo: la da `scripts/pasada-pendiente.sh`, y son tres —falta, no falta, o **no se
+puede leer**—. La tercera es el producto: cuando el registro **que sabe leer** no alcanza para
+decidir lo dice, en vez de suponer que no falta, que es hacia donde se equivocaba la versión en
+prosa de esta misma regla. Fuera de eso hay tres casos distintos, y conviene no juntarlos: una
+cabecera con la forma y el vocabulario buenos que no sepa clasificar **sí la ve y sí avisa**; una
+forma que no reconoce y un título que no nombre al juez ni al revisor **no los ve y no avisa**.
+Es un límite declarado, y está entero en la cabecera del script y en el requisito; aquí no se
+repite. Lo único que este documento le pide al que escribe es que los bloques vayan **al final y
+en un solo fichero**, sin agruparlos por tipo: «posterior» lo decide su orden en el fichero.
+Repartirlos entre `tasks.md` y `proposal.md` el script lo detecta y contesta que no se puede
+leer; agruparlos por tipo no lo detecta nadie, y es lo que hacen varios acuerdos archivados.
 
 Qué cuenta como mover el comportamiento lo dice la tabla del tope, en `agents/aceptacion.md`;
 este documento no la repite.
@@ -258,8 +265,8 @@ Build y tests lo acabarán viendo —la firma se invalida y la puerta de commit 
 re-verificar en el paso 8, no aquí—; lo que no lo ve
 es la pregunta del revisor, que es la que caza lo que los tests no.
 
-**Nada de esto lo comprueba nadie, y aquí menos que en el paso 5:** aquel se apoya en
-`rodaja.sh --revisada`, que es un script del kit, y aquí no hay ninguno: **el kit no tiene
+**Que falte una pasada te lo dice un script; que no archives sin ella, no.** El del paso 5 se
+niega a marcar la rodaja; este solo contesta, y contesta a quien lo llame: **el kit no tiene
 ningún hook que intercepte el archivado**. Quien no lo siga archiva igual.
 
 Y no es que no se pueda: `/opsx:archive` corre por la herramienta Bash, que es justo donde la

@@ -20,37 +20,29 @@ Pásale el cambio: `openspec list` para ver cuál está activo, y su carpeta en
 Si arreglar lo que el juez señaló **movió el comportamiento**, ese código no lo ha visto ningún
 revisor: el juez pregunta si es lo acordado, no si rompe algo. Pásalo por `/kit-revisa` antes de archivar.
 
-**Y no lo decidas solo de memoria: normalmente está escrito.** Desde la 1.9.2 cada ronda se
-anota con qué pasó con el comportamiento —abajo—, así que la pregunta «¿falta una pasada?» se
-responde leyendo el
-acuerdo: **si ALGUNA ronda posterior a la última pasada de revisor dice que sí, falta.** Y **si
-no hay ninguna pasada anotada, todas las rondas son posteriores** — así que basta con que una
-diga «sí».
+**Y no lo decidas leyendo: hay un script que lo lee por ti.**
 
-**Y una ronda SIN etiqueta no dice «no»: cuenta como «sí», o pregunta.** La etiqueta llegó con
-la 1.9.2 y la mayoría de los acuerdos archivados no la tiene, así que un cambio que venía en
-vuelo, o un autor que anotó la ronda y omitió la línea, te dejan un registro **mudo** — y un
-registro mudo leído como «no» archiva a ciegas justo lo que esto viene a impedir. Es el mismo
-desempate que ya tienen las dos reglas hermanas, y empuja al mismo lado.
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/pasada-pendiente.sh"
+```
 
-Ese último caso no es raro: hay acuerdos archivados con rondas de juez y ninguna pasada
-anotada. Cuántos exactamente **no lo cuentes con un `grep` de cabeceras**: los bloques se han
-escrito de varias formas —cabecera `## Del juez`, item numerado `**Del juez…**`, «De la segunda
-revisión»— y un patrón que solo conozca una devuelve `0` sobre ficheros que sí los tienen, en
-silencio y hacia el lado que archiva. Léelo tú.
+Contesta por las **rondas de juez**, que es lo que esta regla mira. Que una pasada de revisor
+haya quedado pendiente por otro motivo —porque arreglaste algo después de que la última pasada
+mirara— lo cubre la regla hermana, la de la rodaja, y este script no lo sabe: puede decir «no
+falta» y faltar una por ese otro lado.
 
-«Posterior» se lee por dónde está el bloque en el fichero, no por su cabecera: **una pasada de
-revisor y una ronda de juez del mismo día no se pueden ordenar por su contenido**, porque la del
-revisor no se numera a propósito. (Dos rondas de juez sí: van numeradas.)
+Responde una de tres cosas — **falta** una pasada, **no falta**, o **no se puede leer** — y la
+tercera es la que importa: sale cuando el registro **que sabe leer** no permite decidir, y
+entonces lo miras tú en vez de dar por bueno que no falta. Lo que no sabe leer no lo avisa, y eso
+es un límite declarado, no una promesa — está abajo. Esa respuesta no la sabía dar la versión anterior de esta
+regla, que era un párrafo y llevaba cuatro rondas sin decidir
+(`2026-09-09-no-se-archiva-a-ciegas`).
 
-**Por eso, cuando anotes la ronda abajo, escríbela al final de lo que haya** — no agrupada con
-las rondas anteriores, aunque quede más ordenado. Agrupar por tipo rompe el orden del que
-depende todo esto, y es lo que hacen hoy varios acuerdos archivados.
-
-Fíjate en «alguna», que es la palabra entera. La primera versión de esta regla decía «la
-última ronda», y con eso no disparaba nunca: para archivar en regla la última es un ACEPTADO,
-un ACEPTADO siempre es «no», y el camino normal —DEVUELTO que mueve código, arreglas, ACEPTADO,
-archivas— pasaba limpio por delante. El agujero que esto cierra vive entero en ese camino.
+Aquí ya no se explica cómo se lee, a propósito. La regla la fija el acuerdo —en
+`openspec/specs/coste-del-juicio/spec.md`—; leerla lo hace el script; este prompt solo apunta.
+Cuando el mismo procedimiento estaba escrito también aquí y en `docs/FLUJO.md`, cada arreglo era
+una edición a varias manos y más de una vez llegó a una sola — y nadie sabía cuántas eran: el
+revisor las contó cinco en un sitio y cuatro en otro.
 
 Qué cuenta como mover el comportamiento lo dice la tabla del tope, en la sección «Tope» de
 `agents/aceptacion.md`. Este comando no la repite: reenunciarla en otras palabras es como se
@@ -68,10 +60,11 @@ Y si el arreglo que venga después de esa pasada vuelve a mover el comportamient
 lo que acota la serie no es esta regla, es el presupuesto de rondas de `docs/FLUJO.md`. Al
 agotarse, decide el owner.
 
-**Límite declarado, y es peor que el de su regla hermana.** Aquella se apoya en
-`rodaja.sh --revisada`, que es un script del kit; **el kit no tiene ningún hook que intercepte
-el archivado**, así que esto vive entero en este prompt y en `docs/FLUJO.md`. Quien no lo siga
-archiva igual y no salta nada.
+**Límite declarado, y sigue siendo peor que el de su regla hermana.** Aquella se apoya en un
+gesto que se niega: `rodaja.sh --revisada` no marca. Aquí `pasada-pendiente.sh` contesta, pero
+no impide nada y solo contesta a quien lo llame: **el kit no tiene ningún hook que intercepte el
+archivado**. Quien no lo siga archiva igual y no salta nada. Lo que el script quita no es ese
+hueco — quita que la respuesta dependa de leer bien un párrafo.
 
 Y que quede claro por qué no lo hay, porque **no es que no se pueda**: `/opsx:archive` corre el
 CLI por la herramienta Bash, y el kit ya intercepta ahí `git commit` con su puerta. Lo que lo
@@ -86,6 +79,12 @@ puerta cabe.
 falta no existe— escribe en el acuerdo, en `tasks.md` o al final del `proposal.md` si este
 cambio no lleva lista de tareas: qué ronda fue, qué veredicto dio, qué encontró, y **qué pasó
 con el comportamiento**.
+
+**Escríbela AL FINAL de lo que haya** — no agrupada con las rondas anteriores, aunque quede más
+ordenado, y no en el otro fichero si ya hay bloques en uno. «Posterior» se decide por el orden
+en que están escritos, así que agrupar por tipo o repartirlos entre dos ficheros rompe lo único
+que el script no puede deducir por su cuenta. Repartirlos lo detecta y contesta que no se puede
+leer; **agruparlos no lo detecta nadie**.
 
 Ese último no es un sí/no. **El eje es lo que tus arreglos HICIERON**, no lo que el juez pidió:
 su tope cuenta «rondas cuyos arreglos no cambian lo que ninguna pieza HACE». Escribe cuál de
@@ -134,7 +133,18 @@ archivado:
 grep -cE '^## Del |AMBER|ACEPTADO|ronda' openspec/changes/archive/<cambio>/tasks.md
 ```
 
-Una forma mínima que sirve —el formato no importa, lo que va dentro sí—:
+Una forma mínima que sirve, y **el formato importa** desde que lo lee un script: reconoce la
+cabecera `## Del juez …` / `## Del revisor …` / `## De la … revisión …` y el item numerado
+`- [x] N. **Del juez …**`. Escribe una de esas dos, y pasan tres cosas distintas si no:
+
+- una cabecera con la forma buena y el vocabulario bueno que no sepa clasificar —`## Segunda
+  ronda del juez`— **sí la ve y sí avisa**: contesta que no se puede leer;
+- una forma que no reconoce —un `###`, un item sin numerar— **no la ve y no avisa**;
+- y un título que no nombre al juez ni al revisor —`## Del árbitro supremo`—, tampoco.
+
+Las dos últimas no cuentan como ronda ni disparan la tercera salida. La razón de por qué es así
+está en la cabecera de `scripts/pasada-pendiente.sh`; aquí no se repite, que es como se rompió
+esta misma frase.
 
 ```markdown
 ## Del juez (DEVUELTO, 2026-09-09) — ronda 2

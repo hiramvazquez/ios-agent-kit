@@ -47,10 +47,15 @@ repo() {
                 # un segundo "0", lo que en bash 3.2 abortaba el `if` entero y se perdían
                 # "tareas:", la lista de pendientes y "FUERA de alcance" en silencio. Este
                 # fixture existe para que ese caso deje de pasar por accidente.
+                #
+                # Y su cabecera va en MAYÚSCULAS a propósito: 3 de las 16 propuestas de este
+                # repositorio la escriben así —la activa el 2026-09-11 entre ellas— y el `sed`
+                # de antes distinguía mayúsculas, así que el bloque desaparecía sin decir nada.
+                # El fixture de `activo` la deja en minúsculas: entre los dos cubren las dos.
                 mkdir -p openspec/changes/mi-cambio
                 printf '# Tareas\n\n- [x] 1. hecha\n- [x] 2. tambien hecha\n' \
                     > openspec/changes/mi-cambio/tasks.md
-                printf '# P\n\n## Fuera de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
+                printf '# P\n\n## FUERA de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
                     > openspec/changes/mi-cambio/proposal.md ;;
             dos)
                 # CINCO cambios abiertos a la vez, creados en orden inverso al
@@ -205,6 +210,12 @@ contiene "$D" "FUERA de alcance:"; caso $? \
     "con cero tareas pendientes, el digest sigue incluyendo el bloque FUERA de alcance" \
     "era la línea que más costaba perder: una de las tres reglas innegociables que este hook existe para inyectar"
 
+# Y su CONTENIDO, que es lo que mide la caja de la cabecera: la línea de arriba comprueba la
+# etiqueta que pone el propio hook, y esa sale igual aunque el bloque venga vacío.
+contiene "$D" "no tocar la caja fuerte"; caso $? \
+    "con la cabecera escrita en MAYÚSCULAS, el bloque sale igual" \
+    "el sed distinguía mayúsculas: con «## FUERA de alcance» el bloque desaparecía en silencio"
+
 ERR="$(digest_stderr "$TMP/con_cambio_hecho")"
 if [ -z "$ERR" ]; then
     caso 0 "con cero tareas pendientes, el hook no escribe nada en stderr"
@@ -212,6 +223,24 @@ else
     caso 1 "con cero tareas pendientes, el hook no escribe nada en stderr" \
         "escribía el error de expansión aritmética ahí: $(printf '%s' "$ERR" | tr '\n' ' ')"
 fi
+
+echo "▶ un cambio activo sin lista de tareas"
+
+# `docs/FLUJO.md` recomienda saltarse `tasks.md` en un cambio pequeño de alcance claro, y ahí el
+# digest decía «tareas: 0/0 hechas»: se lee como «no queda nada por hacer» cuando lo cierto es
+# que ese cambio no lleva lista. Se le quita la lista al repo del caso anterior, que ya no se
+# usa más abajo.
+rm -f "$TMP/con_cambio_hecho/openspec/changes/mi-cambio/tasks.md"
+D="$(digest "$TMP/con_cambio_hecho")"
+if contiene "$D" "tareas:"; then
+    caso 1 "sin tasks.md, el digest NO cuenta tareas" \
+        "decía «tareas: 0/0 hechas» sobre un cambio que no tiene lista"
+else
+    caso 0 "sin tasks.md, el digest NO cuenta tareas"
+fi
+contiene "$D" "no tocar la caja fuerte"; caso $? \
+    "sin tasks.md, el resto del digest sigue saliendo" \
+    "el bloque FUERA de alcance se perdió al quitar la lista"
 
 echo "▶ el digest dice de qué repo habla"
 

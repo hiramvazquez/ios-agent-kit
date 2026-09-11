@@ -19,7 +19,7 @@ scripts viven en el plugin, no en tu repo.
 | El agente hace algo distinto de lo que se pidió, y nadie se entera hasta que un humano lo mira | **juez de aceptación** — compara lo entregado contra lo acordado, criterio por criterio, con evidencia |
 | El agente escribe código correcto que rompe algo | **reviewer** — contexto fresco, una sola pregunta: ¿esto rompe algo? |
 | Empieza bien y acaba repitiendo lógica que ya existía | **detector de duplicados** — el mismo cuerpo de función en dos ficheros |
-| "Los tests pasan" dicho sobre un árbol que ya cambió | **verificación firmada** contra el `sha256` del diff staged |
+| "Los tests pasan" dicho sobre un árbol que ya cambió | **verificación firmada** contra el `sha256` del árbol que se verificó |
 | Se olvida de las reglas a mitad de sesión, o tras compactar | **inyección del acuerdo** en cada turno y tras cada compactación |
 
 Y lo que **no** hace, dicho por delante: no impide que un modelo alucine, no obliga a nadie

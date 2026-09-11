@@ -118,10 +118,17 @@ else
         # `tasks.md` no llega a abrirse—, el contenido se pasa por `printf` en vez de dejar
         # que `grep` abra el fichero: un `printf` con salto de línea le da a `grep -c` una
         # entrada bien formada exista o no el fichero, igual que hace `rodaja.sh` con `$D`.
-        TASKS="$(cat "$ACT/tasks.md" 2>/dev/null)"
-        PEND="$(printf '%s\n' "$TASKS" | grep -c '^- \[ \]' || true)"
-        TOT="$(printf '%s\n' "$TASKS" | grep -cE '^- \[[ x]\]' || true)"
-        add "    tareas: $((TOT-PEND))/$TOT hechas"
+        #
+        # Y SOLO si hay lista. Un cambio pequeño no lleva `tasks.md` —lo recomienda
+        # `docs/FLUJO.md`—, y ahí esto decía «tareas: 0/0 hechas», que se lee como «no queda
+        # nada por hacer» cuando lo cierto es que ese cambio no tiene lista.
+        PEND=0
+        if [ -f "$ACT/tasks.md" ]; then
+            TASKS="$(cat "$ACT/tasks.md")"
+            PEND="$(printf '%s\n' "$TASKS" | grep -c '^- \[ \]' || true)"
+            TOT="$(printf '%s\n' "$TASKS" | grep -cE '^- \[[ x]\]' || true)"
+            add "    tareas: $((TOT-PEND))/$TOT hechas"
+        fi
         # Sin fichero intermedio. Esto pasaba por `/tmp/.ic.$$`: un nombre derivable del
         # identificador de proceso, en un directorio donde escribe cualquiera, y escrito por
         # un hook que corre en CADA turno de CUALQUIER repositorio por el que pase una
@@ -132,7 +139,18 @@ else
             PENDIENTES="$(grep '^- \[ \]' "$ACT/tasks.md" 2>/dev/null | head -3 | sed 's/^/    /')"
             [ -n "$PENDIENTES" ] && L="${L}${PENDIENTES}"$'\n'
         fi
-        FUERA="$(sed -n '/## Fuera de alcance/,/^## /p' "$ACT/proposal.md" 2>/dev/null | grep '^- ' | head -3)"
+        # La cabecera, en CUALQUIER caja. El `sed` de antes distinguía mayúsculas y 3 de las 16
+        # propuestas de este repositorio escriben «## FUERA de alcance» —incluida la activa el
+        # 2026-09-11—, así que el bloque desaparecía del digest sin decir nada: el mismo fallo
+        # silencioso que la cláusula de las cero tareas cerró por la otra puerta.
+        #
+        # `##+` en la cabecera y el MISMO corte que el `sed`: aquél cogía también un
+        # `### Fuera de alcance`, y estrechar eso de paso sería reintroducir el mismo fallo un
+        # nivel más abajo. El corte estuvo un rato en `/^#/`, que era más estrecho que el `sed`
+        # por el otro lado — terminaba el bloque en un `### Matiz` o en una almohadilla dentro
+        # de un bloque de código. Las dos cosas las señaló el revisor.
+        FUERA="$(awk 'tolower($0) ~ /^##+ fuera de alcance/ {f=1; next} f && /^## / {exit} f && /^- /' \
+                 "$ACT/proposal.md" 2>/dev/null | head -3)"
         [ -n "$FUERA" ] && { add "    FUERA de alcance:"; L="${L}$(printf '%s\n' "$FUERA" | sed 's/^/      /')"$'\n'; }
     else
         add "· Sin cambio OpenSpec activo. Si vas a tocar código, primero /opsx:propose."
@@ -184,9 +202,9 @@ DEPDOC="$(cat "$CACHE" 2>/dev/null)"
 # tiene algo que firmar.
 M="$RAIZ/.agent-kit/verificacion.txt"
 if [ -f "$M" ]; then
-    grep -q "^diff: $(git diff --cached | shasum -a 256 | cut -d' ' -f1)$" "$M" \
-        && add "· Verificación: firmada contra el diff staged actual." \
-        || add "· Verificación: la firma es de OTRO diff — /kit-verifica antes de commitear."
+    grep -q "^diff: $(huella_diff)$" "$M" \
+        && add "· Verificación: firmada contra el árbol actual." \
+        || add "· Verificación: la firma es de OTRO árbol — /kit-verifica antes de commitear."
 else
     add "· Verificación: sin firmar todavía."
 fi

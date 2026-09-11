@@ -39,6 +39,47 @@ cambio_activo() {
              | LC_ALL=C sort)
 }
 
+# huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE, los dos.
+#
+# LOS DOS, y cada uno cierra un agujero distinto:
+#
+#   - El ÁRBOL, porque es lo que `verificaciones()` compila y porque es lo que se commitea con
+#     `git commit -a` o con un pathspec. Firmando solo el índice, verificar sin nada stageado
+#     firmaba el diff VACÍO y esa firma seguía valiendo después de editar: `git commit -am`
+#     metía código sin verificar. Reproducido el 2026-09-11.
+#   - El ÍNDICE, porque un `git commit` a secas commitea el índice y no el árbol. Firmando solo
+#     el árbol, stagear veneno y devolver el fichero a su contenido de HEAD deja la huella
+#     igual —`git diff HEAD` no ve el índice— y se commitea algo que nunca se compiló. Lo
+#     reprodujo el revisor el 2026-09-11, de punta a punta, sobre la versión que firmaba solo
+#     el árbol.
+#
+# CONSECUENCIA ASUMIDA: stagear después de firmar cambia el índice y por tanto la huella, así
+# que invalida la firma. Por eso stagear, verificar y commitear van en comandos separados. Es
+# molesto y es el lado correcto en el que equivocarse: lo contrario es dejar pasar contenido
+# que nadie miró.
+#
+# EL SEPARADOR NO ES ADORNO. Pegados sin marca, el punto de corte entre los dos diffs no existe
+# para el `shasum`, y el hunk del último fichero por orden puede migrar del diff del árbol al del
+# índice sin cambiar un byte: se stagea ese fichero y se devuelve al contenido de HEAD, y la
+# huella no se mueve. Lo reprodujo el revisor el 2026-09-11 sobre la primera versión de esta
+# función. Lo que se alcanzaba así era commitear un SUBCONJUNTO de lo verificado —no contenido
+# nuevo, porque los bytes que migran tienen que ser idénticos—, pero la norma promete que un
+# cambio posterior a la firma la invalida, y sin separador eso era falso.
+#
+# Sin ningún commit todavía no hay `HEAD` con el que comparar —`git diff HEAD` falla—, y ahí el
+# índice es la única referencia que existe.
+#
+# Vive aquí porque la usan `verifica.sh` —que firma— y el hook de contexto —que dice si la firma
+# vale—. Si las dos no dan el mismo número, el digest anuncia «la firma es de OTRO árbol» en
+# cada turno de un árbol recién firmado. Estaba escrita dos veces.
+huella_diff() {
+    if git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
+        { git diff HEAD; echo '--- índice ---'; git diff --cached; }
+    else
+        git diff --cached
+    fi | shasum -a 256 | cut -d' ' -f1
+}
+
 # derivados_propios <raíz> — deja una variable puesta:
 #     DD_PROPIO  array con los directorios de DerivedData que son de ESE repositorio
 #

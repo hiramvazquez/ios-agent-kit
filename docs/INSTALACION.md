@@ -109,9 +109,10 @@ Con la sesión un nivel por encima te queda medio flujo funcionando y la otra mi
 respondiendo «Unknown command», que no dice nada de la causa. Los ficheros están donde tienen
 que estar; simplemente nadie los ha cargado.
 
-**La puerta bloquea un commit que crees válido** — la firma es de OTRO diff. Pasa siempre
+**La puerta bloquea un commit que crees válido** — la firma es de OTRO árbol. Pasa siempre
 por lo mismo: encadenar `git add && git commit`. Stagea, verifica y commitea en **tres
-comandos separados**; entre la firma y el commit el diff no puede cambiar.
+comandos separados**: se firma el árbol **y** el índice, así que stagear después de firmar
+cambia lo firmado.
 
 **`openspec list --specs` dice `requirements 0`** — tu spec es prosa que el parser no
 reconoce. Necesita `### Requirement:` con "SHALL" y `#### Scenario:` con WHEN/THEN. Está

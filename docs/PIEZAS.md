@@ -48,7 +48,7 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 | comando | qué hace |
 |---|---|
 | `/kit-init` | prepara el proyecto: OpenSpec, `kit.conf`, reglas, `.gitignore` |
-| `/kit-verifica` | build, tests y duplicados, firmado contra el diff staged |
+| `/kit-verifica` | build, tests y duplicados, firmado contra el árbol que se verificó |
 | `/kit-duplicados` | busca lógica repetida, a demanda — **todos** los grupos, también los preexistentes |
 | `/kit-doc` | dónde está la doc de los paquetes de los que dependes (rutas resueltas) |
 | `/kit-revisa` | lanza el revisor sobre la **rodaja** pendiente, no sobre el cambio entero |
@@ -61,8 +61,20 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 ### `verifica.sh` — la firma
 
 Corre lo que diga tu `kit.conf` y escribe `.agent-kit/verificacion.txt` con el `sha256` del
-diff staged. Tres modos: verificar y firmar, `--informe` (imprime sin volver a correr) y
-`--comprueba` (¿la firma es de este diff?).
+**árbol de trabajo y del índice** —o solo del índice si el repositorio no tiene commits
+todavía—. Tres modos: verificar y firmar, `--informe` (imprime sin volver a correr) y
+`--comprueba` (¿la firma es de este árbol?).
+
+**Firma los dos, y cada uno cierra un agujero distinto.** Con la huella solo del índice,
+verificar sin nada stageado firmaba el diff vacío y esa firma seguía valiendo después de
+editar: `git commit -am` metía código sin verificar. Con la huella solo del árbol, stagear algo
+y devolver el fichero a su contenido anterior dejaba la huella igual, y `git commit` a secas
+commitea el índice: entraba contenido que nunca se compiló. El segundo lo encontró un revisor
+sobre la primera versión de este mismo arreglo.
+
+**Lo que cuesta:** stagear después de firmar invalida la firma, así que stagear, verificar y
+commitear van en comandos separados. Y lo que queda abierto, que el informe avisa como árbol
+sucio, es lo contrario de los dos agujeros: commitear **menos** de lo verificado.
 
 **Por qué existe:** sin él, «los tests pasan» es una afirmación del modelo sobre un árbol
 que pudo cambiar después de correrlos. Es error de proceso, no mala fe, y es el que menos

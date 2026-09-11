@@ -107,7 +107,41 @@ igual "$C" 1; caso $? "tras un rojo, --comprueba rechaza ($C)" \
 echo nuevo > "$TMP/verde/otro.txt"
 ( cd "$TMP/verde" && git add otro.txt >/dev/null 2>&1 )
 C="$(codigo "$TMP/verde" --comprueba)"
-igual "$C" 1; caso $? "si el diff staged cambia, la firma deja de valer ($C)"
+igual "$C" 1; caso $? "si el árbol cambia, la firma deja de valer ($C)"
+
+echo "▶ un repositorio sin commits todavía"
+
+# Sin `HEAD` no hay árbol contra el que comparar, y `git diff HEAD` falla: la huella tiene que
+# caer al índice, que es la única referencia que existe ahí. Sin esa caída, un repositorio
+# recién creado firmaría la huella del vacío — la misma para cualquier contenido.
+mkdir -p "$TMP/virgen"
+(
+    cd "$TMP/virgen" || exit 1
+    git init -q .
+    git config user.email t@t.t
+    git config user.name t
+    echo hola > a.txt
+    git add a.txt
+) >/dev/null 2>&1
+conf virgen 0
+
+C="$(codigo "$TMP/virgen")"
+igual "$C" 0; caso $? "sin ningún commit, la verificación firma ($C)"
+
+C="$(codigo "$TMP/virgen" --comprueba)"
+igual "$C" 0; caso $? "sin ningún commit, esa firma vale ($C)"
+
+# Y que DISTINGA: se stagea algo más y la firma tiene que dejar de valer. Contra una huella que
+# mire solo el árbol, este caso sale rojo — los dos de arriba no, y por eso hace falta.
+#
+# Lo que este caso NO fija, desde que la huella emite los dos diffs: quitar la caída al índice.
+# El `git diff --cached` sigue en la tubería, así que sin el `if` lo único que se gana es un
+# «fatal: ambiguous argument HEAD» en stderr. Aquí ponía que sin la caída la huella era la del
+# vacío, y eso describía la fórmula anterior. Lo midió el revisor.
+( cd "$TMP/virgen" && echo otro > otro.txt && git add otro.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/virgen" --comprueba)"
+igual "$C" 1; caso $? "sin ningún commit, stagear algo más invalida la firma ($C)" \
+    "sin la caída al índice la huella es la del vacío, y cualquier contenido cuadra con ella"
 
 C="$(codigo "$TMP/sin_conf" --comprueba)"
 igual "$C" 1; caso $? "sin nada verificado, --comprueba rechaza ($C)"

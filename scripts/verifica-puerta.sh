@@ -28,6 +28,11 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$DIR/lib-banco.sh"
 
+# La huella la calcula la MISMA función que firma en producción. Escrita aparte aquí, este
+# banco mediría su propia copia de la fórmula y no la del kit.
+# shellcheck source=/dev/null
+. "$DIR/lib-kit.sh"
+
 PUERTA="${PUERTA_BAJO_PRUEBA:-$DIR/puerta-commit.sh}"
 [ -f "$PUERTA" ] || { echo "no encuentro la puerta en $PUERTA"; exit 2; }
 
@@ -35,8 +40,7 @@ PUERTA="${PUERTA_BAJO_PRUEBA:-$DIR/puerta-commit.sh}"
 
 # repo <nombre> <kit_conf:si|no> <firma:valida|rota|ninguna>
 #
-# Deja algo STAGEADO, porque la firma se calcula sobre `git diff --cached` y un índice vacío
-# haría que todos los repos compartieran la misma huella.
+# Deja algo STAGEADO: sin nada que firmar, todos los repos compartirían la misma huella.
 repo() {
     local nombre="$1" conf="$2" firma="$3"
     repo_base "$nombre" "$conf" || return 1
@@ -49,7 +53,7 @@ repo() {
                 mkdir -p .agent-kit
                 local h
                 if [ "$firma" = "valida" ]; then
-                    h="$(git diff --cached | shasum -a 256 | cut -d' ' -f1)"
+                    h="$(huella_diff)"
                 else
                     h="0000000000000000000000000000000000000000000000000000000000000000"
                 fi
@@ -93,6 +97,8 @@ repo kit_firmado    si valida
 repo kit_sin_firma  si ninguna
 repo kit_firma_rota si rota
 repo ajeno          no ninguna
+repo kit_editado    si valida   # se le edita el árbol DESPUÉS de firmar, más abajo
+repo kit_indice     si valida   # se le envenena el ÍNDICE dejando el árbol igual que HEAD
 
 # --- los casos ------------------------------------------------------------------------
 
@@ -102,6 +108,62 @@ espera bloquea "$TMP/kit_sin_firma"  "git $C -m x"  "repo del kit sin firma → 
 espera bloquea "$TMP/kit_firma_rota" "git $C -m x"  "repo del kit con firma de otro diff → bloquea"
 espera pasa    "$TMP/kit_firmado"    'ls -la'       "un comando que no es un commit → pasa"
 espera pasa    "$TMP/kit_firmado"    "git status"   "otro subcomando de git → pasa"
+
+echo "▶ la firma cubre el árbol, no el índice"
+
+# El agujero que cierran estos casos: con la huella del índice, verificar sin nada stageado
+# firmaba el diff VACÍO y esa firma seguía valiendo después de editar. Reproducido el
+# 2026-09-11 en un repositorio temporal: `-am`, `-a -m` y un pathspec pasaban los tres.
+echo "editado despues de firmar" >> "$TMP/kit_editado/nuevo.txt"
+espera bloquea "$TMP/kit_editado" "git $C -am x" \
+     "editado el árbol sin stagear, un commit con -a → bloquea" \
+     "la huella era la del índice, que no había cambiado, así que la firma seguía valiendo"
+espera bloquea "$TMP/kit_editado" "git $C nuevo.txt -m x" \
+     "lo mismo con un pathspec → bloquea" \
+     "mismo motivo: el commit stagea él, y el índice firmado estaba sin tocar"
+
+# Y la otra mitad, que es la que impide «arreglarlo» bloqueando todo `-a`: con el árbol
+# limpio, un commit con -a no tiene nada que añadir y la firma vale.
+espera pasa "$TMP/kit_firmado" "git $C -am x" \
+     "con el árbol limpio, un commit con -a → pasa"
+
+# El agujero del otro lado, y el que se coló en la PRIMERA versión de este mismo arreglo:
+# firmando solo el árbol, `git diff HEAD` no ve el índice. Se stagea veneno y se devuelve el
+# fichero a su contenido de HEAD: el árbol vuelve a estar como estaba, la huella no se movía, y
+# `git commit` a secas commitea el índice — contenido que nunca se compiló. Lo reprodujo el
+# revisor de punta a punta el 2026-09-11.
+(
+    cd "$TMP/kit_indice" || exit 1
+    printf 'VENENO\n' > base.txt
+    git add base.txt
+    printf 'base\n' > base.txt     # el árbol vuelve a ser el de HEAD; el índice se queda con el veneno
+) >/dev/null 2>&1
+espera bloquea "$TMP/kit_indice" "git $C -m x" \
+     "con el índice envenenado y el árbol igual que HEAD → bloquea" \
+     "la huella solo miraba el árbol, así que no veía lo que el commit iba a llevarse"
+
+# Y el tercero de la misma familia, que ya no es «qué mira la huella» sino «cómo lo pega»: sin
+# un separador entre los dos diffs, el hunk del ÚLTIMO fichero por orden migra del árbol al
+# índice sin cambiar un byte, y la huella no se mueve. Lo reprodujo el revisor.
+repo_base kit_migra si
+(
+    cd "$TMP/kit_migra" || exit 1
+    printf 'uno\n' > a.txt
+    printf 'dos\n' > z.txt
+    git add a.txt z.txt
+    git commit -qm ficheros
+    printf 'X\n' > a.txt        # el estado que se verifica: los dos ficheros tocados en el árbol
+    printf 'Y\n' > z.txt
+    mkdir -p .agent-kit
+    { echo "verificado: $(date -u +%FT%TZ)"
+      echo "diff: $(huella_diff)"
+      echo "resultado: verde"; } > .agent-kit/verificacion.txt
+    git add z.txt                          # el hunk de z migra al índice…
+    git cat-file -p HEAD:z.txt > z.txt     # …y el árbol vuelve al contenido de HEAD
+) >/dev/null 2>&1
+espera bloquea "$TMP/kit_migra" "git $C -m x" \
+     "un hunk que migra del árbol al índice → bloquea" \
+     "los dos diffs se concatenaban sin separador, así que los bytes cuadraban igual"
 
 echo "▶ el commit va a OTRO repo"
 espera bloquea "$TMP/kit_firmado" "git -C $TMP/kit_sin_firma $C -m x" \

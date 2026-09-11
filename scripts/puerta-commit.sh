@@ -84,9 +84,9 @@ print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
     "permissionDecisionReason": (
-        "No hay verificación firmada para el diff staged de "
-        f"{os.environ['DESTINO']}. Corre `/kit-verifica` ahí y commitea después, en un "
-        "comando aparte — encadenar el `add` con el commit cambia el diff entre la firma "
-        "y el commit."
+        "No hay verificación firmada para el árbol de "
+        f"{os.environ['DESTINO']}. Stagea primero, corre `/kit-verifica` ahí y commitea "
+        "después, en un comando aparte: se firma el árbol Y el índice, así que encadenar el "
+        "`add` con el commit cambia lo firmado."
     )}}))
 PY

@@ -3,7 +3,8 @@
 ## Purpose
 
 Que «verificado» signifique algo que se puede comprobar: la verificación se firma contra el
-`sha256` del diff staged, y la firma vale para ese diff y solo si el resultado fue verde.
+`sha256` del árbol que se verificó, y la firma vale para ese árbol y solo si el resultado fue
+verde.
 
 Y que se distinga **«no pude mirar»** de **«está mal»**. No son lo mismo: confundirlos hace
 que un gate roto parezca un proyecto roto, y al revés. Por eso el código de salida reserva un

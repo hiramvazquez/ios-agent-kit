@@ -113,8 +113,8 @@ Dos reglas que ese recordatorio repite:
 ```
 
 Corre lo que diga tu `kit.conf`, pasa el detector de duplicados, y **firma el resultado
-contra el `sha256` del diff staged**. La firma vive en `.agent-kit/verificacion.txt`, fuera
-de git.
+contra el `sha256` del árbol que acaba de verificar**. La firma vive en
+`.agent-kit/verificacion.txt`, fuera de git.
 
 Los duplicados **avisan, no bloquean**: uno puede ser deliberado, y eso lo decide quien
 tiene el cambio delante.
@@ -252,8 +252,10 @@ recarga al volver o no?"*, la respuesta está escrita, con la razón al lado.
 Al intentar `git commit`, el hook de `PreToolUse` comprueba la firma. Si el árbol cambió
 desde que verificaste, **bloquea** y dice por qué.
 
-Por eso stagear, verificar y commitear van en **tres comandos separados**: encadenar
-`git add && git commit` cambia el diff entre la firma y el commit.
+Por eso stagear, verificar y commitear van en **tres comandos separados**: se firma el árbol
+**y** el índice —el uno porque es lo que se compila y lo que commitea un `-a`, el otro porque
+es lo que commitea un `git commit` a secas—, así que encadenar `git add && git commit` cambia
+el índice entre la firma y el commit.
 
 En el PR va el código **y** el cambio de `openspec/`. Quien lo revise lee el `proposal.md` y
 sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.

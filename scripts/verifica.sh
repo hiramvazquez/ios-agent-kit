@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Verifica el proyecto y FIRMA que la verificación corrió contra ESTE diff.
 #
-# El marker liga el resultado al sha256 del diff staged. Sin eso, "los tests pasan" es una
+# El marker liga el resultado al sha256 del árbol de trabajo Y del índice: entre los dos está
+# todo lo que un commit puede llevarse. Stagear después de firmar cambia el índice, y por tanto
+# invalida la firma — por eso stagear, verificar y commitear van en comandos separados. Aquí
+# ponía «se stagee luego como se stagee», que es justo lo que dejó de ser cierto cuando la
+# huella pasó a cubrir el índice. Sin esto, "los tests pasan" es una
 # afirmación sobre un árbol que pudo cambiar después de correrlos — el fallo de proceso más
 # común y el que menos rastro deja.
 #
@@ -15,8 +19,15 @@
 #
 # Uso:  verifica.sh              verifica y firma
 #       verifica.sh --informe    imprime el último informe, sin volver a correr
-#       verifica.sh --comprueba  ¿hay firma válida para el diff staged? (exit 1 si no)
+#       verifica.sh --comprueba  ¿hay firma válida para este árbol? (exit 1 si no)
 set -uo pipefail
+
+# `$DIR` se resuelve ANTES del `cd`, igual que en el resto de scripts del kit: después, una
+# invocación relativa desde un subdirectorio ya no encontraría la lib.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$DIR/lib-kit.sh"
+
 RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "❌ no es un repo git"; exit 1; }
 cd "$RAIZ" || exit 1
 
@@ -24,8 +35,6 @@ CONF="$RAIZ/kit.conf"
 ESTADO="$RAIZ/.agent-kit"
 MARKER="$ESTADO/verificacion.txt"
 mkdir -p "$ESTADO"
-
-huella() { git diff --cached | shasum -a 256 | cut -d' ' -f1; }
 
 case "${1:-}" in
 --informe)
@@ -39,11 +48,11 @@ case "${1:-}" in
     # comprobando un criterio que decia "sale en rojo y no firma" — la segunda mitad era
     # falsa.
     [ -f "$MARKER" ] || { echo "❌ nada verificado todavía"; exit 1; }
-    grep -q "^diff: $(huella)$" "$MARKER" \
+    grep -q "^diff: $(huella_diff)$" "$MARKER" \
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
     grep -q "^resultado: verde$" "$MARKER" \
         || { echo "❌ la última verificación salió en ROJO — arréglalo y vuelve a verificar"; exit 1; }
-    echo "✅ firma válida para el diff staged"; exit 0
+    echo "✅ firma válida para este árbol"; exit 0
     ;;
 esac
 
@@ -59,12 +68,9 @@ AYUDA
     exit 3   # "no pude mirar", que no es lo mismo que "está mal"
 fi
 
-# El árbol sucio hace mentir a la firma, y hay que decirlo.
-#
-# `swift build`/`swift test` compilan el ÁRBOL DE TRABAJO; la firma es del ÍNDICE. Si algún
-# fichero trackeado tiene cambios sin stagear, lo verificado NO es lo que se va a commitear
-# — y el informe diría "verde" sobre otro código. Lo cazaron dos revisiones seguidas sobre
-# un cambio ajeno que llevaba días en el árbol.
+# El árbol sucio ya no hace mentir a la firma —desde que se firma el árbol, lo verificado y lo
+# firmado son lo mismo—, pero sigue avisando por lo que queda: con cambios sin stagear se puede
+# commitear un SUBCONJUNTO de lo verificado, y ese subconjunto no se ha probado solo.
 #
 # Avisa y lo DEJA ESCRITO en el informe; no bloquea. Quien tenga trabajo en curso aparte
 # decide si lo guarda (`git stash -k`) o asume la diferencia — pero ya no puede no saberlo,
@@ -158,14 +164,15 @@ if [ -n "$DESFASE" ]; then
 fi
 
 if [ -n "$SUCIO" ]; then
-    INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR, así que"$'\n'
-    INFORME="${INFORME}    lo que se compiló y testeó NO es exactamente lo que se va a commitear:"$'\n'
+    INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR. Lo que se ha"$'\n'
+    INFORME="${INFORME}    verificado es el árbol entero; si commiteas solo el índice, commitearás MENOS"$'\n'
+    INFORME="${INFORME}    de lo que se ha probado:"$'\n'
     INFORME="${INFORME}$(printf '%s\n' "$SUCIO" | sed 's/^/      /')"$'\n'
 fi
 
 {
     echo "verificado: $(date -u +%FT%TZ)"
-    echo "diff: $(huella)"
+    echo "diff: $(huella_diff)"
     echo "rama: $(git rev-parse --abbrev-ref HEAD)"
     # Lo lee `--comprueba`. Sin esta línea, un marker de una corrida en rojo era
     # indistinguible de uno verde para la puerta de commit.
@@ -176,8 +183,8 @@ fi
 
 printf '%s' "$INFORME"
 [ -n "$DESFASE" ] && echo "⚠️  kit desfasado: $DESFASE"
-[ -n "$SUCIO" ] && echo "⚠️  el árbol tenía cambios sin stagear: la firma vale, el verde es sobre otro árbol."
-[ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el diff staged." \
+[ -n "$SUCIO" ] && echo "⚠️  hay cambios sin stagear: se ha verificado el árbol entero, y un commit del índice lleva menos."
+[ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el árbol verificado." \
                     || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."
 
 # 0 verde · 1 rojo · 3 «no pude mirar». El rojo es 1 SIEMPRE, no el número de pasos.

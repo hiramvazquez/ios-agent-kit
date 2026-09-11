@@ -94,12 +94,13 @@ Se ejecutan las tareas marcando `[x]`. Dos reglas que el hook te recuerda en cad
 /kit-verifica
 ```
 
-Corre lo que diga tu `kit.conf` y firma el resultado contra el `sha256` del diff staged.
+Corre lo que diga tu `kit.conf` y firma el resultado contra el `sha256` del árbol que verificó.
 El informe de lógica repetida sale aparte: **avisa, no bloquea** — un duplicado puede ser
 deliberado, y quien lo decide eres tú con el cambio delante.
 
-Stagea, verifica y commitea en **comandos separados**. Encadenar `git add && git commit`
-cambia el diff entre la firma y el commit, y la puerta lo rechaza con razón.
+Stagea, verifica y commitea en **comandos separados**. Se firma el árbol **y** el índice, así
+que encadenar `git add && git commit` cambia el índice entre la firma y el commit, y la puerta
+lo rechaza con razón.
 
 ---
 

@@ -92,8 +92,8 @@ se arregla ahí mismo.
 ```
 /opsx:propose "lo que quieras construir"   →  proposal + delta de spec + tareas. CERO código.
 /opsx:apply                                →  se implementa, marcando tareas
-/kit-revisa                                →  ¿esto rompe algo? UNA TAREA, no el cambio entero
 /kit-verifica                              →  build, tests y duplicados, firmado
+/kit-revisa                                →  ¿esto rompe algo? UNA TAREA, no el cambio entero
 /kit-acepta                                →  ¿es lo acordado? criterio por criterio
 /opsx:archive                              →  el delta se funde en la spec viva
 ```
@@ -152,7 +152,7 @@ firma y la puerta de commit no deja pasar.
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
 | `hooks/hooks.json` | los tres hooks |
-| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh`. **Toda pieza con lógica tiene el suyo**, que es la regla — y las dos últimas en tenerlo lo confirmaron por las malas: la autocomprobación estuvo dejando pasar una invocación muerta en el prompt del juez, y `doc-paquetes.sh` fue a la vez el último sin banco y el único con una rama muerta dentro. Cuáles hay se cuenta con `ls scripts/verifica-*.sh`; enumerarlos aquí ya se quedó corto dos veces |
+| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh` de las piezas que usan los proyectos. Cuáles hay se cuenta con `ls scripts/verifica-*.sh` |
 
 ### Para mejorar el kit
 

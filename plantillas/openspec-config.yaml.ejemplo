@@ -47,5 +47,7 @@ operations:
       - 'Antes de archivar, pasa `/kit-acepta`. Compara lo ENTREGADO con lo ACORDADO,
          criterio por criterio. Es la pregunta que ni el compilador, ni los tests, ni el
          reviewer se hacen.'
-      - 'No se archiva con veredicto DEVUELTO o ACUERDO-ROTO. Con ACUERDO-ROTO se corrige
-         el acuerdo primero, POR ESCRITO, y se vuelve a pasar.'
+      - 'No se archiva con ACUERDO-ROTO ni con un DEVUELTO del producto —una pieza que no
+         hace lo acordado—. Con ACUERDO-ROTO se corrige el acuerdo primero, POR ESCRITO, y se
+         vuelve a pasar. Con un DEVUELTO que no es del producto y el presupuesto de rondas
+         agotado, decide el owner: puede archivar dejando la deuda escrita en el acuerdo.'

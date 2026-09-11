@@ -148,10 +148,12 @@ silencio para que encaje con lo entregado.
 ```
 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a
-`openspec/changes/archive/<fecha>-<nombre>/`. **No se archiva con DEVUELTO ni con
-ACUERDO-ROTO.**
+`openspec/changes/archive/<fecha>-<nombre>/`. **No se archiva con ACUERDO-ROTO ni con un
+DEVUELTO del producto**, una pieza que no hace lo acordado.
 
-Con `ACUERDO-ROTO` se corrige el acuerdo primero, por escrito, y se vuelve a pasar.
+Con `ACUERDO-ROTO` se corrige el acuerdo primero, por escrito, y se vuelve a pasar. Con un
+`DEVUELTO` que no es del producto y el presupuesto de rondas agotado, decides tú: puedes
+archivar dejando la deuda escrita en el acuerdo, como cuenta `docs/FLUJO.md` en su paso 7.
 
 ---
 

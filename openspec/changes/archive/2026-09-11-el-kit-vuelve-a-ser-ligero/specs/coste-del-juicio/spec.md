@@ -1,29 +1,6 @@
-# coste-del-juicio Specification
+# Coste del juicio — delta
 
-## Purpose
-Que quien abre un cambio sepa **cuántas vueltas de juicio va a pagar** antes de empezar, y no
-al final. El kit tenía una tabla para decidir qué artefactos escribir y ninguna para decidir
-cuántas rondas presupuestar: la palabra «ronda» aparecía una sola vez en toda su documentación.
-
-El coste está donde nadie miraba. Cargar el prompt del juez cuesta ~1,6k tokens; usarlo cuesta
-entre cuarenta y ochenta veces eso, porque lo que se paga es la ronda entera. Las dos cifras
-son ciertas y responden preguntas distintas, y publicar solo la primera hacía pensar que juzgar
-es barato.
-
-Lo que **no** pretende: automatizar nada. No hay contador de rondas ni de tokens, y no lo va a
-haber por esto — el presupuesto lo lleva quien orquesta, a ojo, y un autor que no lo declare al
-empezar se queda igual que antes de que esta capacidad existiera. Es una pregunta mejor, no un
-detector, que es el orden que manda en esta casa.
-
-Y lo que aprendió al nacer, porque vale más que las cifras: **la medición que la sostiene no se
-puede recomprobar**. Salió de las notificaciones de unos sub-agentes que no viven en el
-repositorio, así que no hay comando que correr — al contrario que la tabla hermana de coste de
-las piezas, que sí lo tiene. Va declarado en los tres sitios donde se publica, porque el propio
-kit exige que una medición fechada vaya con el comando que la produjo, y ésta no puede. Una
-cifra que nadie puede rehacer no es falsa; es una cifra con dueño y con fecha de caducidad, y
-hay que decirlo donde se lee.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: El kit dice lo que cuesta juzgar, y presupuesta las rondas
 
@@ -182,3 +159,17 @@ autor cambia por iniciativa propia entre la última pasada y el archivado.
 - **WHEN** alguien lee en `docs/FLUJO.md` el paso de archivar
 - **THEN** encuentra la condición
 - **AND** encuentra que nada la comprueba
+
+## REMOVED Requirements
+
+### Requirement: Si falta una pasada de revisor, lo dice un script y no un párrafo
+
+**Reason**: `scripts/pasada-pendiente.sh` lee un registro de pasadas y rondas que solo se escribió
+en el repositorio del kit. Sobre los ocho cambios archivados de `AppStarter`, el único proyecto
+real, contesta «no se puede leer» en los ocho (medido el 2026-09-11), y no cazó nada fuera del
+propio kit. Con la anotación reducida a la ronda del juez, el registro que leía deja de existir
+también aquí.
+
+**Migration**: Quien arregló sabe si su arreglo cambió lo que el código hace; si lo cambió, pasa
+el revisor antes de archivar. La condición sigue en «No se archiva sobre el arreglo de un juicio
+que no ha visto ningún revisor».

@@ -136,28 +136,16 @@ Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED. Con 
 se marca el punto (`rodaja.sh --revisada`); con RED no, para que lo arreglado entre en la
 revisión siguiente en vez de darse por bueno.
 
-**Y hay una segunda condición para marcar, que es la que más se olvida: si arreglar lo que el
-revisor encontró movió el comportamiento, ese código no lo ha visto nadie.** Marcar significa
-«desde aquí no se vuelve a revisar», así que hacerlo después de cambiar código convierte la
-marca en una afirmación sobre un árbol que ya no es el revisado — el mismo error que la puerta de commit y la
-firma de verificación existen para cerrar. Se vuelve a pasar, y se marca entonces.
+**Y hay una segunda condición para marcar: si arreglar lo que el revisor encontró cambió lo que
+hace el código que se entrega, ese arreglo no lo ha visto nadie.** Se vuelve a pasar, y se marca
+entonces. Corregir pruebas o prosa no obliga: el eje es el mismo que el del tope del juez, en
+`agents/aceptacion.md`.
 
-Qué cuenta como mover el comportamiento lo dice **la tabla del tope**, en
-`agents/aceptacion.md` — este documento no la repite, porque reenunciarla en otras palabras
-es como se ensanchó una vez. Y en la duda, cuenta como comportamiento: una pasada de más cuesta
-menos que marcar sobre algo que nadie ha visto.
+Salió de un caso real, y no del kit: el 2026-09-09, en un cambio de `AppStarter`, la segunda
+pasada encontró una spec que se contradecía consigo misma y que al archivar se habría fundido en la
+canónica.
 
-Salió de un caso real, y no del kit: el 2026-09-09, en un cambio de `AppStarter`, quien
-implementaba se dio cuenta solo y volvió a pasarlo. La segunda pasada encontró más, y una
-bloqueaba — la spec se contradecía consigo misma, y al archivar esa contradicción se
-habría fundido en la canónica, donde quien la implementara habría reintroducido el defecto que
-la primera pasada acababa de cerrar.
-
-**Anota la pasada en el acuerdo** —en `tasks.md`, o al final del `proposal.md`— con su veredicto
-y lo que encontró. **Encabézala como del revisor, escríbela al final de lo que haya y en el mismo fichero donde
-estén los demás, y no la numeres como ronda**: las rondas que el
-juez cuenta son las suyas, y si se mezclan contará pasadas de revisor y su tope puede dispararse
-antes de tiempo.
+Anotar la pasada en el acuerdo es opcional.
 
 ### Se revisa al cerrar cada tarea, no al final
 
@@ -214,12 +202,9 @@ Busca tres cosas **a propósito**, porque si no se buscan se escapan:
    las tres pantallas que lo pedían.
 3. **Lo que nadie pidió.** Código que no responde a ningún criterio.
 
-**Anota la ronda en el acuerdo**, encabezada como del juez, **al final de lo que haya y en el
-mismo fichero donde estén los demás** —el orden dentro del fichero es lo único que dice qué vino
-antes—, y —al contrario que la del revisor— **numerada**: son las que su tope cuenta,
-y de ahí las lee porque él empieza en blanco cada vez. Con un dato más: qué pasó con el
-comportamiento —se movió, no se movió, o él pidió moverlo y no se hizo—. Ese es el que su tope
-consume, y no puede saberlo desde dentro de su invocación: lo sabes tú, que arreglaste.
+**Anota la ronda en una línea** al final de `tasks.md`: número, veredicto, y si tus arreglos
+cambiaron lo que hace el código. Es el contador de su tope, porque él empieza en blanco en cada
+invocación; la forma está en `/kit-acepta`.
 
 ### Por qué no basta con el reviewer
 
@@ -240,39 +225,22 @@ los tests pasaban; y el reviewer habría dicho GREEN, porque el diff **en sí** 
 ```
 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a
-`openspec/changes/archive/<fecha>-<nombre>/`. **No archiva con DEVUELTO ni con
-ACUERDO-ROTO**; con ACUERDO-ROTO se corrige el acuerdo primero, por escrito.
+`openspec/changes/archive/<fecha>-<nombre>/`.
 
-**Y hay una condición más, hermana de la del paso 5: si arreglar lo que el juez señaló movió el
-comportamiento, ese código no lo ha visto ningún revisor** — el juez pregunta si es lo acordado,
-no si rompe algo. Pásalo antes de archivar. La respuesta a «¿falta una pasada?» no se recuerda
-ni se lee a ojo: la da `scripts/pasada-pendiente.sh`, y son tres —falta, no falta, o **no se
-puede leer**—. La tercera es el producto: cuando el registro **que sabe leer** no alcanza para
-decidir lo dice, en vez de suponer que no falta, que es hacia donde se equivocaba la versión en
-prosa de esta misma regla. Fuera de eso hay tres casos distintos, y conviene no juntarlos: una
-cabecera con la forma y el vocabulario buenos que no sepa clasificar **sí la ve y sí avisa**; una
-forma que no reconoce y un título que no nombre al juez ni al revisor **no los ve y no avisa**.
-Es un límite declarado, y está entero en la cabecera del script y en el requisito; aquí no se
-repite. Lo único que este documento le pide al que escribe es que los bloques vayan **al final y
-en un solo fichero**, sin agruparlos por tipo: «posterior» lo decide su orden en el fichero.
-Repartirlos entre `tasks.md` y `proposal.md` el script lo detecta y contesta que no se puede
-leer; agruparlos por tipo no lo detecta nadie, y es lo que hacen varios acuerdos archivados.
+**No archiva con ACUERDO-ROTO** —se corrige el acuerdo primero, por escrito— **ni con un DEVUELTO
+del producto**: una pieza que no hace lo acordado. Con un DEVUELTO que no es del producto —lo que
+queda es prosa— y el presupuesto de rondas agotado, **decides tú**: puedes archivar, y la deuda
+queda escrita en el acuerdo.
 
-Qué cuenta como mover el comportamiento lo dice la tabla del tope, en `agents/aceptacion.md`;
-este documento no la repite.
+**Y si arreglar lo que el juez señaló cambió lo que hace el código, pásalo por el revisor antes de
+archivar**: el juez pregunta si es lo acordado, no si rompe algo. Build y tests lo acabarán viendo
+—la firma se invalida y la puerta de commit obliga a re-verificar en el paso 8—; la pregunta del
+revisor, no. Corregir pruebas o prosa no obliga.
 
-Build y tests lo acabarán viendo —la firma se invalida y la puerta de commit obliga a
-re-verificar en el paso 8, no aquí—; lo que no lo ve
-es la pregunta del revisor, que es la que caza lo que los tests no.
-
-**Que falte una pasada te lo dice un script; que no archives sin ella, no.** El del paso 5 se
-niega a marcar la rodaja; este solo contesta, y contesta a quien lo llame: **el kit no tiene
-ningún hook que intercepte el archivado**. Quien no lo siga archiva igual.
-
-Y no es que no se pueda: `/opsx:archive` corre por la herramienta Bash, que es justo donde la
-puerta de commit intercepta `git commit`. Lo que lo impide es una política escrita —
-`hooks/hooks.json` dice «tres hooks y ninguno más; un cuarto tiene que traer escrito el fallo
-que lo motiva»— y este no lo trae todavía.
+**Nada lo comprueba, y no porque no se pueda**: `/opsx:archive` corre por la herramienta Bash,
+donde la puerta de commit ya intercepta `git commit`. El kit ha decidido no poner ahí otro hook
+—`hooks/hooks.json` exige que uno nuevo traiga escrito el fallo que lo motiva—, así que lo sabe
+quien arregló.
 
 Tu spec viva acaba de crecer. Dentro de seis meses, cuando alguien pregunte *"¿esto se
 recarga al volver o no?"*, la respuesta está escrita, con la razón al lado.
@@ -350,75 +318,25 @@ dispara porque el cambio *tenga* delta de spec —el flujo nunca deja saltársel
 cumplen todos—. Dispara cuando la prosa es **lo que se juzga**, no la vara con la que se mide:
 
 - El delta describe cómo se comporta el código y el juez mide el código contra él → **filas 1
-  y 2**. Es el caso normal, y es donde el presupuesto de 1–2 tiene sentido.
+  y 2**. Es el caso normal.
 - El cambio **reescribe un prompt, una norma o una spec**, y eso es el producto entregado →
-  **fila 3**. Aquí no hay tests que cierren nada: la cierra alguien leyendo, y por eso no
+  **fila 3**. Aquí no hay tests que cierren nada, y cada arreglo reescribe la norma: por eso no
   converge sola.
 
-Los cuatro cambios que midieron esta tabla caen todos en el segundo caso, que es lo que hay que
-tener en cuenta al leer las cifras de abajo.
-
-**El eje es qué se juzga, no cuánto ocupa**, y eso está medido — con una muestra pequeña que
-conviene mirar antes de creerla. El 2026-09-08 hubo diecisiete rondas de juez en este
-repositorio; de nueve quedó registrada la cifra, y son esas nueve las que dan **67k–124k tokens
-por ronda**.
-
-Comparando dos cambios de esa tanda: el de veinticinco ficheros costó **124,3k y 100,0k** por
-ronda; el de un fichero y una sección, **67,7k y 80,0k**. De media, 112,1k contra 73,9k: una vez
-y media, **+52 %**. Veinticinco veces más grande y la mitad más de coste por vuelta — **el
-tamaño escala muy por debajo de lo lineal**, así que quien manda en la factura es el número de
-rondas.
-
-(Las cuatro cifras van con decimal a propósito: con ellas redondeadas a `124/100/68/80` la
-media pequeña sale 74k y el ratio 1,51, y quien rehiciera la cuenta encontraría números que no
-cuadran con estos. Un juez lo intentó y le pasó.)
-
-Ojo con leer eso de más: un 52 % no es nada. Lo que dice el dato es que **acotar el alcance
-rinde mucho menos que acotar las rondas**, no que el tamaño dé igual. La fórmula que este mismo
-documento usa más arriba —«tamaño de lo revisado × número de rondas»— sigue siendo la buena;
-lo que se aprende aquí es que su primer factor crece despacio y el segundo no.
-
-Y son dos cambios, cuatro rondas: según cómo se emparejen, el ratio va de 1,25 a 1,83. La
-dirección es clara; el número, no.
-
-**Y las filas de código no tienen ni una medición detrás.** Los cuatro cambios medidos ponían
-prosa normativa bajo juicio, así que la fila 3 se apoya en n=1 y las filas 1 y 2 en **n=0**: son
-una expectativa razonada —los tests cierran lo que la lectura no— y nada más. El número que
-falta es el de una ronda sobre Swift con tests, y hasta que exista, esas dos filas son una
-apuesta con la que empezar, no un dato.
-
-La fila de la prosa es la que muerde, y también está medida: un cambio de unas 300 líneas se
-llevó **seis rondas** sin converger, y de las nueve frases que se corrigieron, **cinco estaban
-en texto escrito por el arreglo de la ronda anterior**. Cuando el artefacto juzgado es prosa
-normativa, cada arreglo vuelve a redactar la norma, y redactarla es lo que fabrica el hallazgo
-siguiente. No es que el juez encuentre más: es que el autor produce más.
+El eje es qué se juzga y no cuánto ocupa: el tamaño del cambio mueve el coste de una ronda mucho
+menos que el número de rondas. Lo que cuesta una, fechado y con sus límites, está en
+`docs/PIEZAS.md`.
 
 ### Qué hacer cuando se agote
 
-**Para y decide tú.** Puedes pagar otra vuelta con lo que ya sabes, archivar con la deuda
-anotada, o partir el cambio. Lo que no vale es seguir por inercia: a la tercera vuelta sin que
-el producto se mueva, lo que se está comprando ya no es rigor.
+**Para y decide tú.** Puedes pagar otra vuelta, partir el cambio, o archivar con la deuda escrita en
+el acuerdo si lo que queda no es del producto (paso 7). Lo que no vale es seguir por inercia.
 
-Esto y el **tope del juez** son el mismo mecanismo por los dos lados: el tope lo detecta desde
-dentro y al final —dos rondas sin mover el comportamiento— y el presupuesto lo declaras tú
-desde fuera y antes. Los dos paran igual y los dos te entregan la misma decisión. Si el juez
-llega a su tope antes de que agotes el presupuesto, manda el tope.
+El tope del juez es lo mismo por el otro lado: él lo detecta desde dentro —dos rondas sin cambiar
+lo que el código hace— y el presupuesto lo declaras tú antes. Si llega antes el tope, manda el tope.
 
-**Límite declarado, porque estas cifras se van a leer como ley y no lo son.** Empezando por lo
-que peor se ve: **no se pueden recomprobar.** Salen de las notificaciones que dejaron los
-sub-agentes de aquel día, que no viven en el repositorio, así que aquí no hay ningún comando que
-correr — al revés que la tabla de coste de las piezas, que sí te manda correr uno. Si alguien
-las necesita ciertas, tiene que volver a medirlas.
-
-Y se midieron en un solo día, sobre un solo repositorio y sobre un solo tipo de artefacto: el
-propio kit, cuyo producto es en buena parte prosa. Es el caso que peor converge, así que **son un techo, no una
-media**. Sobre código Swift con tests deberían bajar, y eso **no está medido**: cuando lo midas,
-esta tabla se corrige con el dato.
-
-Y no las cuenta nadie por ti. Rastro sí queda —cada pasada y cada ronda se anotan en el
-acuerdo, y de ahí las lee el juez—, pero **contarlas y compararlas con el presupuesto lo haces
-tú**: no hay contador de rondas ni de tokens en el kit. Si no lo declaras al empezar, te quedas
-exactamente como antes de que esta tabla existiera.
+Las rondas no las cuenta el kit: no hay contador de rondas ni de coste, así que las cuentas tú
+contra el presupuesto.
 
 ## Los tres sitios donde decide un humano
 

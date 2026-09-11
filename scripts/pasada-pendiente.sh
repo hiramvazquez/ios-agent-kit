@@ -74,14 +74,14 @@ if [ -z "$CAMBIO" ]; then
     [ "$ACTIVOS_N" -gt 1 ] && echo "⚠️  hay $ACTIVOS_N cambios activos; miro «${CAMBIO##*/}»."
 fi
 CAMBIO="${CAMBIO%/}"
-[ -d "$CAMBIO" ] || { echo "NO SE PUEDE LEER — no existe «$CAMBIO»"; exit 3; }
+[ -d "$CAMBIO" ] || { echo "NO SE PUEDE LEER — no existe «${CAMBIO}»"; exit 3; }
 
 # El registro vive en `tasks.md`, o al final del `proposal.md` cuando el cambio no lleva lista.
 # Se leen los dos: un cambio puede tener lista y haber anotado en el proposal por error, y
 # leer solo uno lo daría por vacío — que es «no falta», la respuesta prohibida.
 FUENTES=()
 for f in "$CAMBIO/tasks.md" "$CAMBIO/proposal.md"; do [ -f "$f" ] && FUENTES+=("$f"); done
-[ ${#FUENTES[@]} -gt 0 ] || { echo "NO SE PUEDE LEER — «$CAMBIO» no tiene ni tasks.md ni proposal.md"; exit 3; }
+[ ${#FUENTES[@]} -gt 0 ] || { echo "NO SE PUEDE LEER — «${CAMBIO}» no tiene ni tasks.md ni proposal.md"; exit 3; }
 
 # Nada de aquí dentro lleva una clase de caracteres con acento, y esa es la corrección: el awk
 # de macOS trata los corchetes por bytes, así que `[oó]` no casa contra «revisión» según el

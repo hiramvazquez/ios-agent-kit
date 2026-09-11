@@ -312,7 +312,7 @@ if [ "$E" = "UserPromptSubmit" ]; then
     caso 0 "invocado como UserPromptSubmit, el hookEventName emitido es UserPromptSubmit"
 else
     caso 1 "invocado como UserPromptSubmit, el hookEventName emitido es UserPromptSubmit" \
-        "emitió «$E»"
+        "emitió «${E}»"
 fi
 
 E="$(evento_emitido "$TMP/con_cambio" SessionStart)"
@@ -320,7 +320,7 @@ if [ "$E" = "SessionStart" ]; then
     caso 0 "invocado como SessionStart, el hookEventName emitido es SessionStart"
 else
     caso 1 "invocado como SessionStart, el hookEventName emitido es SessionStart" \
-        "emitía siempre UserPromptSubmit, aunque hooks.json registra el mismo script también en SessionStart(compact) — emitió «$E»"
+        "emitía siempre UserPromptSubmit, aunque hooks.json registra el mismo script también en SessionStart(compact) — emitió «${E}»"
 fi
 
 echo "▶ con varios cambios activos, elige estable y lo dice"

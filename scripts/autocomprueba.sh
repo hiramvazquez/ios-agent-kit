@@ -34,7 +34,7 @@ RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # definir *o* vacío, al revés de lo que ponía esta nota antes. Lo midió un juez corriendo
 # `autocomprueba.sh ""`.)
 [ -n "$RAIZ" ] || { echo "❌ raíz vacía: pásame un directorio o ningún argumento"; exit 3; }
-cd "$RAIZ" || { echo "❌ no existe la raíz «$RAIZ»"; exit 3; }
+cd "$RAIZ" || { echo "❌ no existe la raíz «${RAIZ}»"; exit 3; }
 FALLOS=0
 mal() { printf '❌ %s\n' "$1"; FALLOS=$((FALLOS+1)); }
 bien() { printf '✅ %s\n' "$1"; }

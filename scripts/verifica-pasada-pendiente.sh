@@ -415,9 +415,9 @@ B="$(cd "$TMP/fixtures" && LC_ALL=en_US.UTF-8 bash "$SINPIN" openspec/changes/re
 # —porque `lib-kit.sh` se mueva, por ejemplo— las dos corridas devuelven el MISMO error y este
 # caso vuelve a ser la tautología que fue. Sin esta línea, el arreglo no se protege a sí mismo.
 contiene "$A" "FALTA"; caso $? "la copia sin pin arranca y devuelve un veredicto" \
-    "devolvió «$A», que no es un veredicto: la comparación de abajo sería cierta para cualquier código"
+    "devolvió «${A}», que no es un veredicto: la comparación de abajo sería cierta para cualquier código"
 igual "$A" "$B"; caso $? "el clasificador contesta igual en los dos idiomas, sin el pin puesto" \
-    "con LC_ALL=C dijo «$A» y con UTF-8 «$B»: hay una clase de caracteres que se lee por bytes"
+    "con LC_ALL=C dijo «${A}» y con UTF-8 «${B}»: hay una clase de caracteres que se lee por bytes"
 
 
 contiene "$(veredicto cita_al_revisor)" "FALTA una pasada"; caso $? \

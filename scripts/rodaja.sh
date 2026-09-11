@@ -95,11 +95,11 @@ if [ "$MODO" = entregado ]; then
     # el diff. Lo encontró el revisor de esta misma rodaja.
     if [ -n "$CAMBIO_PEDIDO" ]; then
         CAMBIO_PEDIDO="${CAMBIO_PEDIDO%/}"
-        [ -d "$CAMBIO_PEDIDO" ] || { echo "❌ no existe el cambio «$CAMBIO_PEDIDO»"; exit 1; }
+        [ -d "$CAMBIO_PEDIDO" ] || { echo "❌ no existe el cambio «${CAMBIO_PEDIDO}»"; exit 1; }
         # Y que sea un cambio, no un directorio cualquiera: apuntar a `openspec` a secas
         # imprimía una cabecera de tareas vacía sin decir nada.
         [ -f "$CAMBIO_PEDIDO/proposal.md" ] || {
-            echo "❌ «$CAMBIO_PEDIDO» no parece un cambio: no tiene proposal.md"; exit 1; }
+            echo "❌ «${CAMBIO_PEDIDO}» no parece un cambio: no tiene proposal.md"; exit 1; }
         ACT="$CAMBIO_PEDIDO"
     fi
 

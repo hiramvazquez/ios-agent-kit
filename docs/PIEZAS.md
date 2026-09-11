@@ -83,48 +83,6 @@ ponía que el código de salida era **el número de pasos en rojo**, y entonces 
 tres fallos eran indistinguibles de «no pude mirar». El recuento vive en el informe y en la
 línea `resultado:` de la firma, que es donde se lee.
 
-### `variables-pegadas.py` — ¿el kit funciona en tu terminal?
-
-Busca `$VAR` pegado a un carácter que no sea ASCII en los scripts del kit. Corre en
-`/kit-verifica`.
-
-**Por qué existe:** `bash` 3.2 —el que trae macOS— con `LC_CTYPE` UTF-8 mete los bytes de ese
-carácter **dentro del nombre de la variable**, y con `set -u` no degrada, aborta:
-
-```
-$ LANG=en_US.UTF-8 bash -c 'set -u; A=ok; echo "«$A»"'    # pegada-de-ejemplo
-bash: A»: unbound variable
-```
-
-`LANG=en_US.UTF-8` es el valor por defecto de Terminal.app. Cuando pasó, `/kit-verifica` daba
-cuatro pasos en rojo y salía **sin firma** — y sin firma la puerta de commit bloquea el commit.
-El kit quedaba inservible para quien abriera un terminal con su configuración de fábrica.
-
-No es cosa del guillemet: medido con `»`, `—`, `·`, `…`, `á` y `€`, los seis rompen. El arreglo
-son las llaves, `${VAR}`.
-
-**Y no hay forma más barata de verlo**, que es la otra mitad de la regla de la casa: `bash -n`
-sale con `0`, `shellcheck --severity=warning` sale con `0`, y los bancos pasan en verde **porque
-el agente corre con el locale vacío**. Invisible a todo el instrumental que ya existe, visible
-para el usuario a la primera. La clase había reincidido catorce veces en seis scripts, diez de
-ellas ya publicadas.
-
-**Por qué Python y no `grep`:** la primera versión usaba `grep -rnoP` y **no encontraba nada
-nunca** — el `grep` de macOS es BSD y no tiene `-P`. Salía con «invalid option», el `|| true` se
-lo comía, y contestaba «✅ ninguna» sobre ficheros que sí las tenían. No se vio porque el `grep`
-del agente es otro, uno que sí soporta `-P`: exactamente el mismo hueco entre dos entornos que
-esta pieza viene a cerrar.
-
-**La marca de ejemplo:** una línea con `pegada-de-ejemplo` se salta, para que los sitios que
-documentan el fallo puedan enseñarlo —esta sección lo hace—. Va por línea y no por fichero, para
-que marcar un ejemplo no ciegue el resto.
-
-**Códigos de salida:** `0` ninguna · `1` hay alguna, y dice cuál y dónde · `3` no pude mirar.
-
-**Límite declarado, y son dos.** Mira los scripts del kit —`.sh` y `.py`—, que es lo que el kit
-controla: el código del proyecto que lo usa queda fuera, porque ahí el kit no manda. Y mira el
-fuente, no lo compilado.
-
 ### `pasada-pendiente.sh` — ¿falta una pasada de revisor?
 
 Lee el registro de rondas de un cambio y contesta si falta pasarlo por el revisor antes de

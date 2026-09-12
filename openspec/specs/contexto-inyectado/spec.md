@@ -35,12 +35,15 @@ del que lo ha leído, y SHALL producirlo entero sea cual sea el estado de las ta
    `## Fuera de alcance` y `## FUERA de alcance` SHALL dar el mismo resultado.
 6. Un cambio activo **sin `tasks.md`** NO SHALL producir la línea de recuento de tareas, y SHALL
    seguir produciendo el resto del digest.
+7. Las reglas innegociables SHALL incluir **qué hacer con un hallazgo de revisión**: buscar la
+   causa antes de reaccionar y preferir restar, porque un hallazgo no justifica por sí solo un
+   fichero nuevo. SHALL caber en una línea.
 
 La 4 es nueva y no es un detalle de formato. `grep -c` imprime `0` **y** sale con 1, así que
 el idiom `$(grep -c … || echo 0)` deja `"0\n0"`; en bash 3.2 —el de macOS, el que resuelve
 `#!/usr/bin/env bash`— un error de expansión aritmética aborta **el compound entero**, no solo
 su línea. El resultado es que el digest pierde en silencio el recuento, la lista de
-pendientes y el «fuera de alcance», que es una de las tres reglas innegociables que este hook
+pendientes y el «fuera de alcance», que es una de las reglas innegociables que este hook
 existe para inyectar.
 
 Y lo pierde exactamente cuando el cambio está terminado, que es el turno en que se llama al
@@ -55,6 +58,17 @@ nada, que es la clase de fallo silencioso que la cláusula 4 ya cerró por el ot
 `tasks.md` —lo que `docs/FLUJO.md` recomienda para un cambio pequeño— el digest decía
 `tareas: 0/0 hechas`, que se lee como «no queda nada por hacer» cuando lo cierto es que ese
 cambio no lleva lista.
+
+La 7 sale del mismo día, y de la otra clase de deriva: no la de los detectores que el README ya
+acota, sino la del **arreglo que fabrica el hallazgo siguiente**. En un solo cambio de ese día
+—el de la firma— hubo cinco hallazgos en dos rondas, y **dos salieron del arreglo de la ronda
+anterior**: uno lo escribió el arreglo y el otro era una frase que el arreglo volvió falsa. El
+sitio es el digest porque es el único texto que un agente lee sin falta, y el momento en que
+decide entre arreglar la causa o añadir un fichero es justo cuando recibe el veredicto.
+
+**Límite declarado.** Que la regla esté delante no obliga a nadie a seguirla, igual que las otras
+tres: el digest pone el texto, no impone la conducta. Lo que sí hace es que nadie pueda decir que
+no estaba escrito.
 
 #### Scenario: Un cambio con todas las tareas cerradas
 
@@ -73,6 +87,12 @@ cambio no lleva lista.
 - **WHEN** el cambio activo no tiene `tasks.md`
 - **THEN** el digest no lleva la línea de recuento de tareas
 - **AND** sigue llevando el bloque «FUERA de alcance»
+
+#### Scenario: Qué hacer con un hallazgo, delante en cada turno
+
+- **WHEN** el hook corre en cualquier repositorio
+- **THEN** las reglas innegociables incluyen qué hacer con un hallazgo de revisión
+- **AND** ocupa una línea
 
 #### Scenario: Un repositorio que no usa OpenSpec
 

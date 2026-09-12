@@ -32,6 +32,9 @@ el commit interceptado**, no sobre el directorio de trabajo que hereda de la ses
    subcadena en el texto del comando.
 4. Cada salida que deje pasar el comando sin comprobar nada SHALL declarar por escrito, en
    el propio script, si falla abierto o cerrado y por qué.
+5. Lo que la puerta exige es una firma válida **para el árbol** del repositorio de destino, no
+   para su índice: la forma de stagear —`-a`, un pathspec, o el índice— NO SHALL cambiar el
+   veredicto.
 
 La 1 y la 3 no son la misma: un comando dirigido con `-C` falla hoy por las DOS razones a
 la vez —no se reconoce como commit, y aunque se reconociera se miraría el repo equivocado—,
@@ -41,17 +44,22 @@ La 3 tiene una segunda cara que no es teórica: mientras el reconocimiento sea p
 subcadena, cualquier comando que mencione las palabras queda bloqueado aunque no invoque
 git. Escribir documentación sobre la puerta es el caso que lo destapó.
 
+La 5 no cambia lo que hace la puerta —delega en `verifica.sh --comprueba`— sino lo que esta
+norma promete. Decía «firma válida para su diff staged», y con esa lectura `git commit -am`
+sobre un índice vacío cumplía la letra mientras metía código sin verificar. Qué se firma lo fija
+`verificacion-firmada`.
+
 #### Scenario: Commit dirigido a otro repo sin firma
 
 - **WHEN** el comando dirige un commit con `-C` a un repositorio sin firma válida para su
-  diff staged
+  árbol
 - **THEN** la puerta lo bloquea
 - **AND** el motivo nombra el repositorio que ha comprobado
 
 #### Scenario: Commit dirigido a otro repo con firma válida
 
 - **WHEN** el comando dirige un commit con `-C` a un repositorio cuya firma es válida para
-  su diff staged
+  su árbol
 - **THEN** la puerta lo deja pasar
 
 #### Scenario: Commit a secas en el repo de la sesión
@@ -60,6 +68,11 @@ git. Escribir documentación sobre la puerta es el caso que lo destapó.
   firma válida
 - **THEN** la puerta lo deja pasar
 - **AND** si no la tiene, la bloquea — igual que antes de este cambio
+
+#### Scenario: Un commit que stagea y commitea a la vez
+
+- **WHEN** hay firma válida y después se modifica el árbol sin stagear
+- **THEN** la puerta bloquea el commit aunque stagee él mismo con `-a` o con un pathspec
 
 #### Scenario: Un comando que solo menciona las palabras
 

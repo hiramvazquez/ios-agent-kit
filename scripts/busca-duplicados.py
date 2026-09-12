@@ -41,41 +41,29 @@ RAICES = [Path(p) for p in (argv or ["App", "Sources", "Packages"]) if Path(p).e
 def tocado(*rutas):
     """¿Alguna de estas rutas está en el diff? Sin `--tocados`, todo cuenta como tocado."""
     return True if TOCADOS is None else any(str(r) in TOCADOS for r in rutas)
-# El suelo de ruido, y por qué se queda donde estaba.
+# El suelo de ruido, y la medición que lo fija.
 #
-# El 2026-09-08 se subió de 3 a 4 para quitarse un falso positivo observado en AppStarter:
-# dos dobles de test cuyo cuerpo de tres líneas es un `return` armado. La medición que lo
-# justificaba contaba GRUPOS, no cuáles: 28→5 en spm-pro, 6→5 en AppStarter, y los tres de
-# iOSandbox intactos. Cuadraba.
+# Subirlo de 3 a 4 quitaba un falso positivo —dos dobles de test cuyo cuerpo de tres
+# líneas es un `return` armado— y se llevaba por delante dos duplicados REALES de tres
+# líneas, `pascalCase()` y `displayPath()`, copiados entre `Sources/ArchInitSupport` y
+# `Plugins/GenerateFeature`: justo la clase que este detector existe para cazar. El trato
+# era perder dos hallazgos verdaderos para quitarse uno falso.
 #
-# El juez de aceptación fue a mirar CUÁLES desaparecían, y ahí se cayó: en spm-pro el suelo
-# de 4 se llevaba por delante dos duplicados REALES de tres líneas —`pascalCase()` y
-# `displayPath()`, copiados entre `Sources/ArchInitSupport` y `Plugins/GenerateFeature`—,
-# que son exactamente la clase que este detector existe para cazar. El trato era perder dos
-# hallazgos verdaderos para quitarse uno falso: malo.
-#
-# Así que 3, con el ruido conocido y asumido: un par de dobles de test en AppStarter. Y la
-# lección, que vale más que el número — un recuento agregado no dice si lo que se fue era lo
-# que sobraba. Mídelo por identidad o no lo has medido.
+# Así que 3, con el ruido conocido y asumido. Y la lección, que vale más que el número:
+# aquella subida se justificó contando GRUPOS (28→5, 6→5) sin mirar CUÁLES desaparecían.
+# Un recuento agregado no dice si lo que se fue era lo que sobraba.
 MIN_LINEAS = 3
 
-# El segundo suelo, declarado igual que el de arriba y no quitado.
+# El segundo suelo, y su razón.
 #
 # Sin él, un cuerpo de tres líneas cuya única sustancia normalizada es una llave, una
 # asignación trivial y un `return` se reporta como duplicado: coincidencia de forma, no la
-# lógica repetida que este detector existe para cazar. Estaba en el script desde el
-# principio, pero sin comentario —a diferencia del de arriba—, aunque `docs/PIEZAS.md` ya lo
-# documentaba con su número: el kit lo conocía y se lo contaba a quien lo instala, y lo que
-# faltaba era el acuerdo, no el conocimiento.
+# lógica repetida que este detector existe para cazar.
 #
-# Se declara en vez de quitarse por la misma razón que el de 3 se queda en 3: quitarlo cambia
-# el detector en proyectos reales sin la medición por identidad que la cláusula 4 de
-# `deteccion-de-duplicados` exige antes de mover cualquiera de los dos suelos —moverlo hoy sin
-# esa medición sería romper esa cláusula para «cumplir» la 3—. El caso exacto que este número
-# decide está montado en `verifica-duplicados.sh` —un cuerpo de tres líneas por debajo del
-# suelo, que no se reporta—, y va ahí a propósito: la primera versión de esta nota citaba una
-# medición del 2026-09-08 sobre un cuerpo que no estaba en ningún fixture, así que nadie podía
-# reproducirla. Un número con fecha y sin fixture envejece igual que uno sin fecha.
+# No se mueve sin una medición por identidad —cuáles desaparecen, no cuántos—, que es lo que
+# `deteccion-de-duplicados` exige antes de tocar cualquiera de los dos suelos. El caso exacto
+# que este número decide está montado en `verifica-duplicados.sh`, y va ahí y no aquí a
+# propósito: un número con fecha y sin fixture envejece igual que uno sin fecha.
 MIN_CARACTERES = 60
 
 def sin_ruido(txt):
@@ -108,15 +96,14 @@ def extensiones(ruta):
 
 # Un fichero real se cuenta UNA vez, aunque se llegue a él por dos rutas.
 #
-# Un symlink no es una copia deliberada: es el mismo fichero. Enlazar las fuentes es el
-# apaño estándar cuando un build tool plugin de SwiftPM no puede depender de un target de
-# librería, así que esto aparece en cualquier repositorio de paquetes. Medido el 2026-09-08
-# en `spm-pro`: cuatro symlinks producían 21 de los 28 grupos del informe, y lo dejaban
-# ilegible en `/kit-duplicados`.
+# Un symlink no es una copia deliberada: es el mismo fichero. Enlazar las fuentes es el apaño
+# estándar cuando un build tool plugin de SwiftPM no puede depender de un target de librería,
+# así que aparece en cualquier repositorio de paquetes — y en uno real, cuatro symlinks
+# produjeron 21 de los 28 grupos del informe.
 #
 # Se deduplica por identidad del fichero —`resolve()`— y no por una lista de directorios a
-# ignorar: una lista hay que mantenerla y envejece, y la pregunta que hay que responder no
-# es «¿salto este directorio?» sino «¿son dos ficheros o es uno?».
+# ignorar: una lista hay que mantenerla y envejece, y la pregunta que hay que responder no es
+# «¿salto este directorio?» sino «¿son dos ficheros o es uno?».
 _vistos = {}
 for _r in RAICES:
     for _f in sorted(_r.rglob("*.swift")):

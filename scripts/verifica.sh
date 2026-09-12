@@ -3,11 +3,10 @@
 #
 # El marker liga el resultado al sha256 del árbol de trabajo Y del índice: entre los dos está
 # todo lo que un commit puede llevarse. Stagear después de firmar cambia el índice, y por tanto
-# invalida la firma — por eso stagear, verificar y commitear van en comandos separados. Aquí
-# ponía «se stagee luego como se stagee», que es justo lo que dejó de ser cierto cuando la
-# huella pasó a cubrir el índice. Sin esto, "los tests pasan" es una
-# afirmación sobre un árbol que pudo cambiar después de correrlos — el fallo de proceso más
-# común y el que menos rastro deja.
+# invalida la firma — por eso stagear, verificar y commitear van en comandos separados.
+#
+# Sin esto, "los tests pasan" es una afirmación sobre un árbol que pudo cambiar después de
+# correrlos — el fallo de proceso más común y el que menos rastro deja.
 #
 # Los comandos concretos NO viven aquí: los pone cada proyecto en `kit.conf`. Este script
 # es del kit y es igual en todos.
@@ -41,12 +40,10 @@ case "${1:-}" in
     [ -f "$MARKER" ] && cat "$MARKER" || echo "sin informe: nadie ha corrido verifica todavía"
     exit 0 ;;
 --comprueba)
-    # DOS condiciones, no una. La firma tiene que ser de este diff Y de una verificación
-    # que salió VERDE. Antes solo se comprobaba el diff, asi que tras una verificacion en
-    # rojo el marker seguia ahi con su linea `diff:` y esto respondia "firma valida": la
-    # puerta que debe parar un cambio roto lo dejaba pasar. Lo caz0 un juez de aceptacion
-    # comprobando un criterio que decia "sale en rojo y no firma" — la segunda mitad era
-    # falsa.
+    # DOS condiciones, no una: la firma tiene que ser de este árbol Y de una verificación que
+    # salió VERDE. Comprobando solo el árbol, tras una corrida en rojo el marker seguía ahí con
+    # su línea `diff:` y esto respondía «firma válida» — la puerta que debe parar un cambio roto
+    # lo dejaba pasar.
     [ -f "$MARKER" ] || { echo "❌ nada verificado todavía"; exit 1; }
     grep -q "^diff: $(huella_diff)$" "$MARKER" \
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
@@ -68,26 +65,24 @@ AYUDA
     exit 3   # "no pude mirar", que no es lo mismo que "está mal"
 fi
 
-# El árbol sucio ya no hace mentir a la firma —desde que se firma el árbol, lo verificado y lo
+# El árbol sucio ya no hace mentir a la firma —se firma el árbol, así que lo verificado y lo
 # firmado son lo mismo—, pero sigue avisando por lo que queda: con cambios sin stagear se puede
 # commitear un SUBCONJUNTO de lo verificado, y ese subconjunto no se ha probado solo.
 #
-# Avisa y lo DEJA ESCRITO en el informe; no bloquea. Quien tenga trabajo en curso aparte
-# decide si lo guarda (`git stash -k`) o asume la diferencia — pero ya no puede no saberlo,
-# y el reviewer y el juez lo leen en `--informe`.
+# Avisa y lo DEJA ESCRITO en el informe; no bloquea. Quien tenga trabajo en curso aparte decide
+# si lo guarda (`git stash -k`) o asume la diferencia, y el reviewer y el juez lo leen en
+# `--informe`.
 SUCIO="$(git diff --name-only 2>/dev/null)"
 
 # ¿Estoy corriendo el kit que el proyecto cree que corre?
 #
 # Un plugin instalado NO se actualiza solo, y `claude plugin install` tampoco lo actualiza:
-# hace falta `claude plugin marketplace update` y luego `claude plugin update`. Mientras
-# tanto el proyecto corre una versión vieja sin que nada lo diga. Pasó de verdad: AppStarter
-# verificó durante una sesión entera con una versión ANTERIOR al arreglo del falso verde —la
-# que firmaba el commit aunque los gates salieran en rojo— y encima sin el aviso de árbol
-# sucio. Dos fallos observados, una sola causa, y se descubrió de casualidad.
+# hace falta `claude plugin marketplace update` y luego `claude plugin update`. Mientras tanto
+# el proyecto corre una versión vieja sin que nada lo diga, y un arreglo publicado no protege a
+# quien cree tenerlo. Pasó, y se descubrió de casualidad.
 #
-# No bloquea y no habla si no tiene nada que decir. La consulta al remoto es como mucho una
-# vez al día y falla en silencio sin red.
+# No bloquea y no habla si no tiene nada que decir. La consulta al remoto es como mucho una vez
+# al día y falla en silencio sin red.
 DESFASE=""
 _ver() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -1; }
 MI_JSON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.claude-plugin/plugin.json"
@@ -100,9 +95,8 @@ if [ -f "$MI_JSON" ]; then
         MKT_VER="$(_ver "$d/.claude-plugin/plugin.json")"
         [ -n "$MKT_VER" ] && [ "$MKT_VER" != "$MI_VER" ] && DESFASE="corriendo $MI_VER, instalable $MKT_VER → claude plugin update $MI_NOMBRE"
 
-        # Y el propio clon del marketplace puede estar atrasado respecto a su remoto: ese
-        # fue exactamente el caso, porque los dos coincidían en la versión vieja y
-        # compararlos entre sí no habría avisado de nada.
+        # Y el propio clon del marketplace puede estar atrasado respecto a su remoto: si los
+        # dos coinciden en la versión vieja, compararlos entre sí no avisa de nada.
         STAMP="$ESTADO/.consulta-version"
         if [ -z "$(find "$STAMP" -mtime -1 2>/dev/null)" ]; then
             if GIT_TERMINAL_PROMPT=0 git -C "$d" fetch --quiet origin 2>/dev/null; then
@@ -142,10 +136,9 @@ verificaciones
 # Lógica repetida: avisa, no bloquea. Un duplicado puede ser deliberado, y quien lo decide
 # es quien mira el cambio, no un script.
 #
-# Y solo se reportan los grupos que TOCA este cambio. Antes se listaban todos, y en un
-# proyecto vivo eso son seis grupos preexistentes que se repiten en cada verificación hasta
-# que nadie los lee: el aviso que siempre dice lo mismo deja de ser un aviso. Los ocultos se
-# cuentan en una línea y se listan enteros con /kit-duplicados.
+# Y solo se reportan los grupos que TOCA este cambio: en un proyecto vivo, los preexistentes se
+# repiten en cada verificación hasta que nadie los lee, y el aviso que siempre dice lo mismo
+# deja de ser un aviso. Los ocultos se cuentan en una línea y se listan con /kit-duplicados.
 printf '▶ %s\n' "lógica repetida"
 TOCADOS="$ESTADO/.tocados"
 { git diff --cached --name-only; git diff --name-only; } 2>/dev/null | sort -u > "$TOCADOS"
@@ -187,13 +180,8 @@ printf '%s' "$INFORME"
 [ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el árbol verificado." \
                     || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."
 
-# 0 verde · 1 rojo · 3 «no pude mirar». El rojo es 1 SIEMPRE, no el número de pasos.
-#
-# Antes salía con `$FALLOS`, y entonces exactamente TRES pasos en rojo eran indistinguibles
-# de «no hay kit.conf» —los dos daban 3—, mientras `docs/PIEZAS.md` prometía por escrito que
-# se distinguían. Comprobado en un repositorio temporal el 2026-09-08: los dos salían 3.
-#
-# Se rompe el contrato que nadie consume (el número de pasos) y se conserva el que está
-# publicado (el 3). El recuento no se pierde: sigue en el informe y en la línea `resultado:`
-# de la firma, que es donde se lee de verdad.
+# 0 verde · 1 rojo · 3 «no pude mirar». El rojo es 1 SIEMPRE, no el número de pasos: saliendo
+# con el recuento, exactamente TRES pasos en rojo son indistinguibles de «no hay kit.conf», y
+# esa distinción es lo que el contrato publica. El recuento vive en el informe y en la línea
+# `resultado:` de la firma, que es donde se lee.
 [ "$FALLOS" -eq 0 ] && exit 0 || exit 1

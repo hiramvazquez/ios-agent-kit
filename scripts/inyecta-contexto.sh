@@ -12,21 +12,18 @@
 #   3. qué dependencias traen reglas propias — SOLO si las hay,
 #   4. si la firma de verificación corresponde al árbol actual.
 #
-# La 3 es condicional, y por eso este recuento ya ha estado mal dos veces: en un repositorio
-# sin dependencias resueltas —como este mismo— salen cuatro, y quien cuente ahí escribirá
-# «cuatro». Lo cazó el revisor el 2026-09-08, contando sobre un repo que sí las tenía.
+# La 3 es condicional: en un repositorio sin dependencias resueltas salen cuatro, así que quien
+# cuente sobre uno de esos escribirá «cuatro».
 #
-# POR QUÉ EL PUNTO 0. Este hook lee el repositorio del directorio que hereda de la sesión,
-# y ese no tiene por qué ser aquel en el que se está trabajando: el plugin se instala para
-# el usuario, no para un proyecto. El 2026-09-07 estuvo una sesión entera afirmando «Sin
-# cambio OpenSpec activo» mientras el repositorio real tenía uno con siete tareas hechas.
-# Nombrar el repositorio NO arregla el desfase —no hay señal disponible de dónde trabaja el
-# modelo, y adivinarlo sería peor que callarse—, pero convierte una afirmación falsa sobre
-# el trabajo en curso en una afirmación cierta y atribuida. El día que Claude Code dé al
-# hook el repositorio de la tarea, esto se sustituye.
+# POR QUÉ EL PUNTO 0. Este hook lee el repositorio del directorio que hereda de la sesión, y ese
+# no tiene por qué ser aquel en el que se está trabajando: el plugin se instala para el usuario,
+# no para un proyecto. Nombrar el repositorio NO arregla el desfase —no hay señal disponible de
+# dónde trabaja el modelo, y adivinarla sería peor que callarse—, pero convierte una afirmación
+# falsa sobre el trabajo en curso en una cierta y atribuida. El día que Claude Code dé al hook
+# el repositorio de la tarea, esto se sustituye.
 #
-# NO ESCRIBE NADA DENTRO DEL REPOSITORIO OBSERVADO. Antes creaba `.agent-kit/` para su
-# caché, en cualquier repositorio por el que pasara una sesión, usara el kit o no.
+# NO ESCRIBE NADA DENTRO DEL REPOSITORIO OBSERVADO: corre en toda sesión del usuario, también
+# en repositorios que nunca pidieron el kit.
 set -uo pipefail
 
 # `$DIR` se resuelve ANTES del `cd`: después, una invocación relativa desde un subdirectorio
@@ -39,37 +36,24 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [ -n "$RAIZ" ] || exit 0
 cd "$RAIZ" || exit 0
 
-# El JSON que este hook emite debe declarar, en `hookEventName`, el evento que lo invocó —
-# así lo exige la documentación de Claude Code—, y el mismo script está registrado en DOS
-# eventos: `UserPromptSubmit` en cada turno, y `SessionStart` con el matcher `compact`, para
-# reinyectar el acuerdo justo cuando compactar se lo come. El evento invocante viaja en el
-# JSON de stdin, en el campo `hook_event_name`; sin señal reconocible, se asume
-# `UserPromptSubmit`, que es el caso mayoritario y el comportamiento de antes de este cambio.
+# El JSON que este hook emite debe declarar en `hookEventName` el evento que lo invocó, y el
+# mismo script está registrado en DOS: `UserPromptSubmit` en cada turno, y `SessionStart` con el
+# matcher `compact`, para reinyectar el acuerdo justo cuando compactar se lo come. El evento
+# viaja en el JSON de stdin; sin señal reconocible se asume `UserPromptSubmit`, que es el caso
+# mayoritario.
 #
-# LÍMITE DECLARADO: lo que se fija aquí es la FORMA del JSON —que el nombre emitido sea el
-# del evento invocante—. Que el efecto se note de verdad, que el acuerdo reaparezca tras una
-# compactación real, solo se ve compactando una sesión real con el plugin instalado; esa
-# prueba vive fuera de este repositorio y el banco no puede fijarla.
+# LÍMITE DECLARADO: aquí se fija la FORMA del JSON. Que el acuerdo reaparezca de verdad tras una
+# compactación solo se ve compactando una sesión real con el plugin instalado, y esa prueba vive
+# fuera de este repositorio.
 #
-# CON TOPE DE TIEMPO, y esto no es prudencia de más. `[ -t 0 ]` solo reconoce el caso
-# terminal; si stdin es un pipe ABIERTO que nunca cierra —un invocador que no cierra la
-# entrada, un arranque desde otro proceso— un `cat` se queda esperando EOF para siempre y este
-# hook corre ANTES de cada turno: colgarlo es colgar la sesión. Reproducido el 2026-09-08 con
-# `bash inyecta-contexto.sh < <(sleep 300)`: ocho minutos vivo hasta que lo maté a mano, y lo
-# encontró una medición de coste que se quedó parada, no una prueba.
+# CON TOPE DE TIEMPO, y no es prudencia de más: `[ -t 0 ]` solo reconoce el caso terminal, y con
+# un stdin que nunca cierra, esperar EOF es esperar para siempre. Este hook corre ANTES de cada
+# turno, así que colgarlo es colgar la sesión. `read -t 1 -d ''` devuelve en cuanto llega EOF y
+# corta al segundo si no llega; sin el JSON solo se pierde saber qué evento invoca, y de eso hay
+# valor por defecto.
 #
-# El riesgo NACE con la lectura de stdin: antes de este cambio el hook no leía la entrada, así
-# que no podía colgarse. `read -t 1 -d ""` devuelve en cuanto llega EOF —el caso de siempre— y
-# corta al segundo si no llega nunca; sin el JSON solo se pierde saber qué evento invoca, y de
-# eso ya hay un valor por defecto.
-#
-# AQUÍ SOLO SE LEE. Quién invoca se decide abajo, en el MISMO `python3` que serializa la
-# salida, y eso no es preferencia de estilo: es la regla que `analiza-invocacion.py` ya lleva
-# escrita en su cabecera —«leer el JSON en un `python3 -c` aparte y analizar en otro costaba
-# dos arranques de intérprete en CADA comando: +12,6 ms sobre 30 iteraciones»—. Este hook
-# corre en cada turno, así que paga lo mismo. La primera versión de este bloque arrancaba un
-# intérprete solo para mirar `hook_event_name`: medido el 2026-09-08, 20,9 ms por turno sobre
-# 30 iteraciones — más caro que lo que aquella cabecera ya se negó a pagar.
+# AQUÍ SOLO SE LEE: quién invoca se decide abajo, en el MISMO `python3` que serializa la salida.
+# Arrancar un intérprete aparte solo para mirar `hook_event_name` costaba 20,9 ms por turno.
 ENTRADA=""
 [ -t 0 ] || IFS= read -r -t 1 -d '' ENTRADA 2>/dev/null || true
 
@@ -100,26 +84,15 @@ else
         # cosas de un acuerdo mientras se trabaja en el otro, que es el mismo fallo que
         # arregló la línea de atribución del repositorio.
         [ "$ACTIVOS_N" -gt 1 ] && add "    ⚠️  hay $ACTIVOS_N cambios activos; este es el primero por orden, no necesariamente el tuyo."
-        # `grep -c` imprime "0" Y sale con estado 1 cuando no hay coincidencias. El idiom
-        # `$(grep -c ... || echo 0)` no lo sabe: con cero pendientes, grep YA imprimió "0" y
-        # el `|| echo 0` ve el estado de salida no-cero y añade un SEGUNDO "0", dejando
-        # PEND="0\n0" —dos líneas, una detrás de otra—. En bash 3.2 —el de macOS, el que
-        # resuelve `#!/usr/bin/env bash`— expandir `$((TOT-PEND))` con ese valor es un error
-        # de sintaxis en la expresión aritmética, y ese error aborta el COMPOUND ENTERO (el
-        # `if [ -n "$ACT" ]; then … fi` de arriba), no solo esta línea: se pierden en
-        # silencio "tareas:", la lista de pendientes y el "FUERA de alcance", y el mensaje de
-        # error queda escrito en stderr. Reproducido el 2026-09-08 con un `tasks.md` de cero
-        # pendientes contra la versión de este hook anterior a este cambio.
+        # `|| true` y NO `|| echo 0`: `grep -c` imprime "0" Y sale con estado 1 cuando no hay
+        # coincidencias, así que el segundo idiom añade un SEGUNDO "0" y deja PEND="0\n0". En
+        # bash 3.2 —el de macOS— expandir `$((TOT-PEND))` con eso es un error de expansión
+        # aritmética, y ese error aborta el COMPOUND ENTERO: se pierden en silencio "tareas:",
+        # la lista de pendientes y el "FUERA de alcance", justo en el turno en que el cambio
+        # está terminado y más mandan. El contenido va por `printf` en vez de dejar que `grep`
+        # abra el fichero, para que "cero coincidencias" siga imprimiendo "0" exista o no.
         #
-        # El arreglo es el idiom que YA usa `rodaja.sh` con el mismo `grep -c` (línea con
-        # `printf '%s\n' "$D" | grep -c ... || true`): `|| true` en vez de `|| echo 0`, que
-        # no imprime nada, así que no hay segundo "0" que sumar. Y para que "cero
-        # coincidencias" siga imprimiendo "0" en vez de nada —que es lo que pasa si
-        # `tasks.md` no llega a abrirse—, el contenido se pasa por `printf` en vez de dejar
-        # que `grep` abra el fichero: un `printf` con salto de línea le da a `grep -c` una
-        # entrada bien formada exista o no el fichero, igual que hace `rodaja.sh` con `$D`.
-        #
-        # Y SOLO si hay lista. Un cambio pequeño no lleva `tasks.md` —lo recomienda
+        # Y SOLO si hay lista: un cambio pequeño no lleva `tasks.md` —lo recomienda
         # `docs/FLUJO.md`—, y ahí esto decía «tareas: 0/0 hechas», que se lee como «no queda
         # nada por hacer» cuando lo cierto es que ese cambio no tiene lista.
         PEND=0
@@ -129,26 +102,17 @@ else
             TOT="$(printf '%s\n' "$TASKS" | grep -cE '^- \[[ x]\]' || true)"
             add "    tareas: $((TOT-PEND))/$TOT hechas"
         fi
-        # Sin fichero intermedio. Esto pasaba por `/tmp/.ic.$$`: un nombre derivable del
-        # identificador de proceso, en un directorio donde escribe cualquiera, y escrito por
-        # un hook que corre en CADA turno de CUALQUIER repositorio por el que pase una
-        # sesión. Para componer tres líneas de texto no hace falta tocar el disco, y menos
-        # ahí. Es la misma regla que este hook ya cumplía —no escribir dentro del repositorio
-        # observado— aplicada al único sitio donde todavía escribía.
+        # Sin fichero intermedio: para componer tres líneas de texto no hace falta tocar el
+        # disco, y menos un temporal de nombre adivinable en un directorio donde escribe
+        # cualquiera, desde un hook que corre en cada turno de cualquier repositorio.
         if [ "$PEND" -gt 0 ]; then
             PENDIENTES="$(grep '^- \[ \]' "$ACT/tasks.md" 2>/dev/null | head -3 | sed 's/^/    /')"
             [ -n "$PENDIENTES" ] && L="${L}${PENDIENTES}"$'\n'
         fi
-        # La cabecera, en CUALQUIER caja. El `sed` de antes distinguía mayúsculas y 3 de las 16
-        # propuestas de este repositorio escriben «## FUERA de alcance» —incluida la activa el
-        # 2026-09-11—, así que el bloque desaparecía del digest sin decir nada: el mismo fallo
-        # silencioso que la cláusula de las cero tareas cerró por la otra puerta.
-        #
-        # `##+` en la cabecera y el MISMO corte que el `sed`: aquél cogía también un
-        # `### Fuera de alcance`, y estrechar eso de paso sería reintroducir el mismo fallo un
-        # nivel más abajo. El corte estuvo un rato en `/^#/`, que era más estrecho que el `sed`
-        # por el otro lado — terminaba el bloque en un `### Matiz` o en una almohadilla dentro
-        # de un bloque de código. Las dos cosas las señaló el revisor.
+        # La cabecera, en CUALQUIER caja y con dos almohadillas o más. Distinguir mayúsculas
+        # hacía desaparecer el bloque del digest sin decir nada en las propuestas que la
+        # escriben «## FUERA de alcance»; y cortar en cualquier `#` lo terminaba antes de
+        # tiempo, en un `### Matiz` o en una almohadilla dentro de un bloque de código.
         FUERA="$(awk 'tolower($0) ~ /^##+ fuera de alcance/ {f=1; next} f && /^## / {exit} f && /^- /' \
                  "$ACT/proposal.md" 2>/dev/null | head -3)"
         [ -n "$FUERA" ] && { add "    FUERA de alcance:"; L="${L}$(printf '%s\n' "$FUERA" | sed 's/^/      /')"$'\n'; }
@@ -173,21 +137,15 @@ CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ios-agent-kit"
 CACHE="$CACHE_DIR/$(printf '%s' "$RAIZ" | shasum -a 256 | cut -c1-32).paquetes"
 mkdir -p "$CACHE_DIR" 2>/dev/null
 if [ -z "$(find "$CACHE" -mtime -1 2>/dev/null)" ]; then
-    # ACOTAR A ESTE REPOSITORIO. Medido el 2026-09-08: sin filtrar, el `find` recorría TODO
-    # `~/Library/Developer/Xcode/DerivedData`, y este mismo repositorio —que tiene CERO
-    # ficheros .swift— anunciaba "AppFoundation CoreNetworking": dependencias de AppStarter y
-    # DemoMulti, otros proyectos de la misma máquina. Un repositorio vacío recién creado en
-    # /tmp recibía la misma frase. Es justo el fallo que el comentario de arriba ya declara
-    # peor que el que arregla: el caché ya era uno por repositorio, pero los cachés de la
-    # máquina contenían todos la misma respuesta de la máquina entera.
-    #
-    # La heurística y sus límites viven en `lib-kit.sh`, con `doc-paquetes.sh`, que hace esta
-    # misma búsqueda. Estuvo escrita aquí y solo aquí una versión, y por eso `/kit-doc` siguió
-    # anunciando los paquetes de otros proyectos después de que esto se arreglara.
+    # ACOTAR A ESTE REPOSITORIO. Sin filtrar, el `find` recorre TODO
+    # `~/Library/Developer/Xcode/DerivedData` y un repositorio sin un solo fichero .swift acaba
+    # anunciando las dependencias de otro proyecto de la máquina — un dato equivocado que parece
+    # correcto. La heurística y sus límites viven en `lib-kit.sh`, que es de donde la toma
+    # también `doc-paquetes.sh`.
     derivados_propios "$RAIZ"
 
-    # `-print0` y un `while read -d ''`: el `xargs` de antes partía por espacios y se comía
-    # cualquier ruta con un espacio dentro, que en DerivedData las hay.
+    # `-print0` y un `while read -d ''`: partir por espacios se come las rutas que los llevan
+    # dentro, y en DerivedData las hay.
     while IFS= read -r -d '' f; do
         b="${f%/*}"        # dirname
         printf '%s\n' "${b##*/}"   # basename

@@ -7,18 +7,9 @@
 # árbol que pudo cambiar después de correrlos. Es error de proceso, no mala fe, y es el
 # fallo que más caro sale porque no deja rastro.
 #
-# QUÉ MIRA, y por qué así. La primera versión reconocía un commit buscando la subcadena
-# "git commit" y comprobaba siempre el repositorio del directorio heredado. Fallaba de
-# cuatro formas a la vez, las cuatro fijadas hoy en `verifica-puerta.sh`:
-#   - una invocación dirigida con `-C` no contiene esa subcadena: se colaba sin comprobar
-#     NADA;
-#   - con el cwd en otro repositorio, comprobaba el equivocado y bloqueaba commits sí
-#     verificados;
-#   - bloqueaba cualquier comando que MENCIONARA las palabras — un `echo`, un `grep`,
-#     escribir esta misma cabecera;
-#   - en repositorios sin `kit.conf` bloqueaba sin salida, porque `verifica.sh` tampoco
-#     puede firmar allí.
-# Ahora se analiza la invocación con `shlex` y se resuelve el repositorio de destino.
+# QUÉ MIRA. La invocación, analizada con `shlex` —no la subcadena "git commit" en el texto del
+# comando—, y el repositorio de destino que de ahí se resuelve. Reconocer por subcadena fallaba
+# de cuatro formas a la vez, y las cuatro están fijadas en `verifica-puerta.sh`.
 #
 # LÍMITES, declarados porque estrecharlos sin decirlo sería peor que tenerlos:
 #   - `--no-verify` y cualquier otra vía deliberada siguen abiertas. Este hook frena el
@@ -30,18 +21,14 @@
 #     bonito que cubriera—: la invocación directa; la dirigida con `-C`, `--git-dir` o
 #     `--git-dir=`; un `cd`/`pushd` encadenado por delante, también dentro de `( … )` o
 #     `{ …; }`; y un `bash -c '…'` (o `sh`/`zsh`) analizado por dentro, hasta 4 niveles.
-#     La primera versión de esta lista decía «un `cd` encadenado por delante» a secas y era
-#     FALSA: `(cd X && …)` caía al directorio heredado, porque el primer token del segmento
-#     era `(` y el `cd` no se registraba. Lo encontró un juez de aceptación, no las pruebas.
 #   - Lo que NO cubre, y cae al directorio heredado: una invocación construida en tiempo de
 #     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable—, y
 #     cualquier envoltorio que no sea un shell de la lista. El olvido tiene formas comunes,
 #     no retorcidas; estas no son las comunes.
 set -uo pipefail
 
-# El análisis vive en `analiza-invocacion.py`, en su propio fichero y con UNA sola
-# invocación de python: antes eran dos —una para leer el JSON, otra para analizar— y eso
-# costaba +12,6 ms en CADA comando de la sesión, medidos sobre 30 iteraciones.
+# El análisis vive en `analiza-invocacion.py`, en su propio fichero y con UNA sola invocación
+# de python: dos intérpretes por comando cuestan +12,6 ms en CADA comando de la sesión.
 #
 # Fallo ABIERTO si algo va mal ahí dentro: sin poder leer la entrada no se puede afirmar
 # que haya un commit, y bloquear ante un JSON raro convertiría un fallo del hook en una

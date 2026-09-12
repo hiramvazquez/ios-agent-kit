@@ -2,13 +2,10 @@
 # Qué ha cambiado desde la última revisión — la "rodaja" que toca revisar ahora.
 #
 # EL PROBLEMA QUE RESUELVE. Revisar al final significa revisar el cambio entero, y volver a
-# revisarlo entero en cada vuelta. El coste es «tamaño de lo revisado × número de rondas», y
-# al final los dos factores están al máximo. Medido en un cambio real: 700 líneas revisadas
-# nueve veces entre revisor y juez, cuando los bugs vivían en tres tareas concretas.
-#
-# Peor que el coste es el momento: un hallazgo al final llega cuando el contexto ya se
-# perdió, cuando el arreglo toca código que se escribió encima, y cuando devolver una cosa
-# devuelve las siete que venían detrás.
+# revisarlo entero en cada vuelta: el coste es «tamaño de lo revisado × número de rondas», y así
+# los dos factores están al máximo. Y peor que el coste es el momento — un hallazgo al final
+# llega cuando el contexto ya se perdió y cuando devolver una cosa devuelve las que venían
+# detrás.
 #
 # Esto no añade proceso: `tasks.md` YA trocea el trabajo. Solo hace visible dónde acaba la
 # rodaja anterior, para poder revisar una tarea recién cerrada en vez del cambio entero.
@@ -19,13 +16,10 @@
 #       rodaja.sh --entregado [<ruta-del-cambio>]
 #                              TODO lo que ese cambio ha entregado, ignorando la marca
 #
-# `--entregado` es para el juez de aceptación, no para el revisor. El revisor juzga rodajas
-# —lo que ha cambiado desde la última revisión— y el juez juzga el cambio entero contra el
-# acuerdo, así que la marca no le sirve. Existe porque el prompt del juez le mandaba leer
-# «lo entregado» con `git diff main...HEAD`, y eso está VACÍO en el momento en que se le
-# invoca: por el flujo del kit el commit es posterior al juicio. Un juez con Read y Grep no
-# se queda a oscuras — dictamina leyendo ficheros sueltos y nadie se entera de que su fuente
-# estaba vacía, que es peor.
+# `--entregado` es para el juez de aceptación, no para el revisor: el revisor juzga rodajas y el
+# juez el cambio entero contra el acuerdo, así que la marca no le sirve. Y no puede usar
+# `git diff main...HEAD`, que está VACÍO cuando se le invoca —el commit es posterior al juicio—:
+# un juez con Read y Grep dictaminaría igual sin enterarse de que su fuente estaba vacía.
 set -uo pipefail
 
 # `$DIR` antes del `cd`, por lo mismo que en el hook: después, una invocación relativa desde
@@ -34,11 +28,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$DIR/lib-kit.sh"
 
-# `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo: `cd ""` devuelve 0 en bash, así
-# que la guarda nunca ve el fallo de git. Con eso, este script seguía hasta `mkdir -p
-# .agent-kit` en el directorio donde estuvieras — fuera de cualquier repositorio. Comprobado
-# el 2026-09-08 en un directorio pelado. La asignación SÍ propaga el código de git —
-# `verifica.sh` ya lo hace así—, así que se comprueba la resolución, no el `cd`.
+# Se comprueba la RESOLUCIÓN, no el `cd`: `cd "$(git rev-parse …)" || …` no dispara fuera de un
+# repositorio, porque `cd ""` devuelve 0 en bash, y este script seguiría hasta `mkdir -p
+# .agent-kit` en el directorio donde estuvieras. La asignación sí propaga el código de git.
 RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "❌ no es un repo git"; exit 1; }
 cd "$RAIZ" || exit 1
 
@@ -105,10 +97,8 @@ if [ "$MODO" = entregado ]; then
 
     DESDE=""
     if [ -n "$ACT" ]; then
-        # `--follow`: sin él, un `git mv` del directorio del cambio cuenta como la ADICIÓN
-        # del proposal, y el punto de partida pasa a ser el commit anterior al renombrado.
-        # Todo lo commiteado antes de renombrar desaparece del juicio, en silencio — el modo
-        # de fallo que este mismo modo existe para cerrar, reintroducido en pequeño.
+        # `--follow`: sin él, un `git mv` del directorio del cambio cuenta como la ADICIÓN del
+        # proposal, y todo lo commiteado antes de renombrar desaparece del juicio en silencio.
         INTRO="$(git log --follow --diff-filter=A --format=%H -- "$ACT/proposal.md" 2>/dev/null | tail -1)"
         [ -n "$INTRO" ] && DESDE="$(git rev-parse --verify --quiet "${INTRO}^" || echo "$INTRO")"
     fi
@@ -156,12 +146,11 @@ else
     [ "$MODO" = entregado ] && ORIGEN="el cambio entero, todavía sin commitear"
 fi
 
-# Los ficheros NUEVOS sin trackear no salen en ningún `git diff`, y en un cambio que crea
-# código son justamente todo el cambio. La primera prueba sobre una feature nueva reportó
-# 26 líneas cuando había cerca de setecientas: el revisor no habría visto la feature.
+# Los ficheros NUEVOS sin trackear no salen en ningún `git diff`, y en un cambio que crea código
+# son justamente todo el cambio: una feature de setecientas líneas se reportaba como 26.
 #
-# Se añaden aparte, sin tocar el índice. Un `git add -N` los haría visibles de golpe, pero
-# deja entradas intent-to-add que rompen el `git stash create` del que depende la marca.
+# Se añaden aparte, sin tocar el índice. Un `git add -N` los haría visibles de golpe, pero deja
+# entradas intent-to-add que rompen el `git stash create` del que depende la marca.
 #
 # Consecuencia asumida: un fichero que siga sin trackear aparece entero en CADA rodaja
 # hasta que se stagee. Se repite trabajo, no se pierde — y ese es el lado correcto en el
@@ -171,10 +160,9 @@ HAY_NUEVOS=0
 OMITIDOS=""
 while IFS= read -r nuevo; do
     [ -n "$nuevo" ] || continue
-    # `.claude/` es estado de herramientas, nunca código del proyecto. Un `worktrees/` ahí
-    # dentro metió 26.000 líneas de OTRO repo en una rodaja de 900: el revisor las leyó
-    # como si fueran el cambio. No está en .gitignore de todos los proyectos, así que se
-    # excluye aquí y no se confía en que lo esté.
+    # `.claude/` es estado de herramientas, nunca código del proyecto: un `worktrees/` ahí
+    # dentro metió 26.000 líneas de OTRO repositorio en una rodaja de 900. No está en el
+    # .gitignore de todos los proyectos, así que se excluye aquí en vez de confiar en que lo esté.
     case "$nuevo" in .claude/*|*/.claude/*) continue ;; esac
 
     LINEAS="$(wc -l < "$nuevo" 2>/dev/null || echo 0)"
@@ -195,9 +183,8 @@ if [ -n "$OMITIDOS" ]; then
     NUEVOS="${NUEVOS}"$'\n'"FICHEROS NUEVOS DEMASIADO GRANDES PARA VOLCARLOS AQUÍ:"$'\n'"${OMITIDOS}"
 fi
 
-# Bandera puesta en el bucle, y no un `${NUEVOS//[[:space:]]/}` al final: esa sustitución
-# de patrones sobre el diff entero tarda MINUTOS en bash en cuanto pasa de unas decenas de
-# KB. Colgó el script en su primer uso real con 43 KB de ficheros nuevos.
+# Bandera puesta en el bucle, y no un `${NUEVOS//[[:space:]]/}` al final: esa sustitución de
+# patrones sobre el diff entero tarda MINUTOS en bash en cuanto pasa de unas decenas de KB.
 if [ "$HAY_NUEVOS" -eq 1 ]; then
     D="${D}"$'\n'"${NUEVOS}"
 fi

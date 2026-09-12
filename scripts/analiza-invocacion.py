@@ -5,11 +5,10 @@ Lo usa `puerta-commit.sh`. Vive en su propio fichero por dos razones, y las dos
 salieron de fallos reales:
 
 - En un heredoc dentro de `$(python3 - <<'PY')`, stdin lo ocupa el PROPIO programa,
-  así que el JSON del hook no llegaba nunca y el analizador respondía «no es un
-  commit» a todo — la puerta quedaba abierta de par en par, sin síntoma visible.
-- Leer el JSON en un `python3 -c` aparte y analizar en otro costaba dos arranques
-  de intérprete en CADA comando de la sesión: +12,6 ms medidos sobre 30
-  iteraciones. Aquí es uno solo.
+  así que el JSON del hook no llega nunca y el analizador responde «no es un commit»
+  a todo: la puerta queda abierta de par en par, sin síntoma visible.
+- Leer el JSON en un intérprete y analizar en otro cuesta +12,6 ms en CADA comando
+  de la sesión. Aquí es uno solo.
 
 Lee el JSON del hook por stdin e imprime una línea:
     NO              → esto no invoca un commit

@@ -5,15 +5,18 @@ description: Revisa la rodaja pendiente — lo que ha cambiado desde la última 
 Lanza el sub-agente `reviewer` sobre **la rodaja pendiente**: lo que ha cambiado desde la
 última revisión marcada, no el cambio completo.
 
-Empieza mirando qué hay:
+**No ejecutes `rodaja.sh` aquí.** Lo hace el revisor dentro de su propio contexto, que es donde
+hace falta el diff. Ejecutarlo antes lo vuelca también en esta conversación, donde se queda para
+siempre, y el diff se acaba pagando dos veces.
 
-```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh"
-```
+Dile qué cambio se está implementando —por su ruta— y que corra él la rodaja, el informe de
+`/kit-verifica` y el `proposal.md`. Su única pregunta es **¿esto rompe algo?** — corrección,
+seguridad o un requisito explícito del encargo.
 
-Pásale al reviewer esa rodaja, el informe de `/kit-verifica` y el `proposal.md` del cambio
-activo. Su única pregunta es **¿esto rompe algo?** — corrección, seguridad o un requisito
-explícito del encargo.
+**Y dile qué hacer si la rodaja avisa de varios cambios activos:** `rodaja.sh` sin argumentos
+elige el primero por orden y solo avisa —no acepta que se le diga cuál—, así que el aviso, que
+antes salía aquí, ahora lo ve solo él. Que se quede con la ruta que le has dado: lo único que
+depende de esa elección es la lista de tareas cerradas; el diff es del repositorio entero.
 
 Cuando devuelva **GREEN o AMBER**, marca el punto:
 

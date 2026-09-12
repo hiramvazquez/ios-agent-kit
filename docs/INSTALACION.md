@@ -52,7 +52,8 @@ que nadie se enterara. La tabla de coste, con su fecha, está en
 [PIEZAS.md](PIEZAS.md#coste).
 
 Lo que sí conviene saber sin correr nada: lo caro se paga al invocarlo, no por estar
-instalado, y los hooks no cuestan contexto porque corren fuera del modelo.
+instalado. Y de los hooks, el código corre fuera del modelo y no cuesta contexto, pero **el
+texto que devuelven sí**: el que inyecta el acuerdo mete un digest en cada turno.
 
 ## 3. Tu proyecto — una vez por proyecto
 

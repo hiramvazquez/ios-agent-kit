@@ -270,7 +270,10 @@ sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.
 | `SessionStart(compact)` | tras compactar | lo mismo — es justo cuando se pierden las reglas |
 | `PreToolUse` | antes de cada Bash | bloquea `git commit` sin firma válida |
 
-Los tres corren fuera del contexto del modelo: no cuestan tokens.
+Los tres corren fuera del contexto del modelo, así que su código no cuesta tokens. Lo que sí
+cuesta es **lo que devuelven**: el digest del acuerdo entra en el contexto una vez por turno, y
+las copias anteriores siguen ahí hasta que se compacta. Cuánto ocupa, en
+[PIEZAS.md](PIEZAS.md#coste).
 
 ## Cuánto proceso pide cada cambio
 

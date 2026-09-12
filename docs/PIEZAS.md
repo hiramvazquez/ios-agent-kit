@@ -236,7 +236,33 @@ Cuando necesites el número de hoy, corre el comando en vez de leer esta tabla.
 | `aceptacion` al invocarlo | ~1,6k |
 | `reviewer` al invocarlo | ~900 |
 | Los `/kit-*` al invocarlos | ~260–870 cada uno |
-| Los tres hooks | 0 — corren fuera del contexto del modelo |
+| Los tres hooks | su código, 0 — corren fuera del contexto del modelo |
+| El digest que inyecta uno de ellos | **770–1.110 caracteres por turno** (medido el 2026-09-11, ver abajo), y no se descuentan hasta compactar |
+
+El digest no tiene un tamaño fijo: **crece con el acuerdo que describe**. Medido el 2026-09-11
+con el propio hook, contando el `additionalContext` que emite:
+
+| estado del repositorio | caracteres |
+|---|---|
+| con `openspec/` y sin cambio activo | 769 |
+| un cambio activo, «fuera de alcance» de una línea | 802 |
+| este repositorio ese día, con tres cambios activos | 1.111 |
+
+Lo que lo mueve son el bloque «FUERA de alcance» —hasta tres viñetas enteras, sin truncar—, la
+lista de tareas pendientes y el aviso de varios cambios activos. Por eso va como rango: un
+número plano sería falso para cualquier repositorio que no sea el medido.
+
+Se recuenta así, que es el comando que produjo la tabla:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/inyecta-contexto.sh" </dev/null \
+  | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"]))'
+```
+
+Y una advertencia de procedencia: la primera versión de esta fila decía «~720», medido antes de
+que se arreglara el fallo por el que el «fuera de alcance» no se inyectaba con la cabecera en
+mayúsculas. La cifra la caducó el arreglo del mismo día — es el motivo por el que una medición
+va con su comando y no sola.
 
 Esos números son el **prompt**: lo que ocupa cargar la pieza. No es lo que cuesta usarla.
 

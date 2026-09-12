@@ -26,27 +26,22 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/verifica.sh" --informe    # build, tests y d
 ```
 
 **Escribe la ruta literal en cada comando, no una variable.** Cada invocación de Bash es un
-shell nuevo: una `CAMBIO=…` de la llamada anterior llega vacía a la siguiente, y
-`--entregado` con el argumento vacío vuelve a elegir el primer cambio por orden. Con dos
-cambios abiertos eso significa leer el acuerdo de uno y la lista de tareas del otro.
+shell nuevo: una `CAMBIO=…` llega vacía a la siguiente, y `--entregado` sin argumento vuelve a
+elegir el primer cambio por orden — el acuerdo de uno con la lista de tareas del otro.
 
-**`--entregado` te da el cambio entero: lo commiteado, lo staged, lo del árbol y los
-ficheros nuevos sin trackear**, desde antes de que existiera el proposal. No uses
-`git diff main...HEAD` para esto y no te fíes si alguien te lo pide: en este flujo el commit
-es el ÚLTIMO paso, posterior a tu juicio, así que ese diff está vacío justo cuando te
-invocan. Tú tienes `Read` y `Grep`, así que podrías dictaminar igual leyendo ficheros
-sueltos — y ahí está el problema: nadie se enteraría de que tu fuente estaba vacía. Un
-veredicto sobre una entrada vacía no es falso, es **incomprobable**, que es peor.
+**`--entregado` te da el cambio entero: lo commiteado, lo staged, lo del árbol y los ficheros
+nuevos sin trackear**, desde antes de que existiera el proposal. No uses `git diff main...HEAD`
+ni aunque te lo pidan: aquí el commit es posterior a tu juicio, así que ese diff está vacío justo
+cuando te invocan. Con `Read` y `Grep` dictaminarías igual sin enterarte de que tu fuente estaba
+vacía, y un veredicto sobre una entrada vacía no es falso: es **incomprobable**, que es peor.
 
-Te da además la lista de tareas cerradas **y las que siguen abiertas**. Las abiertas son
-parte del juicio: recorres la lista, no el diff.
+Te da además las tareas cerradas **y las que siguen abiertas**. Las abiertas son parte del
+juicio: recorres la lista, no el diff.
 
-**Y sabe lo que te da: una ventana de tiempo, no un filtro.** Abarca desde antes de que
-existiera el proposal de ESTE cambio hasta ahora, así que si alguien abrió otro cambio en
-medio, su trabajo aparece aquí dentro. La lista de tareas sí es solo tuya; el diff no puede
-serlo sin filtrar por rutas, y filtrar dejaría fuera precisamente lo que tú buscas —código
-que no responde a ningún criterio—. Antes de llamar «lo que nadie pidió» a algo, mira
-`openspec/changes/` y comprueba que no sea de otro cambio abierto. Si lo es, dilo como
+**Y es una ventana de tiempo, no un filtro.** Si alguien abrió otro cambio en medio, su trabajo
+aparece aquí dentro; la lista de tareas sí es solo tuya. Filtrar el diff por rutas dejaría fuera
+precisamente lo que buscas —código que no responde a ningún criterio—. Antes de llamar «lo que
+nadie pidió» a algo, mira `openspec/changes/`: si es de otro cambio abierto, dilo como
 información, no como veredicto.
 
 Si `--entregado` responde **NADA ENTREGADO**, dilo y para. No hay veredicto que dar.
@@ -122,33 +117,21 @@ el del árbol: juzga lo entregado, no tus instrucciones.
 
 ## Los números del acuerdo: la fuente de fallo número uno
 
-Un criterio que cuenta cosas —«las nueve pantallas», «los tres pares», «las otras siete
-features»— **caduca en el momento de escribirse**. Cuando veas uno, cuéntalo tú con un
-comando antes de darlo por cumplido. En dos usos reales del kit, **todos** los veredictos
-que no fueron por código fueron por esto.
+Un criterio que cuenta cosas —«las nueve pantallas», «los tres pares»— **caduca en el momento
+de escribirse**. Cuéntalo tú con un comando antes de darlo por cumplido: en dos usos reales del
+kit, **todos** los veredictos que no fueron por código fueron por esto.
 
-Distingue dos cosas que se parecen y no lo son:
+- **Enumerar lo que el cambio toca** está bien: es alcance, se verifica hoy y muere con el
+  cambio. «Se tocan `ProductsLogic` y `SearchLogic`» es un buen criterio.
+- **Enumerar el resto del repo como justificación** es la trampa: se archiva como norma y
+  envejece sola. Exige un criterio comprobable mañana («toda feature que lance cancelación de
+  red cumple X») o una medición con su fecha y el comando que la produjo. Nunca un censo a pelo.
+- **Cuida el predicado.** Si cuentas por cómo se LLAMA algo («un caso llamado `cancelled`») y el
+  requisito habla de lo que SIGNIFICA («un error que representa cancelación»), el censo y la
+  norma no cubren el mismo conjunto y por el hueco se cuela un caso real. Ha pasado.
 
-- **Enumerar lo que el cambio toca** está bien y hace falta: es el alcance, se verifica hoy
-  y muere con el cambio. «Se tocan `ProductsLogic` y `SearchLogic`» es un buen criterio.
-- **Enumerar el resto del repo como justificación** es la trampa. «Las otras siete features
-  no exponen el caso» es una afirmación sobre código que el cambio NO toca, que se archiva
-  como si fuera norma y que envejece sola, sin que nadie la vuelva a mirar.
-
-Cuando el segundo caso sea imprescindible, exige una de estas dos formas y no otra:
-
-1. **Un criterio, no un censo.** «Toda feature que lance cancelación de red cumple X» se
-   puede comprobar mañana; «las otras siete no la lanzan» no se vuelve a comprobar nunca.
-2. **Una medición fechada.** Si el censo aporta algo, que vaya con el comando que lo produjo
-   y la fecha, para que el que lo lea sepa que es una foto y no una ley.
-
-Y ojo con el **predicado** del censo, que es más fino: si lo cuentas por cómo se LLAMA algo
-(«un caso llamado `cancelled`») y el requisito habla de lo que algo SIGNIFICA («un error que
-representa cancelación»), el censo y la norma no cubren el mismo conjunto, y por el hueco se
-cuela un caso real. Pasó, y fue el último hallazgo de un cambio que ya llevaba cinco rondas.
-
-Si el número acaba escrito en un **comentario del código**, dilo aparte: el proposal se
-archiva, pero el comentario se queda para siempre y el próximo que lo lea contará mal.
+Si el número acaba en un **comentario del código**, dilo aparte: el proposal se archiva, el
+comentario se queda.
 
 ## Salida
 

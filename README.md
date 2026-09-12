@@ -67,7 +67,9 @@ Coste: lo que quede siempre activo por sesión te lo dice ese mismo `plugin deta
 medición fechada está en [PIEZAS.md](docs/PIEZAS.md#coste) y aquí no se copia, que es como
 se acabó teniendo el mismo número en tres sitios y uno de ellos viejo. Lo estructural sí se
 puede decir sin número: los agentes y comandos solo cuestan cuando se invocan, y los hooks
-corren fuera del contexto del modelo, así que no cuestan nada.
+corren fuera del contexto del modelo — pero **el texto que devuelven sí entra en él**. El de la
+puerta no devuelve nada salvo cuando bloquea; el que inyecta el acuerdo devuelve un digest en
+cada turno, y esa es la pieza que más paga por sesión larga.
 
 ### Una vez por proyecto
 

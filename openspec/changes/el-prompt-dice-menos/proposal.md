@@ -64,8 +64,15 @@ se toca. Lo que se va es prosa que no manda nada.
       inalcanzable mientras el cambio no se publique: ese comando mide el plugin INSTALADO, no
       el árbol de trabajo. Corregido por escrito el 2026-09-11 para medir lo que sí se puede
       medir hoy; la cifra del comando se anota al publicar, como dice el criterio de abajo.*
-- [ ] Al publicar, `claude plugin details ios-agent-kit` SHALL dar un «on-invoke» de `aceptacion`
+- [x] Al publicar, `claude plugin details ios-agent-kit` SHALL dar un «on-invoke» de `aceptacion`
       menor que los ~4,2k del 2026-09-11, y la cifra nueva SHALL quedar anotada con su fecha.
+
+      **Medido el 2026-09-11 con la 1.11.0 ya instalada: `aceptacion` ~3,7k** (antes ~4,2k).
+      Y el resto de la foto, que no todo baja y hay que decirlo: `kit-revisa` sube de ~860 a
+      **~1,1k**, porque este mismo cambio le añadió qué hacer con el aviso de varios cambios
+      activos —el aviso que dejó de verse en la conversación principal—; `kit-verifica` de ~290
+      a ~310; y lo siempre activo, de ~650 a ~653. El ahorro de `/kit-revisa` no está en su
+      prompt sino en el diff de la rodaja, que antes se pagaba dos veces y ahora una.
 - [ ] `agents/aceptacion.md` SHALL seguir diciendo, sin perder nada de lo que una spec exige: que
       los scripts se invocan por `${CLAUDE_PLUGIN_ROOT}`, que la ruta del cambio se escribe
       literal en cada comando, que con NADA ENTREGADO se para, y que lo entregado es una ventana

@@ -243,6 +243,40 @@ Hoy hay **un solo** detector propio, el de duplicados, y está porque esa clase 
 tres veces: tres `extension Date` en tres view models distintos, cada una correcta por
 separado.
 
+### La otra deriva: el arreglo que fabrica el hallazgo siguiente
+
+Lo de arriba acota los **detectores**. Pero hay una segunda forma de crecer, y es más difícil de
+ver porque cada paso parece responsable: se recibe un hallazgo de revisión, se arregla, y **el
+arreglo abre el siguiente**.
+
+Medido en este repositorio el 2026-09-11, auditándolo con su propio kit: **un solo cambio dio
+cinco hallazgos en dos rondas de revisor, y dos de los cinco salieron del arreglo de la ronda
+anterior** — firmar el árbol para cerrar `git commit -am` abrió el agujero del índice, y firmar
+los dos abrió la colisión de los diffs concatenados. Uno lo escribió el arreglo; el otro era una
+frase que el arreglo volvió falsa. Ese día entero fueron cuatro rondas y ocho hallazgos sobre
+tres cambios.
+
+Cada ronda costó entre 130k y 260k tokens. **Esa cifra no se puede recomprobar**: sale de las
+notificaciones de los sub-agentes de aquel día, que no viven en el repositorio — el mismo límite
+que [PIEZAS.md](docs/PIEZAS.md#coste) declara para las suyas.
+
+Lo que corta ese bucle no es otra regla mecánica; son tres cosas, y las tres las decide una
+persona:
+
+| | |
+|---|---|
+| **Presupuestar las rondas antes de empezar** | está en [FLUJO.md](docs/FLUJO.md#cuántas-rondas-merece-esto), y en prosa son dos |
+| **Parar y archivar con la deuda escrita** | un DEVUELTO que no es del producto no obliga a otra ronda |
+| **Preferir restar** | ese mismo día, lo que encogió el repo no fue arreglar nada: fue borrar 7.720 líneas que nadie leía, y **no tocar** los bancos — que son los que cazaron los cinco hallazgos |
+
+Por eso el digest de cada turno lleva la regla en una línea —«un hallazgo se arregla en su causa
+y restando: no es motivo para un fichero nuevo»— y `/kit-revisa` y `/kit-acepta` la repiten al
+recibir el veredicto, que es el momento en que se decide.
+
+Sí: para predicar «prefiere restar», esa línea **añade** 89 caracteres a cada turno, para
+siempre. Es deliberado y es la rama barata de la regla de arriba — cambiar una línea de un prompt
+cuesta una línea; un detector cuesta un script, su banco y su mantenimiento.
+
 ---
 
 ## Documentación

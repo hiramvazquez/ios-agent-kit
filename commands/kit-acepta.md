@@ -15,6 +15,14 @@ final, con la cabeza fresca.
 Pásale el cambio: `openspec list` para ver cuál está activo, y su carpeta en
 `openspec/changes/<nombre>/`.
 
+## Qué hacer con el veredicto, antes de tocar nada
+
+Igual que con el revisor: busca **la causa** antes de reaccionar, **prefiere restar** a añadir, y
+recuerda que un hallazgo no justifica por sí solo un fichero nuevo. Con el juez hay además una
+trampa propia: es fácil «cumplir» un criterio reescribiéndolo. Si el criterio está mal escrito,
+se corrige **por escrito y diciéndolo** —eso es renegociar—; lo que no vale es ajustarlo en
+silencio para que encaje con lo entregado.
+
 ## Anota la ronda, en una línea
 
 Cuando hayas terminado con lo que dijo, añade una línea al final de `tasks.md` —o del

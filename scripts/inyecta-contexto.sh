@@ -68,6 +68,7 @@ add "    - El acuerdo manda: si el código y openspec/ discrepan, se corrige el 
 add "      renegocia el acuerdo POR ESCRITO. Nunca se reescribe el acuerdo para que encaje."
 add "    - Antes de escribir una función, busca si ya existe: /kit-duplicados."
 add "    - Fuera de alcance es fuera de alcance, incluso si 'ya que estamos'."
+add "    - Un hallazgo se arregla en su causa y restando: no es motivo para un fichero nuevo."
 
 # Tres situaciones, no dos. Antes, un repositorio sin `openspec/` salía por la misma rama
 # que uno que lo tiene y no está usándolo, y recibía la misma orden: «primero

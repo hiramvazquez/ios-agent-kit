@@ -18,6 +18,20 @@ elige el primero por orden y solo avisa —no acepta que se le diga cuál—, as
 antes salía aquí, ahora lo ve solo él. Que se quede con la ruta que le has dado: lo único que
 depende de esa elección es la lista de tareas cerradas; el diff es del repositorio entero.
 
+## Qué hacer con lo que devuelva, antes de tocar nada
+
+Un veredicto no es una lista de tareas. Para cada hallazgo, decide **en este orden**:
+
+1. **¿Cuál es la causa?** Si dos hallazgos tienen la misma, se arregla una vez, no dos.
+2. **¿Se puede restar?** Borrar lo que sobra cierra más hallazgos que añadir lo que falta.
+3. **¿Hace falta un fichero nuevo?** Casi nunca. Un hallazgo no lo justifica por sí solo: se
+   arregla donde vive el defecto.
+
+Y cuenta las rondas contra el presupuesto que declaraste (`docs/FLUJO.md`). El modo de fallo
+caro no es el hallazgo: es que **tu arreglo fabrique el siguiente** — ha pasado, y una ronda
+cuesta más que el cambio entero. Si la segunda solo devuelve redacción, para y que decida el
+owner.
+
 Cuando devuelva **GREEN o AMBER**, marca el punto:
 
 ```bash

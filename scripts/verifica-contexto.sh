@@ -180,6 +180,9 @@ echo "▶ lo que ya hacía, y no puede romperse"
 D="$(digest "$TMP/con_cambio")"
 contiene "$D" "Reglas que ningún linter puede comprobar por ti"; caso $? \
     "las reglas innegociables siguen inyectándose"
+contiene "$D" "Un hallazgo se arregla en su causa"; caso $? \
+    "entre ellas, qué hacer con un hallazgo de revisión" \
+    "la cláusula la afirmaba el acuerdo y no la medía nada: borrar la línea dejaba el banco verde"
 contiene "$D" "mi-cambio"; caso $? \
     "con cambio activo, lo nombra"
 contiene "$D" "2. pendiente"; caso $? \
@@ -208,7 +211,7 @@ contiene "$D" "tareas:"; caso $? \
     "el compound abortaba antes de llegar a esta línea: el digest saltaba directo a la verificación"
 contiene "$D" "FUERA de alcance:"; caso $? \
     "con cero tareas pendientes, el digest sigue incluyendo el bloque FUERA de alcance" \
-    "era la línea que más costaba perder: una de las tres reglas innegociables que este hook existe para inyectar"
+    "era la línea que más costaba perder: una de las reglas innegociables que este hook existe para inyectar"
 
 # Y su CONTENIDO, que es lo que mide la caja de la cabecera: la línea de arriba comprueba la
 # etiqueta que pone el propio hook, y esa sale igual aunque el bloque venga vacío.

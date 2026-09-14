@@ -226,16 +226,22 @@ pensar que la segunda es barata y no lo es.
 
 ### Lo que cuesta tener el kit puesto
 
-**Medición del 2026-09-07**, con `claude plugin details ios-agent-kit`. Va fechada a
-propósito: es una foto, no una ley, y cambia en cuanto se añade o se recorta una pieza.
-Cuando necesites el número de hoy, corre el comando en vez de leer esta tabla.
+**Aquí no hay tabla de tokens por pieza, y es deliberado.** Los da el comando:
+
+```bash
+claude plugin details ios-agent-kit
+```
+
+Lo que ocupa siempre activo y lo que cuesta cada agente o comando al invocarlo sale de ahí, con
+la versión que tengas instalada. Hubo una tabla con esos números, fechada, y **caducó tres veces
+en cinco días** — la última en menos de un día, cuando un cambio recortó el prompt del juez y
+otro alargó el de `/kit-revisa`. Un número que un comando da mejor no se copia a un documento: se
+mira donde vive.
+
+Lo que sí va escrito es lo que ningún comando dice:
 
 | | |
 |---|---|
-| Siempre activo | **~469 tokens** por sesión |
-| `aceptacion` al invocarlo | ~1,6k |
-| `reviewer` al invocarlo | ~900 |
-| Los `/kit-*` al invocarlos | ~260–870 cada uno |
 | Los tres hooks | su código, 0 — corren fuera del contexto del modelo |
 | El digest que inyecta uno de ellos | **770–1.110 caracteres por turno** (medido el 2026-09-11, ver abajo), y no se descuentan hasta compactar |
 
@@ -277,10 +283,14 @@ poco para dar un rango y se dice:
 | una ronda de juez | **67k – 124k tokens** · 9 rondas de las 17 del día |
 | una ronda de revisor | 68k – 111k · **solo 2 rondas** |
 
-Un juez «cuesta ~1,6k» al cargarlo y entre **cuarenta y ochenta veces más** al usarlo, porque
-lo que se paga es la ronda entera: leer el acuerdo, correr los scripts, medir contra el repositorio y
-escribir el dictamen. Las dos cifras son ciertas y responden preguntas distintas; la que decide
-tu factura es esta.
+Cargar el prompt del juez cuesta lo que diga `claude plugin details`; **usarlo cuesta uno o dos
+órdenes de magnitud más**, porque lo que se paga es la ronda entera: leer el acuerdo, correr los
+scripts, medir contra el repositorio y escribir el dictamen. Las dos cifras son ciertas y
+responden preguntas distintas; la que decide tu factura es esta.
+
+Aquí ponía un múltiplo exacto —«entre cuarenta y ochenta veces»— y no vuelve: su numerador lo da
+un comando que cambia con cada versión, y su denominador no se puede recomprobar. Un cociente así
+nace caducado, y este ya lo hizo.
 
 Y el tamaño del cambio la mueve **mucho menos de lo que parece**: el de veinticinco ficheros
 costó por ronda una vez y media lo que el de un fichero y una sección —112,1k contra 73,9k de

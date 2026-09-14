@@ -46,9 +46,10 @@ claude plugin details ios-agent-kit
 ```
 
 Ese comando inventaría las piezas —skills, agentes y hooks— y dice cuántos tokens quedan
-siempre activos por sesión. Los números salen de ahí y **no se escriben aquí**: un inventario
-copiado a un documento caduca en el momento de escribirse, y este llegó a quedarse corto sin
-que nadie se enterara. La tabla de coste, con su fecha, está en
+siempre activos por sesión. Los números salen de ahí y **no se escriben en la documentación**:
+un inventario copiado a un documento caduca en el momento de escribirse, y este llegó a quedarse
+corto sin que nadie se enterara. Lo que sí está escrito, porque ningún comando lo dice, es lo
+que cuesta el digest que se inyecta en cada turno y lo que cuesta una ronda de juicio:
 [PIEZAS.md](PIEZAS.md#coste).
 
 Lo que sí conviene saber sin correr nada: lo caro se paga al invocarlo, no por estar
@@ -77,12 +78,28 @@ ese es el momento de arreglarlo, no la primera vez que alguien intente commitear
 
 ### Si prefieres hacerlo a mano
 
+Las plantillas viven en el clon del marketplace, no en tu proyecto. `hiram-kits` es el nombre con
+el que lo añadiste en el paso 1; si usaste otro, cámbialo aquí.
+
 ```bash
+KIT=~/.claude/plugins/marketplaces/hiram-kits
+
 openspec init --tools claude --language es
-cp "$(claude plugin details ios-agent-kit | grep -o '/.*ios-agent-kit')/plantillas/kit.conf.ejemplo" kit.conf
+cp "$KIT/plantillas/kit.conf.ejemplo" kit.conf
+cp "$KIT/plantillas/openspec-config.yaml.ejemplo" openspec/config.yaml
 printf '\n.agent-kit/\n' >> .gitignore
-$EDITOR kit.conf          # pon los comandos reales de tu proyecto
+
+$EDITOR kit.conf               # pon los comandos reales de tu proyecto
+$EDITOR openspec/config.yaml   # rellena el `context` con módulos, capas y reglas
 ```
+
+**Son dos plantillas, no una.** El segundo `cp` pisa el `config.yaml` que acaba de generar
+`openspec init`, y eso es lo que se quiere: sin él te quedas sin las reglas de criterios de
+aceptación y de archivado, que es la mitad de lo que hace `/kit-init`.
+
+Aquí ponía un `cp` que sacaba la ruta de `claude plugin details … | grep -o '/.*ios-agent-kit'`.
+Ese comando **no imprime ninguna ruta** —inventaría piezas y coste—, así que el `grep` salía
+vacío y el `cp` apuntaba a `/plantillas/…`. Comprobado el 2026-09-11 y otra vez el 2026-09-12.
 
 ## Cuando algo falla
 

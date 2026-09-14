@@ -5,10 +5,11 @@ Que quien abre un cambio sepa **cuántas vueltas de juicio va a pagar** antes de
 al final. El kit tenía una tabla para decidir qué artefactos escribir y ninguna para decidir
 cuántas rondas presupuestar: la palabra «ronda» aparecía una sola vez en toda su documentación.
 
-El coste está donde nadie miraba. Cargar el prompt del juez cuesta ~1,6k tokens; usarlo cuesta
-entre cuarenta y ochenta veces eso, porque lo que se paga es la ronda entera. Las dos cifras
-son ciertas y responden preguntas distintas, y publicar solo la primera hacía pensar que juzgar
-es barato.
+El coste está donde nadie miraba: cargar el prompt del juez es barato y usarlo cuesta mucho más,
+porque lo que se paga es la ronda entera. Las dos cifras son ciertas y responden preguntas
+distintas, y publicar solo la primera hacía pensar que juzgar es barato. Las cifras no se
+escriben aquí —viven en `docs/PIEZAS.md`, fechadas y con lo que se pueda recomprobar declarado—,
+porque un número en un texto que se archiva envejece solo.
 
 Lo que **no** pretende: automatizar nada. No hay contador de rondas ni de tokens, y no lo va a
 haber por esto — el presupuesto lo lleva quien orquesta, a ojo, y un autor que no lo declare al

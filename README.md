@@ -63,9 +63,11 @@ puede teclear comandos de barra: los escribe el humano.
 (`/opsx:propose`, `/kit-verifica`, `/kit-acepta`…). La terminal solo hace falta para
 instalar, actualizar y diagnosticar.
 
-Coste: lo que quede siempre activo por sesión te lo dice ese mismo `plugin details`; la
-medición fechada está en [PIEZAS.md](docs/PIEZAS.md#coste) y aquí no se copia, que es como
-se acabó teniendo el mismo número en tres sitios y uno de ellos viejo. Lo estructural sí se
+Coste: lo que quede siempre activo por sesión te lo dice ese mismo `plugin details`, y no se
+copia a ningún documento — que es como se acabó teniendo el mismo número en tres sitios y uno de
+ellos viejo. Lo que sí está escrito en [PIEZAS.md](docs/PIEZAS.md#coste) es lo que ningún comando
+dice: lo que cuesta el digest de cada turno y lo que cuesta una ronda de juicio. Lo estructural
+sí se
 puede decir sin número: los agentes y comandos solo cuestan cuando se invocan, y los hooks
 corren fuera del contexto del modelo — pero **el texto que devuelven sí entra en él**. El de la
 puerta no devuelve nada salvo cuando bloquea; el que inyecta el acuerdo devuelve un digest en

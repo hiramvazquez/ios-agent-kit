@@ -44,15 +44,15 @@ operations:
          que hace falta".'
   archive:
     guidance:
-      - 'Antes de archivar, pasa `/kit-acepta`. Compara lo ENTREGADO con lo ACORDADO,
-         criterio por criterio. Es la pregunta que ni el compilador, ni los tests, ni el
-         reviewer se hacen.
-         La excepción, y es la única: un cambio pequeño de alcance claro cuyo alcance NO se
-         movió al implementar puede archivarse sin juez. "Pequeño" tiene umbral: menos de unos
-         5 ficheros y sin tocar varias capas — si toca varias, hay juez aunque sean pocos
-         ficheros. Sale de la tabla "Cuánto proceso pide cada cambio" de docs/FLUJO.md, que se
-         midió sobre un cambio real con el flujo entero; el umbral va escrito aquí porque tu
-         proyecto no tiene ese documento.'
+      - 'El paso obligatorio antes de archivar es el REVISOR (`/kit-revisa`): ¿esto rompe algo?
+         El juez (`/kit-acepta`) pregunta otra cosa —¿es lo ACORDADO?, criterio por criterio— y
+         se invoca CUANDO NADIE VAYA A LEER EL ACUERDO CONTRA LO ENTREGADO: cambios grandes o
+         que tocan varias capas (más de unos 5 ficheros), alcance que se movió al implementar,
+         o cuando quien orquesta no es quien acordó.
+         No es adorno: su primer uso real devolvió ACUERDO-ROTO a un cambio que compilaba,
+         pasaba 144 tests y tenía el linter en verde, y que hacía justo lo que su propio "fuera
+         de alcance" prohibía. El revisor no lo ve porque no es su pregunta. Lo que decide
+         cuándo pagar esa ronda eres tú, no una regla.'
       - 'No se archiva con ACUERDO-ROTO ni con un DEVUELTO del producto —una pieza que no
          hace lo acordado—. Con ACUERDO-ROTO se corrige el acuerdo primero, POR ESCRITO, y se
          vuelve a pasar. Con un DEVUELTO que no es del producto y el presupuesto de rondas

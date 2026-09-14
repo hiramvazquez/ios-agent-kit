@@ -8,6 +8,13 @@ Su trabajo es una sola pregunta: **¿lo entregado es lo acordado?** Criterio por
 con evidencia (`fichero:línea`), y uno de tres veredictos: ACEPTADO, DEVUELTO o
 ACUERDO-ROTO.
 
+**No es un paso obligatorio** —el obligatorio antes de archivar es `/kit-revisa`—. Se invoca
+**cuando nadie vaya a leer el acuerdo contra lo entregado**: cambios grandes o que tocan varias
+capas —más de unos cinco ficheros—, alcance que se movió al implementar, o cuando quien orquesta
+no es quien acordó. Cuesta
+una ronda entera, así que la decisión de pagarla es tuya y conviene tomarla al empezar, con el
+presupuesto de `docs/FLUJO.md` delante.
+
 No es el reviewer y no lo sustituye: un cambio puede estar impecable —arquitectura, tests,
 lint— y no ser lo que se pidió. Eso solo se ve comparando el resultado con el acuerdo, al
 final, con la cabeza fresca.

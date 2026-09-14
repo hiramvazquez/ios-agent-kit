@@ -60,6 +60,9 @@ significa revisar todo, y volver a revisarlo todo en cada vuelta. Un hallazgo ta
 llega cuando el contexto se perdió y cuando devolver una cosa devuelve las que vinieran
 detrás.
 
-No sustituye a `/kit-acepta`: el reviewer pregunta si el código está bien; el juez de
-aceptación pregunta si es lo que se acordó. Un cambio puede estar impecable y no ser lo
-pedido.
+**Este es el paso obligatorio antes de archivar.** `/kit-acepta` no lo es: pregunta otra cosa
+—el reviewer, si el código está bien; el juez, si es lo que se acordó— y se invoca **cuando
+nadie vaya a leer el acuerdo contra lo entregado**: cambios grandes o que tocan varias capas
+—más de unos cinco ficheros—, alcance que se movió al implementar, o cuando quien orquesta no es
+quien acordó. Un cambio puede
+estar impecable y no ser lo pedido, y eso solo lo ve el juez.

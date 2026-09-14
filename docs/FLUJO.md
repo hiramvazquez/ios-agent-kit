@@ -177,11 +177,29 @@ código existente sí se trocea fino; creándolo, no.
 
 ---
 
-## 6. El juez de aceptación — *¿es lo acordado?*
+## 6. El juez de aceptación — *¿es lo acordado?* · **opcional**
 
 ```
 /kit-acepta
 ```
+
+**Este paso no es obligatorio**, y es el único del flujo que no lo es. El que sí lo es antes de
+archivar es el revisor del paso 5. El juez se invoca **cuando nadie vaya a leer el acuerdo contra
+lo entregado**:
+
+- el cambio es grande o toca varias capas —más de unos cinco ficheros—,
+- el alcance se movió al implementar,
+- o quien orquesta no es quien acordó.
+
+Fuera de esos casos, decide quien orquesta y cuesta una ronda entera, así que conviene decidirlo
+al empezar y no al final. En la auditoría del kit —cinco cambios y once commits, con catorce
+hallazgos en seis pasadas— no se invocó ni una vez y el revisor encontró todo; pero eran cambios
+pequeños, de prosa, con el owner mirando cada paso. Los tres casos de arriba son justo los
+contrarios, y de ellos esa auditoría no dice nada: no se dio ninguno.
+
+Y lo que no prueba, dicho porque es fácil leerlo al revés: **no es que el juez no encontrara
+nada** — es que no se le preguntó. La única vez que se usó de verdad devolvió ACUERDO-ROTO a un
+cambio que compilaba y pasaba 144 tests.
 
 Lee el `proposal.md`, el delta y el diff completo, y va **criterio por criterio**, cada uno
 con evidencia (`fichero:línea`):
@@ -227,7 +245,8 @@ los tests pasaban; y el reviewer habría dicho GREEN, porque el diff **en sí** 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a
 `openspec/changes/archive/<fecha>-<nombre>/`.
 
-**No archiva con ACUERDO-ROTO** —se corrige el acuerdo primero, por escrito— **ni con un DEVUELTO
+**Si pasaste el juez** —que es opcional desde el paso 6—, su veredicto manda para archivar. **No
+archiva con ACUERDO-ROTO** —se corrige el acuerdo primero, por escrito— **ni con un DEVUELTO
 del producto**: una pieza que no hace lo acordado. Con un DEVUELTO que no es del producto —lo que
 queda es prosa— y el presupuesto de rondas agotado, **decides tú**: puedes archivar, y la deuda
 queda escrita en el acuerdo.
@@ -280,11 +299,14 @@ las copias anteriores siguen ahí hasta que se compacta. Cuánto ocupa, en
 No todo cambio necesita los seis pasos, y forzarlos es la forma más rápida de que la gente
 deje de usar esto. La regla salió de medir un cambio de cuatro líneas con el flujo entero:
 
-| tamaño del cambio | qué escribes | ¿juez? |
+| tamaño del cambio | qué escribes | ¿conviene el juez? |
 |---|---|---|
-| menos de ~5 ficheros, alcance claro | **proposal + delta**. Salta `tasks.md` | solo si el alcance se movió al implementar |
-| varios ficheros, o toca varias capas | proposal + delta + tasks | sí |
-| el alcance creció a mitad | lo que ya tuvieras, **más la enmienda por escrito** | **sí, siempre** |
+| menos de ~5 ficheros, alcance claro | **proposal + delta**. Salta `tasks.md` | no suele aportar: el revisor llega |
+| varios ficheros, o toca varias capas | proposal + delta + tasks | sí, aquí es donde paga |
+| el alcance creció a mitad | lo que ya tuvieras, **más la enmienda por escrito** | sí, y por eso mismo |
+
+**Ninguna fila obliga.** El juez dejó de ser un paso del flujo el 2026-09-14: la columna dice
+cuándo aporta, no qué hay que hacer. Quien orquesta decide, y lo que decide es pagar una ronda.
 
 Lo que **nunca** se salta es el **«Fuera de alcance»** y el **delta de spec**, aunque el
 cambio sea de una línea. En el cambio de cuatro líneas que sirvió para medir esto, el
@@ -306,8 +328,10 @@ los cita: en ese mismo cambio, añadir un `import` los desplazó y llegaron fals
 
 ## Cuántas rondas merece esto
 
-La tabla de arriba decide qué artefactos escribes. Esta decide **cuántas vueltas de revisor y
-juez pagas**, que es donde de verdad se va el coste — y no es lo mismo.
+La tabla de arriba decide qué artefactos escribes. Esta decide **cuántas vueltas de revisor
+pagas** —y de juez, si decides invocarlo—, que es donde de verdad se va el coste y no es lo
+mismo. Con el juez opcional desde el paso 6, presupuestar «dos rondas» significa dos del
+revisor; la del juez, si la hay, se suma aparte.
 
 **Presupuéstalas antes de invocar a nadie**, según lo que vayas a poner bajo juicio:
 

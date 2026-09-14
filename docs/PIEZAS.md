@@ -9,7 +9,11 @@ primero: una pieza que promete más de lo que da es peor que no tenerla.
 
 ### `aceptacion` — ¿es lo acordado?
 
-**Cuándo:** al final de un cambio, antes de archivar. Con `/kit-acepta`.
+**Cuándo:** al final de un cambio, con `/kit-acepta`. **No es obligatorio** —el paso que sí lo es
+antes de archivar es el revisor—: se invoca **cuando nadie vaya a leer el acuerdo contra lo
+entregado**, que son los cambios grandes o que tocan varias capas —más de unos cinco ficheros—,
+los que movieron su alcance al implementar, y aquellos en los que quien orquesta no es quien
+acordó.
 
 Lee el `proposal.md`, el delta de spec y el diff completo, y dictamina **criterio por
 criterio** con evidencia (`fichero:línea`). Tres cosas que busca a propósito porque si no se

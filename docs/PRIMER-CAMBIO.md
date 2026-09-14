@@ -10,10 +10,15 @@ salió.
 /opsx:propose "lo que quieras construir"    →  se acuerda. CERO código.
 /opsx:apply                                 →  se implementa
 /kit-verifica                               →  build, tests y duplicados, firmado
-   reviewer                                 →  ¿esto rompe algo?
-/kit-acepta                                 →  ¿es lo acordado?
+/kit-revisa                                 →  ¿esto rompe algo?  ← el obligatorio
+/kit-acepta                                 →  ¿es lo acordado?   ← OPCIONAL
 /opsx:archive                               →  el delta se funde en la spec viva
 ```
+
+El único paso opcional es el juez. Se invoca **cuando nadie vaya a leer el acuerdo contra lo
+entregado**: cambios grandes o que tocan varias capas —más de unos cinco ficheros—, alcance que
+se movió al implementar, o cuando quien orquesta no es quien acordó. En este recorrido sí se usa,
+y por eso aparece: es un cambio que toca dos paquetes y varias pantallas.
 
 ---
 

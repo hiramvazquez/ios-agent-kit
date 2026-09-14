@@ -99,12 +99,18 @@ se arregla ahí mismo.
 /kit-verifica                              →  build, tests y duplicados, firmado
 /kit-revisa                                →  ¿esto rompe algo? UNA TAREA, no el cambio entero
 /kit-acepta                                →  ¿es lo acordado? criterio por criterio
+                                              OPCIONAL: se invoca cuando nadie vaya a leer
+                                              el acuerdo contra lo entregado
 /opsx:archive                              →  el delta se funde en la spec viva
 ```
 
 Los dos últimos pasos antes de archivar son distintos **a propósito**: un cambio puede
 estar impecable —arquitectura, tests, lint— y no ser lo que se pidió. El reviewer no lo ve
 porque no es su pregunta.
+
+**El obligatorio de los dos es el revisor.** El juez se invoca cuando nadie vaya a leer el
+acuerdo contra lo entregado: cambios grandes o que tocan varias capas —más de unos cinco
+ficheros—, alcance que se movió al implementar, o cuando quien orquesta no es quien acordó.
 
 ### El caso que lo justifica
 

@@ -85,23 +85,13 @@ else
         # cosas de un acuerdo mientras se trabaja en el otro, que es el mismo fallo que
         # arregló la línea de atribución del repositorio.
         [ "$ACTIVOS_N" -gt 1 ] && add "    ⚠️  hay $ACTIVOS_N cambios activos; este es el primero por orden, no necesariamente el tuyo."
-        # `|| true` y NO `|| echo 0`: `grep -c` imprime "0" Y sale con estado 1 cuando no hay
-        # coincidencias, así que el segundo idiom añade un SEGUNDO "0" y deja PEND="0\n0". En
-        # bash 3.2 —el de macOS— expandir `$((TOT-PEND))` con eso es un error de expansión
-        # aritmética, y ese error aborta el COMPOUND ENTERO: se pierden en silencio "tareas:",
-        # la lista de pendientes y el "FUERA de alcance", justo en el turno en que el cambio
-        # está terminado y más mandan. El contenido va por `printf` en vez de dejar que `grep`
-        # abra el fichero, para que "cero coincidencias" siga imprimiendo "0" exista o no.
-        #
-        # Y SOLO si hay lista: un cambio pequeño no lleva `tasks.md` —lo recomienda
-        # `docs/FLUJO.md`—, y ahí esto decía «tareas: 0/0 hechas», que se lee como «no queda
-        # nada por hacer» cuando lo cierto es que ese cambio no tiene lista.
+        # SOLO si hay lista: sin `tasks.md` no hay línea de recuento. Por qué, y la trampa de
+        # `grep -c` en bash 3.2 que se comía este bloque entero, en `recuento_tareas`.
         PEND=0
-        if [ -f "$ACT/tasks.md" ]; then
-            TASKS="$(cat "$ACT/tasks.md")"
-            PEND="$(printf '%s\n' "$TASKS" | grep -c '^- \[ \]' || true)"
-            TOT="$(printf '%s\n' "$TASKS" | grep -cE '^- \[[ x]\]' || true)"
-            add "    tareas: $((TOT-PEND))/$TOT hechas"
+        recuento_tareas "$ACT"
+        if [ -n "$TAREAS_TOTAL" ]; then
+            PEND=$((TAREAS_TOTAL - TAREAS_HECHAS))
+            add "    tareas: $TAREAS_HECHAS/$TAREAS_TOTAL hechas"
         fi
         # Sin fichero intermedio: para componer tres líneas de texto no hace falta tocar el
         # disco, y menos un temporal de nombre adivinable en un directorio donde escribe

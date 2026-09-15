@@ -33,8 +33,10 @@ cd "$RAIZ" || exit 1
 CONF="$RAIZ/kit.conf"
 ESTADO="$RAIZ/.agent-kit"
 MARKER="$ESTADO/verificacion.txt"
-mkdir -p "$ESTADO"
 
+# Los dos modos de abajo solo LEEN, y no crean `.agent-kit/`: `/kit-estado` pregunta con
+# `--comprueba`, y una pregunta no puede dejar un directorio en un repositorio que nunca pidió el
+# kit. Lo crea verificar, que es quien tiene algo que escribir.
 case "${1:-}" in
 --informe)
     [ -f "$MARKER" ] && cat "$MARKER" || echo "sin informe: nadie ha corrido verifica todavía"
@@ -52,6 +54,7 @@ case "${1:-}" in
     echo "✅ firma válida para este árbol"; exit 0
     ;;
 esac
+mkdir -p "$ESTADO"
 
 if [ ! -f "$CONF" ]; then
     cat >&2 <<'AYUDA'
@@ -77,39 +80,34 @@ SUCIO="$(git diff --name-only 2>/dev/null)"
 # ¿Estoy corriendo el kit que el proyecto cree que corre?
 #
 # Un plugin instalado NO se actualiza solo, y `claude plugin install` tampoco lo actualiza:
-# hace falta `claude plugin marketplace update` y luego `claude plugin update`. Mientras tanto
-# el proyecto corre una versión vieja sin que nada lo diga, y un arreglo publicado no protege a
-# quien cree tenerlo. Pasó, y se descubrió de casualidad.
+# hace falta `claude plugin marketplace update` y luego `claude plugin update`. Y aun así, una
+# conversación REANUDADA puede seguir cargando la versión con la que empezó: pasó retomando una desde
+# el historial de la app. Mientras tanto el proyecto
+# corre una versión vieja sin que nada lo diga, y un arreglo publicado no protege a quien cree
+# tenerlo. Pasaron las dos cosas, y las dos se descubrieron de casualidad.
+#
+# Qué versiones se comparan y qué se aconseja lo decide `version_kit`, en `lib-kit.sh`, que es de
+# donde lo toma también `/kit-estado`: si los dos lo decidieran por su cuenta, podrían aconsejar
+# distinto sobre la misma máquina. Lo único que es de aquí es mirar el REMOTO del marketplace,
+# porque el clon local puede estar atrasado, y compararlo con lo instalado no avisa de nada.
 #
 # No bloquea y no habla si no tiene nada que decir. La consulta al remoto es como mucho una vez
 # al día y falla en silencio sin red.
-DESFASE=""
-_ver() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -1; }
-MI_JSON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.claude-plugin/plugin.json"
-if [ -f "$MI_JSON" ]; then
-    MI_VER="$(_ver "$MI_JSON")"
-    MI_NOMBRE="$(sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' "$MI_JSON" | head -1)"
-    for d in "$HOME"/.claude/plugins/marketplaces/*/; do
-        [ -f "$d/.claude-plugin/plugin.json" ] || continue
-        grep -q "\"name\": *\"$MI_NOMBRE\"" "$d/.claude-plugin/plugin.json" || continue
-        MKT_VER="$(_ver "$d/.claude-plugin/plugin.json")"
-        [ -n "$MKT_VER" ] && [ "$MKT_VER" != "$MI_VER" ] && DESFASE="corriendo $MI_VER, instalable $MKT_VER → claude plugin update $MI_NOMBRE"
-
-        # Y el propio clon del marketplace puede estar atrasado respecto a su remoto: si los
-        # dos coinciden en la versión vieja, compararlos entre sí no avisa de nada.
-        STAMP="$ESTADO/.consulta-version"
-        if [ -z "$(find "$STAMP" -mtime -1 2>/dev/null)" ]; then
-            if GIT_TERMINAL_PROMPT=0 git -C "$d" fetch --quiet origin 2>/dev/null; then
-                touch "$STAMP"
-                REF="$(git -C "$d" rev-parse --verify --quiet origin/HEAD || echo origin/main)"
-                REM_VER="$(git -C "$d" show "$REF:.claude-plugin/plugin.json" 2>/dev/null \
-                           | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1)"
-                [ -n "$REM_VER" ] && [ "$REM_VER" != "$MKT_VER" ] && \
-                    DESFASE="corriendo $MI_VER, publicada $REM_VER → claude plugin marketplace update ${d%/} && claude plugin update $MI_NOMBRE"
-            fi
+version_kit "$(cd "$DIR/.." && pwd)"
+DESFASE="$CONSEJO_VERSION"
+if [ -n "$KIT_CLON" ]; then
+    STAMP="$ESTADO/.consulta-version"
+    if [ -z "$(find "$STAMP" -mtime -1 2>/dev/null)" ]; then
+        if GIT_TERMINAL_PROMPT=0 git -C "$KIT_CLON" fetch --quiet origin 2>/dev/null; then
+            touch "$STAMP"
+            REF="$(git -C "$KIT_CLON" rev-parse --verify --quiet origin/HEAD || echo origin/main)"
+            REM_VER="$(git -C "$KIT_CLON" show "$REF:.claude-plugin/plugin.json" 2>/dev/null | version_json)"
+            # El marketplace se nombra por su NOMBRE, no por su ruta: antes se aconsejaba
+            # `claude plugin marketplace update <ruta del clon>`.
+            [ -n "$REM_VER" ] && [ "$REM_VER" != "$VER_CLON" ] && \
+                DESFASE="corriendo $VER_CORRE, publicada $REM_VER → claude plugin marketplace update ${KIT_CLON##*/} && claude plugin update $KIT_ID, y después abre una conversación nueva"
         fi
-        break
-    done
+    fi
 fi
 
 FALLOS=0

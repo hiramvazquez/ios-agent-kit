@@ -160,7 +160,7 @@ firma y la puerta de commit no deja pasar.
 | `agents/aceptacion.md` | juez de aceptación |
 | `agents/reviewer.md` | revisor de corrección |
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
-| `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta` |
+| `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta`, `/kit-estado` |
 | `hooks/hooks.json` | los tres hooks |
 | `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh` de las piezas que usan los proyectos. Cuáles hay se cuenta con `ls scripts/verifica-*.sh` |
 
@@ -173,6 +173,10 @@ claude plugin marketplace update hiram-kits
 claude plugin update ios-agent-kit@hiram-kits    # `install` NO actualiza: dice "ya instalado"
 claude plugin list                                # Status ✔ enabled, con la versión nueva
 ```
+
+**Y abre una conversación nueva.** Una conversación reanudada puede seguir cargando la versión con la
+que empezó aunque la nueva ya esté instalada: pasó retomando una desde el historial de la app.
+`/kit-estado` avisa si la conversación va desfasada y dice qué hacer.
 
 Los proyectos que lo usan no tocan nada, salvo que cambie el contrato de `kit.conf`.
 

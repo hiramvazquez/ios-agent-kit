@@ -57,6 +57,7 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 | `/kit-doc` | dónde está la doc de los paquetes de los que dependes (rutas resueltas) |
 | `/kit-revisa` | lanza el revisor sobre la **rodaja** pendiente, no sobre el cambio entero |
 | `/kit-acepta` | lanza el juez de aceptación |
+| `/kit-estado` | cómo estamos: lo que queda sin guardar, los cambios activos, la firma, los duplicados y la versión del kit. Al instante y sin compilar; como `/kit-verifica`, carga tu `kit.conf` |
 
 ---
 

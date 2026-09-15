@@ -5,31 +5,70 @@
 # No se carga solo: cada script hace `. "$DIR/lib-kit.sh"`, con `$DIR` resuelto ANTES de
 # cambiar de directorio.
 
-# cambio_activo — deja dos variables puestas:
+# cambio_activo — deja tres variables puestas:
 #     ACTIVO     ruta del cambio OpenSpec activo, o vacío si no hay ninguno
 #     ACTIVOS_N  cuántos hay
+#     ACTIVOS    las rutas de TODOS, una por línea y en el mismo orden, o vacío
 #
 # Se llama SIN subshell —`cambio_activo` y luego `$ACTIVO`, nunca `$(cambio_activo)`— porque
-# devuelve dos cosas y una sustitución de comandos se comería la segunda.
+# devuelve tres cosas y una sustitución de comandos se comería las otras dos.
 #
-# Vive aquí porque la usan el hook de contexto y `rodaja.sh`, y copiada ya se cobró un fallo:
-# cada copia elegía con `head -1` sobre un `find`, o sea por el orden del sistema de ficheros,
-# así que con dos cambios abiertos el digest podía hablar de uno mientras la marca de revisión
-# copiaba las tareas del otro.
+# `ACTIVOS` es una cadena y no un array: expandir un array vacío bajo `set -u` aborta en bash
+# 3.2, que es lo que `derivados_propios` tiene que esquivar más abajo.
+#
+# Vive aquí porque la usan el hook de contexto, `rodaja.sh` y `estado.sh`, y copiada ya se cobró
+# un fallo: cada copia elegía con `head -1` sobre un `find`, o sea por el orden del sistema de
+# ficheros, así que con dos cambios abiertos el digest podía hablar de uno mientras la marca de
+# revisión copiaba las tareas del otro.
 #
 # El orden lo fija `LC_ALL=C sort`, para que no dependa del sistema de ficheros ni del idioma
 # de la máquina. Cuál es «el» activo cuando hay varios sigue siendo arbitrario, pero arbitrario
 # y ESTABLE, y quien llama puede decir que hay más de uno en vez de callárselo.
 cambio_activo() {
     ACTIVO=""
+    ACTIVOS=""
     ACTIVOS_N=0
     local d
     while IFS= read -r d; do
         [ -n "$d" ] || continue
         ACTIVOS_N=$((ACTIVOS_N + 1))
         [ -z "$ACTIVO" ] && ACTIVO="$d"
+        ACTIVOS="${ACTIVOS}${d}"$'\n'
     done < <(find openspec/changes -maxdepth 1 -mindepth 1 -type d ! -name archive 2>/dev/null \
              | LC_ALL=C sort)
+}
+
+# recuento_tareas <cambio> — deja dos variables puestas:
+#     TAREAS_HECHAS  cuántas tareas de su `tasks.md` están marcadas
+#     TAREAS_TOTAL   cuántas hay
+#
+# Las dos VACÍAS si el cambio no tiene `tasks.md`, y no a cero: un cambio pequeño no lleva lista
+# —lo recomienda `docs/FLUJO.md`—, y «tareas: 0/0 hechas» se lee como «no queda nada por hacer»
+# cuando lo cierto es que ese cambio no tiene lista. Quien llama mira `TAREAS_TOTAL` vacía.
+#
+# Se llama SIN subshell, por lo mismo que `cambio_activo`.
+#
+# `|| true` y NO `|| echo 0`: `grep -c` imprime "0" Y sale con estado 1 cuando no hay
+# coincidencias, así que el segundo idiom añade un SEGUNDO "0" y deja "0\n0". En bash 3.2 —el de
+# macOS— expandir la resta de abajo con eso es un error de expansión aritmética, y ese error
+# aborta el COMPOUND ENTERO de quien llama: en el hook se perdían en silencio "tareas:", la lista
+# de pendientes y el "FUERA de alcance", justo en el turno en que el cambio está terminado y más
+# mandan. El contenido va por `printf` en vez de dejar que `grep` abra el fichero, para que "cero
+# coincidencias" siga imprimiendo "0".
+#
+# Vive aquí porque la usan el hook de contexto y `estado.sh`, y la trampa de arriba no se ve
+# reescribiéndola de memoria.
+recuento_tareas() {
+    TAREAS_HECHAS=""
+    TAREAS_TOTAL=""
+    [ -f "$1/tasks.md" ] || return 0
+    local tareas pendientes
+    tareas="$(cat "$1/tasks.md")"
+    pendientes="$(printf '%s\n' "$tareas" | grep -c '^- \[ \]' || true)"
+    TAREAS_TOTAL="$(printf '%s\n' "$tareas" | grep -cE '^- \[[ x]\]' || true)"
+    # SC2034: se lee en los scripts que cargan esta lib, no aquí.
+    # shellcheck disable=SC2034
+    TAREAS_HECHAS=$((TAREAS_TOTAL - pendientes))
 }
 
 # huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE, los dos.
@@ -112,4 +151,86 @@ derivados_propios() {
     # shellcheck disable=SC2034
     DD_PROPIO=("$HOME/Library/Developer/Xcode/DerivedData/${proyecto}-"*)
     eval "$_ng"
+}
+
+# version_json — la primera `"version"` del JSON que le llega por la entrada estándar.
+#
+# Por la entrada y no por nombre de fichero, porque `verifica.sh` también la saca de un `git show`.
+# Es un `sed` y no un parser, y basta: los `plugin.json` llevan `"version"` una vez, arriba.
+version_json() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1; }
+
+# version_kit <raíz-del-kit> — qué versión del kit corre, cuál está instalada y cuál trae el
+# marketplace, y qué hacer si no coinciden. Deja puestas:
+#     VER_CORRE        la del `plugin.json` de <raíz-del-kit>: la que ha cargado esta conversación
+#     VER_INSTALADA    la que Claude Code tiene instalada, o vacía si no se puede leer
+#     VER_CLON         la del clon local del marketplace, o vacía si no lo hay
+#     KIT_CLON         el directorio de ese clon, o vacío
+#     KIT_ID           `<nombre>@<marketplace>`, que es como lo nombra `claude plugin`
+#     CONSEJO_VERSION  qué hacer, en una frase, o vacío si no hay nada que hacer
+#
+# Se llama SIN subshell, por lo mismo que `cambio_activo`. Solo LEE: ni red ni escritura. Mirar el
+# remoto del marketplace es cosa de `verifica.sh`, una vez al día.
+#
+# POR QUÉ TRES VERSIONES Y NO DOS. Hasta el 2026-09-15 se comparaba la que corre con la del clon, y
+# el consejo era siempre `claude plugin update`. El 2026-09-14 eso aconsejó mal: con la 1.12.2 ya
+# instalada, una conversación REANUDADA desde el historial de la app seguía cargando la 1.10.0 —conservó
+# la raíz del plugin con la que empezó—, así que actualizar ya estaba hecho y lo que faltaba era una
+# conversación nueva. Con `--continue` o `--resume` no está medido.
+# Sin mirar la instalada no hay forma de distinguir un caso del otro.
+#
+# EL ORDEN DE LOS CONSEJOS: si el marketplace trae otra versión que la instalada, actualizar va
+# primero y la conversación nueva detrás, en la misma frase. Solo con lo instalado al día queda
+# únicamente la conversación.
+#
+# LÍMITES DECLARADOS:
+#   - `installed_plugins.json` es un fichero interno de Claude Code, no un contrato. Si no se puede
+#     leer, se compara la que corre con la del clon, que es lo que se hacía antes.
+#   - El clon se busca como antes: el primer marketplace cuyo `plugin.json` de raíz lleve el mismo
+#     nombre. Sin clon no hay `<marketplace>` con el que buscar la instalada, y se calla.
+#   - Con el kit cargado desde un directorio de desarrollo, la que corre y la instalada también
+#     difieren, y el consejo de conversación nueva no aplica. No se detecta.
+#
+# SC2034: `CONSEJO_VERSION` se lee en los scripts que cargan esta lib, no aquí.
+# shellcheck disable=SC2034
+version_kit() {
+    VER_CORRE=""; VER_INSTALADA=""; VER_CLON=""; KIT_CLON=""; KIT_ID=""; CONSEJO_VERSION=""
+    [ -f "$1/.claude-plugin/plugin.json" ] || return 0
+    local nombre d c nueva
+    VER_CORRE="$(version_json < "$1/.claude-plugin/plugin.json")"
+    nombre="$(sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' "$1/.claude-plugin/plugin.json" | head -1)"
+    KIT_ID="$nombre"
+    for d in "$HOME"/.claude/plugins/marketplaces/*/; do
+        c="${d%/}"
+        [ -f "$c/.claude-plugin/plugin.json" ] || continue
+        grep -q "\"name\": *\"$nombre\"" "$c/.claude-plugin/plugin.json" || continue
+        KIT_CLON="$c"
+        VER_CLON="$(version_json < "$c/.claude-plugin/plugin.json")"
+        KIT_ID="$nombre@${c##*/}"
+        break
+    done
+
+    # La de ámbito `user` si hay varias: es la que se instala para todas las conversaciones.
+    if [ -n "$KIT_CLON" ]; then
+        VER_INSTALADA="$(KIT_ID="$KIT_ID" python3 -c '
+import json, os
+try:
+    ruta = os.path.expanduser("~/.claude/plugins/installed_plugins.json")
+    e = json.load(open(ruta))["plugins"].get(os.environ["KIT_ID"]) or []
+    e = [x for x in e if x.get("scope") == "user"] or e
+    print(e[0].get("version", ""))
+except Exception:
+    pass
+' 2>/dev/null)"
+    fi
+
+    nueva="abre una conversación nueva: una reanudada puede seguir con la versión con la que empezó"
+    if [ -n "$VER_INSTALADA" ]; then
+        if [ -n "$VER_CLON" ] && [ "$VER_CLON" != "$VER_INSTALADA" ]; then
+            CONSEJO_VERSION="instalada la $VER_INSTALADA y el marketplace trae la $VER_CLON → claude plugin update $KIT_ID, y después $nueva"
+        elif [ "$VER_INSTALADA" != "$VER_CORRE" ]; then
+            CONSEJO_VERSION="esta conversación corre la $VER_CORRE y está instalada la $VER_INSTALADA → $nueva"
+        fi
+    elif [ -n "$VER_CLON" ] && [ "$VER_CLON" != "$VER_CORRE" ]; then
+        CONSEJO_VERSION="corriendo $VER_CORRE, instalable $VER_CLON → claude plugin update $KIT_ID, y después $nueva"
+    fi
 }

@@ -154,7 +154,11 @@ claude plugin update ios-agent-kit@hiram-kits     # instala la versión nueva
 
 **`claude plugin install` NO actualiza** — si ya está instalado responde "ya instalado" y
 se queda con la versión vieja, sin avisar de que hay otra. El comando es `update`.
-Reinicia la sesión para que cargue.
+
+Después, **abre una conversación nueva**. Una reanudada puede seguir cargando la versión con la que
+empezó: retomar una desde el historial de la app siguió con la vieja, aun cerrando y volviendo a abrir
+la app. Con `--continue` o `--resume` no está comprobado. `/kit-estado` avisa si la conversación va
+desfasada y dice qué hacer.
 
 Los proyectos que usan el kit no tocan nada, salvo que cambie el contrato de `kit.conf`.
 

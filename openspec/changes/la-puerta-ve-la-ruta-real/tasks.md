@@ -40,3 +40,27 @@
       formas nuevas. **Hecho**: la cabecera nombra el `cd` en línea aparte, la expansión de
       `~` y variables, y el límite de la ruta construida en ejecución.
 - [x] 4.2 `/kit-verifica` en verde.
+
+## 5. Cierre del revisor (AMBER, 2026-09-16)
+
+- [x] 5.1 **El arreglo cubría menos de lo que el spec prometía.** Tras el `cd`, el escaneo
+      paraba en el primer token que no fuera `git commit`, así que `cd X` + `git add -A` +
+      `git commit` en tres líneas pasaba sin comprobar nada. Y medido al verificarlo: `git
+      add -A` + `git commit` en dos líneas **sin** `cd` tampoco comprobaba el repo de la
+      sesión —preexistente, y la forma más común de escribir un commit—. Ahora, tras un `cd`
+      o un subcomando de git, el escaneo busca el siguiente inicio de comando conocido en el
+      mismo segmento. Verificación: 3 casos nuevos en el banco, los tres bloqueando.
+- [x] 5.2 **El límite que queda, declarado y con prueba**: un comando que no es de git entre
+      el `cd` y el commit cae al directorio heredado. No se cubre porque dentro de un segmento
+      no se distingue un nombre de comando de un argumento, y partir por líneas rompería el
+      caso del heredoc. Verificación: caso en el banco que lo fija como «pasa», y la cabecera
+      del hook lo explica.
+- [x] 5.3 **`~usuario` se afirmaba probado y no lo estaba.** El comportamiento funciona, pero
+      `expanduser` lo resuelve por la base de datos de usuarios y no por `$HOME`, así que el
+      truco del banco no sirve y probarlo exigiría escribir en el home real. Criterio de
+      aceptación corregido y dicho en el spec, en vez de dejar creer que hay una prueba.
+- [x] 5.4 **Control contra el montaje**, que el revisor echó de menos: con `HOME` apuntado al
+      banco y ruta absoluta a un repo FIRMADO, la puerta pasa. Si `HOME=$TMP` rompiera
+      `verifica.sh`, los dos «bloquea» de las rutas bloquearían por el montaje y no por el
+      fallo. Verificación: caso 31 del banco.
+- [x] 5.5 El banco pasa de 30 a 35 casos, todos en verde.

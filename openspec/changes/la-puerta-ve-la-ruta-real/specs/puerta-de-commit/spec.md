@@ -6,8 +6,10 @@ El hook `PreToolUse` que vigila los commits SHALL decidir sobre el repositorio *
 el commit interceptado**, no sobre el directorio de trabajo que hereda de la sesión.
 
 1. Cuando el comando indica el repositorio de destino —`-C <ruta>`, `--git-dir <ruta>`, o un
-   `cd <ruta>` que precede al commit en la misma cadena de comandos, con o sin salto de línea
-   entre medias—, la puerta SHALL comprobar la firma de verificación **de ese** repositorio.
+   `cd <ruta>` que precede al commit en la misma cadena de comandos—, la puerta SHALL
+   comprobar la firma de verificación **de ese** repositorio. Entre el `cd` y el commit
+   SHALL poder haber otros comandos de git (`git add`, `git status`), separados por `&&`,
+   por `;` o por salto de línea.
 2. La ruta indicada SHALL resolverse como la resolvería el shell que va a ejecutarla: `~`,
    `~usuario` y variables de entorno se expanden antes de buscar el repositorio. Una ruta que
    el shell resolvería y la puerta no, es un commit que pasa sin comprobar.
@@ -58,15 +60,43 @@ fija `verificacion-firmada`.
 
 #### Scenario: La ruta se escribe con `~` o con una variable
 
-- **WHEN** el comando hace `cd ~/ruta/al/repo` —o `cd $HOME/ruta/al/repo`, o `cd ~usuario/…`—
-  y después commitea, y ese repositorio no tiene firma válida
+- **WHEN** el comando hace `cd ~/ruta/al/repo` —o `cd $HOME/ruta/al/repo`— y después
+  commitea, y ese repositorio no tiene firma válida
 - **THEN** la puerta lo bloquea igual que si la ruta viniera absoluta
+
+`~usuario` se expande por el mismo camino y funciona, pero NO está fijado por el banco: se
+resuelve por la base de datos de usuarios y no por `$HOME`, así que probarlo exigiría escribir
+en el home real del usuario que ejecuta las pruebas. Queda dicho aquí en vez de dejar creer
+que hay una prueba que no existe.
 
 #### Scenario: El `cd` y el commit van en líneas distintas
 
 - **WHEN** el comando hace `cd <ruta>` en una línea y commitea en la siguiente, y ese
   repositorio no tiene firma válida
 - **THEN** la puerta lo bloquea
+
+#### Scenario: Stagear y commitear en líneas distintas
+
+- **WHEN** el comando hace `git add` en una línea y `git commit` en la siguiente, con o sin
+  un `cd` por delante, y el repositorio de destino no tiene firma válida
+- **THEN** la puerta lo bloquea
+
+Es la forma más común de escribir un commit en un script de varias líneas, y hasta el
+2026-09-16 no se comprobaba ni el repositorio de la sesión: el escaneo se detenía en el
+`add`.
+
+#### Scenario: Un comando que no es de git entre el `cd` y el commit
+
+- **WHEN** entre el `cd` y el commit hay un comando cualquiera —un `echo`, un script— en una
+  línea intermedia
+- **THEN** la puerta cae al directorio heredado, como declara su límite
+- **AND** ese límite está escrito en la cabecera del hook
+
+La razón de no cubrirlo: `shlex` no emite el salto de línea, así que dentro de un segmento no
+se sabe dónde acaba un comando y empieza el siguiente. Se reconocen los inicios de comando
+conocidos —git y los shells—, y un nombre arbitrario no se puede distinguir de un argumento.
+Partir la entrada por líneas sí lo resolvería, pero convertiría el cuerpo de un heredoc que
+contenga `git commit` en un commit falso, que es un caso que este banco ya fija.
 
 #### Scenario: Commit a secas en el repo de la sesión
 

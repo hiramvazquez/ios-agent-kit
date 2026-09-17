@@ -68,8 +68,11 @@ quien commiteaba, no el mecanismo. La promesa del kit es justamente no depender 
 
 ## Criterios de aceptación
 
-- [ ] `verifica-puerta.sh` cubre, y en verde: `cd ~/…`, `cd $HOME/…`, `cd ~usuario/…` y `cd`
-      con salto de línea; cada una bloqueando cuando no hay firma.
+- [ ] `verifica-puerta.sh` cubre, y en verde: `cd ~/…`, `cd $HOME/…`, `cd` con salto de
+      línea, y `git add` + `git commit` en líneas distintas con y sin `cd`; cada una
+      bloqueando cuando no hay firma. (`~usuario` funciona pero no se fija con una prueba:
+      `expanduser` lo resuelve por la base de datos de usuarios, no por `$HOME`, y probarlo
+      exigiría escribir en el home real. Dicho en el spec.)
 - [ ] Las pruebas nuevas fallan si se revierte el arreglo. Se demuestra revirtiendo.
 - [ ] Los casos que ya cubría siguen cubiertos: la suite entera en verde.
 - [ ] Si `SEPARADORES` mantiene `"\n"`, es porque el analizador ya lo recibe; si no, esa

@@ -48,6 +48,26 @@ ENVOLTORIOS = {"bash", "sh", "zsh", "dash", "ksh"}
 LIMITE_RECURSION = 4
 
 
+# Nombres de comando que el escaneo reconoce al buscar el SIGUIENTE comando dentro de un
+# segmento. Es una lista corta a propósito: solo se consulta después de haber visto un `cd` o
+# un `git <sub>`, así que no puede convertir el cuerpo de un heredoc en un comando —ese
+# segmento empieza por `cat`, `tee` o quien sea, y el escaneo para ahí.
+INICIOS = {"git", "cd", "pushd", "bash", "sh", "zsh", "dash", "ksh"}
+
+
+def siguiente_comando(seg, desde):
+    """Índice del siguiente token que empieza un comando, o None.
+
+    Sin esto, `cd X` + `git add -A` + `git commit` en líneas distintas caía entero en el
+    mismo segmento —`shlex` se come el salto— y el escaneo se detenía en el `add`, dejando
+    pasar el commit sin comprobar nada. Era la forma más común de escribirlo.
+    """
+    for k in range(desde, len(seg)):
+        if seg[k].rsplit("/", 1)[-1] in INICIOS:
+            return k
+    return None
+
+
 def expandir(ruta):
     """Resuelve la pista como la resolvería el shell que va a ejecutar el comando.
 
@@ -151,7 +171,15 @@ def analiza(cmd, profundidad=0):
                 # Primer argumento que no es opción ni valor de opción: el subcomando.
                 if a == "commit":
                     return ruta or cd_pendiente or "."
-                break   # otro subcomando de git; este segmento no interesa
+                # Otro subcomando de git: puede haber un commit más adelante en el mismo
+                # segmento (`git add -A` y `git commit` separados por un salto de línea).
+                sig = siguiente_comando(seg, j + 1)
+                break
+            else:
+                sig = None
+            if sig is not None:
+                i = sig
+                continue
             break
 
     return None

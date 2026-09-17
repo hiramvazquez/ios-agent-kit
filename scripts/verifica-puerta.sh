@@ -260,8 +260,32 @@ espera pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado
 git $C -m x" \
      "lo mismo hacia un repo CON firma → pasa"
 
+echo "▶ varios comandos en líneas distintas, que es como se escribe de verdad"
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+git add -A
+git $C -m x" \
+     "cd + add + commit en tres líneas → bloquea" \
+     "el escaneo se detenía en el «add» y dejaba pasar el commit"
+espera bloquea "$TMP/kit_sin_firma" "git add -A
+git $C -m x" \
+     "add + commit en dos líneas, sin cd → bloquea" \
+     "preexistente: no se comprobaba ni el repo de la sesión, y es la forma más común"
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+git status
+git $C -m x" \
+     "cd + otro subcomando + commit → bloquea"
+
+echo "▶ el control que descarta que el bloqueo venga del montaje"
+espera_home pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado && git $C -m x" \
+     "con HOME apuntado al banco, un repo firmado por ruta absoluta → pasa" \
+     "si HOME=\$TMP rompiera verifica.sh, los dos «bloquea» de arriba bloquearían por el montaje"
+
 echo "▶ el límite que SIGUE abierto, y a propósito"
 espera pasa "$TMP/kit_firmado" "D=$TMP/kit_sin_firma; cd \$D && git $C -m x" \
      "ruta construida en una variable del propio comando → pasa (fallo abierto declarado)"
+espera pasa "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+echo hola
+git $C -m x" \
+     "un comando cualquiera entre el cd y el commit → pasa (límite declarado)"
 
 resumen "la puerta" "la-puerta-mira-el-repo-del-commit"

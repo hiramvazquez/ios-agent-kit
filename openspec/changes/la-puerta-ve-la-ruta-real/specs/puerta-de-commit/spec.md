@@ -7,9 +7,13 @@ el commit interceptado**, no sobre el directorio de trabajo que hereda de la ses
 
 1. Cuando el comando indica el repositorio de destino —`-C <ruta>`, `--git-dir <ruta>`, o un
    `cd <ruta>` que precede al commit en la misma cadena de comandos—, la puerta SHALL
-   comprobar la firma de verificación **de ese** repositorio. Entre el `cd` y el commit
-   SHALL poder haber otros comandos de git (`git add`, `git status`), separados por `&&`,
-   por `;` o por salto de línea.
+   comprobar la firma de verificación **de ese** repositorio. Entre el `cd` y el commit SHALL
+   poder haber cualquier número de comandos, separados por `&&`, por `;` o por salto de
+   línea.
+1bis. El texto que NO se va a ejecutar no es un comando: el cuerpo de un heredoc NO SHALL
+   reconocerse como invocación, aunque contenga un `git commit`. Un bloqueo falso deja la
+   sesión inservible para comandos legítimos, y eso es peor que el agujero que esta norma
+   cierra.
 2. La ruta indicada SHALL resolverse como la resolvería el shell que va a ejecutarla: `~`,
    `~usuario` y variables de entorno se expanden antes de buscar el repositorio. Una ruta que
    el shell resolvería y la puerta no, es un commit que pasa sin comprobar.
@@ -85,18 +89,22 @@ Es la forma más común de escribir un commit en un script de varias líneas, y 
 2026-09-16 no se comprobaba ni el repositorio de la sesión: el escaneo se detenía en el
 `add`.
 
-#### Scenario: Un comando que no es de git entre el `cd` y el commit
+#### Scenario: Cualquier comando entre el `cd` y el commit
 
-- **WHEN** entre el `cd` y el commit hay un comando cualquiera —un `echo`, un script— en una
-  línea intermedia
-- **THEN** la puerta cae al directorio heredado, como declara su límite
-- **AND** ese límite está escrito en la cabecera del hook
+- **WHEN** entre el `cd` y el commit hay otros comandos en líneas intermedias —un `swift
+  build`, un `echo`, lo que sea— y el repositorio de destino no tiene firma válida
+- **THEN** la puerta lo bloquea
 
-La razón de no cubrirlo: `shlex` no emite el salto de línea, así que dentro de un segmento no
-se sabe dónde acaba un comando y empieza el siguiente. Se reconocen los inicios de comando
-conocidos —git y los shells—, y un nombre arbitrario no se puede distinguir de un argumento.
-Partir la entrada por líneas sí lo resolvería, pero convertiría el cuerpo de un heredoc que
-contenga `git commit` en un commit falso, que es un caso que este banco ya fija.
+#### Scenario: Un `git commit` dentro del cuerpo de un heredoc
+
+- **WHEN** el comando escribe un heredoc cuyo cuerpo contiene la línea `git commit …`, venga
+  detrás de lo que venga
+- **THEN** la puerta no lo bloquea: ese texto no se ejecuta
+
+El cuerpo se reconoce por su regla léxica —desde la línea que abre el heredoc hasta la que
+contiene solo su delimitador—, que es lo que hace el shell. Sin eso, partir por líneas
+convertiría ese texto en un commit falso, y un bloqueo falso deja la sesión inservible para
+comandos legítimos: es peor que el agujero que esta norma cierra.
 
 #### Scenario: Commit a secas en el repo de la sesión
 

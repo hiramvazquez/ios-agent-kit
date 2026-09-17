@@ -64,3 +64,29 @@
       `verifica.sh`, los dos «bloquea» de las rutas bloquearían por el montaje y no por el
       fallo. Verificación: caso 31 del banco.
 - [x] 5.5 El banco pasa de 30 a 35 casos, todos en verde.
+
+## 6. Cierre del juez (DEVUELTO, 2026-09-16)
+
+- [x] 6.1 **El arreglo de 5.1 introdujo una regresión, y de la peor clase.**
+      `siguiente_comando()` saltaba hacia delante sobre tokens arbitrarios, así que tras un
+      `git add` entraba en el cuerpo de un heredoc o en los argumentos de un `grep`/`echo` y
+      encontraba un `git commit` que nadie iba a ejecutar. Medido: `git status` + `grep -rn
+      git commit .` → bloqueaba. **Un bloqueo falso es peor que el agujero**: deja la sesión
+      inservible para comandos legítimos, que es el fallo que costó arreglar el
+      reconocimiento por subcadena. Y rompía justo el caso que la enmienda D2 protegía.
+- [x] 6.2 **Tercera versión de D2, escrita antes de tocar código (D2bis).** La causa de las
+      tres vueltas era la misma: dentro de un segmento no se sabe dónde acaba un comando,
+      porque `shlex` se come el salto de línea. En vez de adivinarlo, se conserva la
+      información antes de perderla: el comando se parte en líneas lógicas ANTES de tokenizar
+      y los cuerpos de heredoc se descartan por su delimitador, como hace el shell.
+      Verificación: `siguiente_comando()` e `INICIOS` retirados; el analizador es más corto.
+- [x] 6.3 **Cubre más de lo que se declaraba como límite.** `cd X` + un comando cualquiera +
+      `git commit` ya se bloquea, y `swift build` + `git add` + `git commit` también — que no
+      lo cubría ninguna versión anterior. La prueba que fijaba ese límite pasa a fijar la
+      cobertura, y el spec y la cabecera se ajustan a lo que hace.
+- [x] 6.4 **Tres casos de no-regresión** para lo que rompió 5.1: heredoc suelto, heredoc tras
+      un `git add`, y `grep` tras un `git status`. Verificación: banco de 35 a 38 casos.
+- [x] 6.5 El escenario del spec decía «cae al directorio heredado» y el código no comprueba
+      nada cuando no reconoce un commit. Corregido: ese escenario desaparece porque el caso
+      ya está cubierto, y el fallo abierto que queda —ruta construida en ejecución— sigue
+      dicho donde estaba.

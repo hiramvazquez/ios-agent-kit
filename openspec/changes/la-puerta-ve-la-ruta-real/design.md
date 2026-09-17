@@ -65,6 +65,32 @@ examinando el segmento después del `cd` en vez de abandonarlo.
 *Por qué no genera falsos positivos:* solo se sigue escaneando después de un `cd`/`pushd`.
 Un `echo git commit` sigue parándose en `echo`, que es lo que hace pasar los casos de texto.
 
+### D2bis. Separar por líneas de verdad, saltando los cuerpos de heredoc
+
+*Enmendada el 2026-09-16, tras el DEVUELTO del juez.* Las dos versiones anteriores de D2 eran
+insuficientes o peores:
+
+- «No abandonar el segmento tras un `cd`» cubría solo el commit INMEDIATAMENTE siguiente. Con
+  un `git add` por medio —la forma normal— seguía pasando sin comprobar nada.
+- «Buscar el siguiente inicio de comando saltando tokens» (lo que se implementó para cerrar
+  eso) **rompió el caso que D2 existía para proteger**: tras un `git add`, el salto entra en
+  el cuerpo de un heredoc o en los argumentos de un `grep`/`echo` y encuentra un `git commit`
+  que nadie va a ejecutar. Medido: `git status` + `grep -rn git commit .` → bloquea. Un
+  bloqueo falso es peor que el agujero, porque deja la sesión inservible para comandos
+  legítimos; es el fallo que costó arreglar el reconocimiento por subcadena.
+
+La causa de fondo de las tres vueltas: dentro de un segmento no se sabe dónde acaba un
+comando, porque `shlex` se come el salto de línea. En vez de adivinarlo, **se conserva la
+información antes de perderla**: el comando se parte en líneas lógicas ANTES de tokenizar, y
+las líneas que son cuerpo de un heredoc se descartan —se detectan por su `<<`/`<<-` y su
+delimitador, que es una regla léxica, no una heurística—. Cada línea lógica se analiza como
+una cadena de comandos, y la pista del `cd` se arrastra entre líneas porque `cd` persiste.
+
+Eso es como lee un shell, y resuelve las tres cosas a la vez: el `git add` por medio, el
+heredoc, y `swift build` + `git add` + `git commit` (que ninguna versión anterior cubría).
+
+*Lo que se retira:* `siguiente_comando()` y la constante `INICIOS`. Restar.
+
 *Consecuencia:* `SEPARADORES` deja de enumerar `"\n"`, porque nunca le llega. La constante
 pasa a decir la verdad — que es lo que pide el punto 7 del requisito.
 

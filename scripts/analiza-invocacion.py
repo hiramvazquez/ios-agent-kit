@@ -16,6 +16,7 @@ Lee el JSON del hook por stdin e imprime una línea:
 """
 import json
 import os
+import re
 import shlex
 import sys
 
@@ -48,24 +49,32 @@ ENVOLTORIOS = {"bash", "sh", "zsh", "dash", "ksh"}
 LIMITE_RECURSION = 4
 
 
-# Nombres de comando que el escaneo reconoce al buscar el SIGUIENTE comando dentro de un
-# segmento. Es una lista corta a propósito: solo se consulta después de haber visto un `cd` o
-# un `git <sub>`, así que no puede convertir el cuerpo de un heredoc en un comando —ese
-# segmento empieza por `cat`, `tee` o quien sea, y el escaneo para ahí.
-INICIOS = {"git", "cd", "pushd", "bash", "sh", "zsh", "dash", "ksh"}
+# `<<EOF`, `<<-'EOF'`, `<< "EOF"`: apertura de heredoc y su delimitador.
+HEREDOC = re.compile(r"""<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1""")
 
 
-def siguiente_comando(seg, desde):
-    """Índice del siguiente token que empieza un comando, o None.
+def lineas_logicas(cmd):
+    """Parte el comando en líneas, descartando los CUERPOS de heredoc.
 
-    Sin esto, `cd X` + `git add -A` + `git commit` en líneas distintas caía entero en el
-    mismo segmento —`shlex` se come el salto— y el escaneo se detenía en el `add`, dejando
-    pasar el commit sin comprobar nada. Era la forma más común de escribirlo.
+    Por qué antes de tokenizar: `shlex` con `whitespace_split` se come el salto de línea, y
+    con él la única pista de dónde acaba un comando. Sin esto hay que adivinarlo, y adivinar
+    costó dos vueltas — una dejando pasar commits, otra bloqueando comandos legítimos porque
+    el `git commit` estaba dentro de un heredoc que nadie iba a ejecutar.
+
+    El cuerpo se descarta por su regla léxica: desde la línea que abre el heredoc hasta la que
+    contiene solo su delimitador. Es lo que hace el shell, no una heurística.
     """
-    for k in range(desde, len(seg)):
-        if seg[k].rsplit("/", 1)[-1] in INICIOS:
-            return k
-    return None
+    fuera, esperando = [], None
+    for linea in cmd.splitlines():
+        if esperando is not None:
+            if linea.strip() == esperando:
+                esperando = None
+            continue
+        fuera.append(linea)
+        m = HEREDOC.search(linea)
+        if m:
+            esperando = m.group(2)
+    return fuera
 
 
 def expandir(ruta):
@@ -91,98 +100,98 @@ def tokeniza(cmd):
 def analiza(cmd, profundidad=0):
     """Devuelve la ruta de destino si `cmd` invoca un commit, o None."""
     if profundidad > LIMITE_RECURSION:
-        # Fallo ABIERTO: pasado este nivel de anidamiento el comando pasa sin
-        # comprobar nada. El límite existe para que un `bash -c` recursivo no cuelgue
-        # el hook, y cuatro niveles no los alcanza ningún commit que alguien escriba
-        # sin querer — que es lo que esta puerta frena.
+        # Fallo ABIERTO: pasado este nivel de anidamiento el comando pasa sin comprobar
+        # nada. El límite existe para que un `bash -c` recursivo no cuelgue el hook, y
+        # cuatro niveles no los alcanza ningún commit que alguien escriba sin querer.
         return None
+
+    cd_pendiente = None
+    for linea in lineas_logicas(cmd):
+        destino, cd_pendiente = analiza_linea(linea, cd_pendiente, profundidad)
+        if destino is not None:
+            return destino
+    return None
+
+
+def analiza_linea(cmd, cd_pendiente, profundidad):
+    """Analiza UNA línea lógica.
+
+    Devuelve `(destino o None, pista del cd para la línea siguiente)`. La pista se arrastra
+    porque `cd` persiste: un `cd X` en una línea manda sobre el commit de la siguiente.
+    """
     try:
         tokens = tokeniza(cmd)
     except ValueError:
-        # Fallo ABIERTO: comillas sin cerrar, así que no es un comando que vaya a
-        # ejecutarse tal cual. Bloquear ante algo que ni siquiera va a correr
-        # convertiría un fallo del analizador en una sesión inutilizable.
-        return None
+        # Fallo ABIERTO: comillas sin cerrar, así que no es un comando que vaya a ejecutarse
+        # tal cual. Bloquear ante algo que ni siquiera va a correr convertiría un fallo del
+        # analizador en una sesión inutilizable.
+        return None, cd_pendiente
 
     segmentos, actual = [], []
-    for t in tokens:
-        if t in SEPARADORES:
+    for tok in tokens:
+        if tok in SEPARADORES:
             segmentos.append(actual)
             actual = []
         else:
-            actual.append(t)
+            actual.append(tok)
     segmentos.append(actual)
 
-    cd_pendiente = None
-
     for seg in segmentos:
-        seg = [t for t in seg if t not in AGRUPADORES]
+        seg = [x for x in seg if x not in AGRUPADORES]
+        if not seg:
+            continue
+
+        # Saltar asignaciones que preceden al comando: FOO=bar git …
         i = 0
-        while i < len(seg):
-            # Saltar asignaciones que preceden al comando: FOO=bar git …
-            while (i < len(seg) and "=" in seg[i] and not seg[i].startswith("-")
-                   and "/" not in seg[i].split("=")[0]):
-                i += 1
-            if i >= len(seg):
-                break
-            base = seg[i].rsplit("/", 1)[-1]
+        while (i < len(seg) and "=" in seg[i] and not seg[i].startswith("-")
+               and "/" not in seg[i].split("=")[0]):
+            i += 1
+        if i >= len(seg):
+            continue
+        base = seg[i].rsplit("/", 1)[-1]
 
-            if base in CAMBIAN_DIR and i + 1 < len(seg):
-                cd_pendiente = expandir(seg[i + 1])
-                # Seguir en el MISMO segmento en vez de abandonarlo: `shlex` se come el
-                # salto de línea, así que un `cd` en una línea y el commit de la siguiente
-                # acaban aquí juntos. Abandonar era dejar pasar ese commit sin mirarlo.
-                i += 2
+        if base in CAMBIAN_DIR and i + 1 < len(seg):
+            cd_pendiente = expandir(seg[i + 1])
+            continue
+
+        if base in ENVOLTORIOS:
+            # `bash -c '<comando>'`: analizar el argumento de -c por dentro.
+            for j in range(i + 1, len(seg) - 1):
+                if seg[j] == "-c":
+                    dentro = analiza(seg[j + 1], profundidad + 1)
+                    if dentro is not None:
+                        # Una ruta relativa de dentro se interpreta desde el `cd` que
+                        # hubiera fuera; sin él, desde el directorio heredado.
+                        destino = dentro if dentro != "." else (cd_pendiente or ".")
+                        return destino, cd_pendiente
+                    break
+            continue
+
+        if base != "git":
+            continue
+
+        ruta = None
+        j = i + 1
+        while j < len(seg):
+            a = seg[j]
+            if a in CON_VALOR:
+                if a in ("-C", "--git-dir") and j + 1 < len(seg):
+                    ruta = expandir(seg[j + 1])
+                j += 2
                 continue
-
-            if base in ENVOLTORIOS:
-                # `bash -c '<comando>'`: analizar el argumento de -c por dentro.
-                for j in range(i + 1, len(seg) - 1):
-                    if seg[j] == "-c":
-                        dentro = analiza(seg[j + 1], profundidad + 1)
-                        if dentro is not None:
-                            # Una ruta relativa de dentro se interpreta desde el `cd`
-                            # que hubiera fuera; sin él, desde el directorio heredado.
-                            return dentro if dentro != "." else (cd_pendiente or ".")
-                        break
-                break
-
-            if base != "git":
-                # Lo que sigue son argumentos suyos, no comandos: `echo git commit` no es un
-                # commit. Parar aquí es lo que hace pasar los casos de texto.
-                break
-
-            ruta = None
-            j = i + 1
-            while j < len(seg):
-                a = seg[j]
-                if a in CON_VALOR:
-                    if a in ("-C", "--git-dir") and j + 1 < len(seg):
-                        ruta = expandir(seg[j + 1])
-                    j += 2
-                    continue
-                if a.startswith("--git-dir="):
-                    ruta = expandir(a.split("=", 1)[1])
-                    j += 1
-                    continue
-                if a.startswith("-"):
-                    j += 1
-                    continue
-                # Primer argumento que no es opción ni valor de opción: el subcomando.
-                if a == "commit":
-                    return ruta or cd_pendiente or "."
-                # Otro subcomando de git: puede haber un commit más adelante en el mismo
-                # segmento (`git add -A` y `git commit` separados por un salto de línea).
-                sig = siguiente_comando(seg, j + 1)
-                break
-            else:
-                sig = None
-            if sig is not None:
-                i = sig
+            if a.startswith("--git-dir="):
+                ruta = expandir(a.split("=", 1)[1])
+                j += 1
                 continue
-            break
+            if a.startswith("-"):
+                j += 1
+                continue
+            # Primer argumento que no es opción ni valor de opción: el subcomando.
+            if a == "commit":
+                return (ruta or cd_pendiente or "."), cd_pendiente
+            break   # otro subcomando de git; este segmento no interesa
 
-    return None
+    return None, cd_pendiente
 
 
 def main():

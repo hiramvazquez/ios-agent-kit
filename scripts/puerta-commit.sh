@@ -20,9 +20,11 @@
 #   - El análisis es sintáctico, y esta lista es lo que de verdad cubre —no lo que sería
 #     bonito que cubriera—: la invocación directa; la dirigida con `-C`, `--git-dir` o
 #     `--git-dir=`; un `cd`/`pushd` por delante, con `&&`, con `;` o en una línea aparte, y
-#     también dentro de `( … )` o `{ …; }`; otros comandos de GIT entre medias (`git add`,
-#     `git status`), que es como se escribe un commit de verdad; y un `bash -c '…'` (o
-#     `sh`/`zsh`) analizado por dentro, hasta 4 niveles.
+#     también dentro de `( … )` o `{ …; }`; CUALQUIER comando entre medias, que es como se
+#     escribe un commit de verdad (`swift build`, `git add`, y luego el commit); y un
+#     `bash -c '…'` (o `sh`/`zsh`) analizado por dentro, hasta 4 niveles.
+#   - El cuerpo de un heredoc NO cuenta como comando, aunque lleve un `git commit` dentro:
+#     ese texto no se ejecuta. Se reconoce por su delimitador, como hace el shell.
 #   - La ruta se resuelve como la resolvería el shell: `~`, `~usuario` y variables de
 #     entorno se expanden antes de buscar el repositorio. Sin esto, `cd ~/repo && git
 #     commit` no resolvía nada y caía al fallo abierto de abajo — medido el 2026-09-16, y
@@ -31,13 +33,6 @@
 #     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable, o una
 #     ruta en una variable definida en el propio comando—, y cualquier envoltorio que no sea
 #     un shell de la lista.
-#   - Y un caso concreto, por si alguien se apoya en la línea de arriba: un comando que NO
-#     sea de git entre el `cd` y el commit, en una línea intermedia (`cd X` / `echo hola` /
-#     `git commit`). Dentro de un segmento no se sabe dónde acaba un comando y empieza el
-#     siguiente —`shlex` se come el salto de línea—, así que se reconocen los inicios
-#     conocidos y un nombre cualquiera no se distingue de un argumento. Partir por líneas lo
-#     resolvería y convertiría el cuerpo de un heredoc con `git commit` dentro en un commit
-#     falso; hay una prueba que lo fija.
 #   El olvido tiene formas comunes, no retorcidas; las que quedan fuera no son las comunes.
 set -uo pipefail
 

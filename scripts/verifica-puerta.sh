@@ -283,9 +283,24 @@ espera_home pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado && git $C -m x" \
 echo "▶ el límite que SIGUE abierto, y a propósito"
 espera pasa "$TMP/kit_firmado" "D=$TMP/kit_sin_firma; cd \$D && git $C -m x" \
      "ruta construida en una variable del propio comando → pasa (fallo abierto declarado)"
-espera pasa "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
 echo hola
 git $C -m x" \
-     "un comando cualquiera entre el cd y el commit → pasa (límite declarado)"
+     "un comando cualquiera entre el cd y el commit → bloquea" \
+     "era un límite declarado hasta que partir por líneas lo hizo innecesario"
+espera pasa "$TMP/kit_sin_firma" "cat > /tmp/nota.md <<EOF
+git $C -m x va en el cuerpo
+EOF" \
+     "un heredoc DETRÁS de nada, con el commit en el cuerpo → pasa"
+espera pasa "$TMP/kit_sin_firma" "git add -A
+cat > /tmp/nota.md <<EOF
+un git $C de ejemplo
+EOF" \
+     "un heredoc tras un git add, con el commit en el cuerpo → pasa" \
+     "el salto hacia delante lo bloqueaba: rompía el caso que la enmienda protegía"
+espera pasa "$TMP/kit_sin_firma" "git status
+grep -rn git $C ." \
+     "un grep tras un git status → pasa" \
+     "mismo fallo: el salto entraba en los argumentos del grep"
 
 resumen "la puerta" "la-puerta-mira-el-repo-del-commit"

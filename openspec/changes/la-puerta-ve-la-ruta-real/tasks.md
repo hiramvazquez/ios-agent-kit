@@ -107,3 +107,61 @@
       el mensaje del commit.
 - [x] 7.4 Se retiran `lineas_logicas()` sobre texto crudo y la constante `HEREDOC`. El
       analizador queda del tamaño del original con el doble de casos cubiertos.
+
+## 8. Tercer DEVUELTO: se para y se revierte (2026-09-16)
+
+- [x] 8.1 **Las cinco reproducciones del juez, confirmadas midiéndolas.** La peor: una LÍNEA
+      EN BLANCO delante del commit desactiva la puerta. `tokens_con_linea` lee `lex.lineno`
+      antes de pedir el token, y el salto se consume dentro de esa llamada, así que con una
+      línea vacía por medio `git` y `commit` caen en grupos distintos. Pulsar Enter una vez
+      es más barato que el agujero original, que pedía escribir la ruta con `~`.
+      Además: un cuerpo de heredoc que mencione su propio delimitador vuelve a bloquear en
+      falso —le pasó al juez EN VIVO al escribir sus sondas—, y `<<-EOF` o un apóstrofo en
+      el cuerpo se tragan el commit posterior.
+- [x] 8.2 **Se revierte `analiza-invocacion.py` y la cabecera de `puerta-commit.sh` al estado
+      de `022b5fd`.** Queda el agujero conocido (`~` sin expandir, `add`+`commit` en líneas
+      distintas) y NINGUNA regresión ni bloqueo falso. Dejar `main` con una puerta que se
+      apaga pulsando Enter era peor.
+- [x] 8.3 **El banco vuelve a sus 24 casos**, porque `kit.conf` lo corre como paso bloqueante
+      y un banco con rojos pendientes impide commitear — es su diseño: las pruebas y su
+      arreglo aterrizan juntos. Los 19 casos escritos en estas rondas quedan aquí abajo para
+      que el próximo intento empiece por ponerlos, que es lo único que no hay que volver a
+      pensar.
+
+### Los 19 casos, para el próximo intento
+
+```bash
+espera_home bloquea "$TMP/kit_firmado" "cd ~/kit_sin_firma && git $C -m x" \
+espera_home bloquea "$TMP/kit_firmado" 'cd $HOME/kit_sin_firma && git '"$C"' -m x' \
+espera_home pasa    "$TMP/kit_sin_firma" "cd ~/kit_firmado && git $C -m x" \
+espera pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado
+espera bloquea "$TMP/kit_sin_firma" "git add -A
+espera bloquea "$TMP/kit_sin_firma" "git $C -m \"titulo
+espera bloquea "$TMP/kit_sin_firma" "git $C -F - <<EOF
+espera pasa "$TMP/kit_sin_firma" "echo \"documentación:
+espera_home pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado && git $C -m x" \
+espera pasa "$TMP/kit_firmado" "D=$TMP/kit_sin_firma; cd \$D && git $C -m x" \
+espera pasa "$TMP/kit_sin_firma" "cat > /tmp/nota.md <<EOF
+espera pasa "$TMP/kit_sin_firma" "git add -A
+espera pasa "$TMP/kit_sin_firma" "git status
+```
+
+Y el que de verdad faltaba, el que hizo invisible el agujero grave durante dos rondas: el
+banco no probaba NINGÚN mensaje de commit con cuerpo — los 24 usan `-m x`.
+
+## 9. Lo que queda decidido para quien siga
+
+Cuatro intentos, cuatro veredictos: AMBER, DEVUELTO, DEVUELTO, DEVUELTO. Cada ronda el banco
+creció, cada ronda quedó verde, y cada ronda el analizador perdió un caso que la versión
+anterior acertaba. Eso no es «quedan flecos»: es la firma de escribir a mano el lexer de un
+lenguaje que tiene sintaxis de verdad.
+
+La pregunta que ya no decide otra ronda de arreglos —y que el juez formuló mejor que yo— es
+si un analizador sintáctico de shell dentro del hook es la forma correcta del problema. Las
+dos salidas que no son otro parche:
+
+- **Un parser de shell de verdad** (`bashlex` o equivalente). Hoy el plugin no tiene ninguna
+  dependencia fuera de la stdlib, así que es una decisión de arquitectura, no de código.
+- **Cambiar la forma del problema**: que la puerta deje de deducir el repositorio del texto
+  del comando. Comprobar siempre el repositorio heredado y, aparte, `-C`/`--git-dir`, que
+  son inequívocos. Cubre menos casos pero ninguno adivinando.

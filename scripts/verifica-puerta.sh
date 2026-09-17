@@ -80,24 +80,6 @@ decision() {
     esac
 }
 
-# Como `espera`, pero con HOME apuntando al TMP del banco: así `~` y `$HOME` expanden a
-# repositorios de prueba y no hace falta ensuciar el home de verdad. La expansión la hace la
-# puerta, no este script — que es justo lo que se está probando.
-espera_home() {
-    local esperado="$1" cwd="$2" cmd="$3" desc="$4" conocido="${5:-}" real salida
-    salida="$(
-        cd "$cwd" || exit 1
-        HOME="$TMP" python3 -c 'import json,sys; print(json.dumps({"tool_input":{"command":sys.argv[1]}}))' "$cmd" \
-            | HOME="$TMP" bash "$PUERTA" 2>/dev/null
-    )"
-    case "$salida" in
-        *'"permissionDecision":"deny"'*|*'"permissionDecision": "deny"'*) real=bloquea ;;
-        *) real=pasa ;;
-    esac
-    [ "$real" = "$esperado" ]
-    caso $? "$desc" "${conocido:+$conocido (esperado: $esperado · real: $real)}"
-}
-
 # espera <esperado> <cwd> <comando> <descripción> [conocido]
 espera() {
     local esperado="$1" cwd="$2" cmd="$3" desc="$4" conocido="${5:-}" real
@@ -239,98 +221,5 @@ SALIDA="$(
 contiene "$SALIDA" "kit_sin_firma"
 caso $? "el motivo nombra el repositorio comprobado, no el heredado" \
     "el spec lo exige y no lo fijaba ninguna prueba"
-
-echo "▶ la ruta escrita como la escribe cualquiera"
-espera_home bloquea "$TMP/kit_firmado" "cd ~/kit_sin_firma && git $C -m x" \
-     "cd ~/… a un repo sin firma → bloquea" \
-     "la pista iba sin expandir a git -C, no resolvía repo y caía al fallo abierto"
-espera_home bloquea "$TMP/kit_firmado" 'cd $HOME/kit_sin_firma && git '"$C"' -m x' \
-     "cd \$HOME/… a un repo sin firma → bloquea" \
-     "mismo motivo: la variable no se expandía"
-espera_home pasa    "$TMP/kit_sin_firma" "cd ~/kit_firmado && git $C -m x" \
-     "cd ~/… a un repo CON firma → pasa" \
-     "expandir no puede convertirse en bloquear de más"
-
-echo "▶ el cd y el commit en líneas distintas"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-git $C -m x" \
-     "cd en una línea y commit en la siguiente → bloquea" \
-     "shlex se come el salto, así que cd y commit caían en el mismo segmento y el commit no se miraba"
-espera pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado
-git $C -m x" \
-     "lo mismo hacia un repo CON firma → pasa"
-
-echo "▶ varios comandos en líneas distintas, que es como se escribe de verdad"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-git add -A
-git $C -m x" \
-     "cd + add + commit en tres líneas → bloquea" \
-     "el escaneo se detenía en el «add» y dejaba pasar el commit"
-espera bloquea "$TMP/kit_sin_firma" "git add -A
-git $C -m x" \
-     "add + commit en dos líneas, sin cd → bloquea" \
-     "preexistente: no se comprobaba ni el repo de la sesión, y es la forma más común"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-git status
-git $C -m x" \
-     "cd + otro subcomando + commit → bloquea"
-
-echo "▶ el mensaje del commit, que el banco nunca había probado"
-espera bloquea "$TMP/kit_sin_firma" "git $C -m \"titulo
-
-cuerpo del mensaje\"" \
-     "commit con mensaje de varias líneas → bloquea" \
-     "es como se commitea de verdad, y no había NI UN caso: todos usaban -m x"
-espera bloquea "$TMP/kit_sin_firma" "git $C -F - <<EOF
-titulo
-
-cuerpo
-EOF" \
-     "commit -F - con el mensaje en un heredoc → bloquea"
-espera pasa "$TMP/kit_sin_firma" "echo \"documentación:
-git $C -m x
-y ya\" > /tmp/doc.md" \
-     "un echo multilínea que lo menciona → pasa" \
-     "una cadena entrecomillada partida por líneas se convertía en un commit falso"
-
-echo "▶ redirecciones que se parecen a un heredoc pero no lo son"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-grep foo <<<\"texto\"
-git $C -m x" \
-     "un here-string por medio → bloquea" \
-     "el regex de heredoc casaba dentro del <<< y se tragaba el resto"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-echo \"se abre con <<EOF\"
-git $C -m x" \
-     "un <<EOF dentro de comillas → bloquea" \
-     "mismo motivo: heredoc fantasma cuyo delimitador no llegaba nunca"
-
-echo "▶ el control que descarta que el bloqueo venga del montaje"
-espera_home pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado && git $C -m x" \
-     "con HOME apuntado al banco, un repo firmado por ruta absoluta → pasa" \
-     "si HOME=\$TMP rompiera verifica.sh, los dos «bloquea» de arriba bloquearían por el montaje"
-
-echo "▶ el límite que SIGUE abierto, y a propósito"
-espera pasa "$TMP/kit_firmado" "D=$TMP/kit_sin_firma; cd \$D && git $C -m x" \
-     "ruta construida en una variable del propio comando → pasa (fallo abierto declarado)"
-espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
-echo hola
-git $C -m x" \
-     "un comando cualquiera entre el cd y el commit → bloquea" \
-     "era un límite declarado hasta que partir por líneas lo hizo innecesario"
-espera pasa "$TMP/kit_sin_firma" "cat > /tmp/nota.md <<EOF
-git $C -m x va en el cuerpo
-EOF" \
-     "un heredoc DETRÁS de nada, con el commit en el cuerpo → pasa"
-espera pasa "$TMP/kit_sin_firma" "git add -A
-cat > /tmp/nota.md <<EOF
-un git $C de ejemplo
-EOF" \
-     "un heredoc tras un git add, con el commit en el cuerpo → pasa" \
-     "el salto hacia delante lo bloqueaba: rompía el caso que la enmienda protegía"
-espera pasa "$TMP/kit_sin_firma" "git status
-grep -rn git $C ." \
-     "un grep tras un git status → pasa" \
-     "mismo fallo: el salto entraba en los argumentos del grep"
 
 resumen "la puerta" "la-puerta-mira-el-repo-del-commit"

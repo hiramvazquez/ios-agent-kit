@@ -1,3 +1,17 @@
+> ## RESULTADO: no se entregó. Archivado como hallazgo, no como mejora.
+>
+> Cuatro intentos, cuatro veredictos —AMBER, DEVUELTO, DEVUELTO, DEVUELTO—, y se revirtió al
+> estado original en `4641faf`. **La puerta sigue sin frenar `cd ~/… && git commit` ni
+> `git add` + `git commit` en líneas distintas.** Lo que sí queda: el agujero medido y
+> reproducible, 19 casos de prueba escritos (grupo 8 de `tasks.md`), y la razón por la que
+> cada arreglo fabricaba el siguiente fallo (grupo 9).
+>
+> Este cambio se archiva **sin promover su delta al spec vivo**: describe una puerta que no
+> existe, y el punto 7 de ese mismo requisito prohíbe nombrar lo que no se cubre.
+>
+> Lo que queda por decidir está en el grupo 9 de `tasks.md`, y no lo resuelve otra ronda de
+> parches.
+
 ## Why
 
 La puerta de commit no frena nada cuando la ruta se escribe como la escribe cualquiera.

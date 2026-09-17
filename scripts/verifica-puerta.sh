@@ -80,6 +80,24 @@ decision() {
     esac
 }
 
+# Como `espera`, pero con HOME apuntando al TMP del banco: así `~` y `$HOME` expanden a
+# repositorios de prueba y no hace falta ensuciar el home de verdad. La expansión la hace la
+# puerta, no este script — que es justo lo que se está probando.
+espera_home() {
+    local esperado="$1" cwd="$2" cmd="$3" desc="$4" conocido="${5:-}" real salida
+    salida="$(
+        cd "$cwd" || exit 1
+        HOME="$TMP" python3 -c 'import json,sys; print(json.dumps({"tool_input":{"command":sys.argv[1]}}))' "$cmd" \
+            | HOME="$TMP" bash "$PUERTA" 2>/dev/null
+    )"
+    case "$salida" in
+        *'"permissionDecision":"deny"'*|*'"permissionDecision": "deny"'*) real=bloquea ;;
+        *) real=pasa ;;
+    esac
+    [ "$real" = "$esperado" ]
+    caso $? "$desc" "${conocido:+$conocido (esperado: $esperado · real: $real)}"
+}
+
 # espera <esperado> <cwd> <comando> <descripción> [conocido]
 espera() {
     local esperado="$1" cwd="$2" cmd="$3" desc="$4" conocido="${5:-}" real
@@ -221,5 +239,29 @@ SALIDA="$(
 contiene "$SALIDA" "kit_sin_firma"
 caso $? "el motivo nombra el repositorio comprobado, no el heredado" \
     "el spec lo exige y no lo fijaba ninguna prueba"
+
+echo "▶ la ruta escrita como la escribe cualquiera"
+espera_home bloquea "$TMP/kit_firmado" "cd ~/kit_sin_firma && git $C -m x" \
+     "cd ~/… a un repo sin firma → bloquea" \
+     "la pista iba sin expandir a git -C, no resolvía repo y caía al fallo abierto"
+espera_home bloquea "$TMP/kit_firmado" 'cd $HOME/kit_sin_firma && git '"$C"' -m x' \
+     "cd \$HOME/… a un repo sin firma → bloquea" \
+     "mismo motivo: la variable no se expandía"
+espera_home pasa    "$TMP/kit_sin_firma" "cd ~/kit_firmado && git $C -m x" \
+     "cd ~/… a un repo CON firma → pasa" \
+     "expandir no puede convertirse en bloquear de más"
+
+echo "▶ el cd y el commit en líneas distintas"
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+git $C -m x" \
+     "cd en una línea y commit en la siguiente → bloquea" \
+     "shlex se come el salto, así que cd y commit caían en el mismo segmento y el commit no se miraba"
+espera pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado
+git $C -m x" \
+     "lo mismo hacia un repo CON firma → pasa"
+
+echo "▶ el límite que SIGUE abierto, y a propósito"
+espera pasa "$TMP/kit_firmado" "D=$TMP/kit_sin_firma; cd \$D && git $C -m x" \
+     "ruta construida en una variable del propio comando → pasa (fallo abierto declarado)"
 
 resumen "la puerta" "la-puerta-mira-el-repo-del-commit"

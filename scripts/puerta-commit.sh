@@ -19,12 +19,18 @@
 #     Claude Code, no lo ve nadie.
 #   - El análisis es sintáctico, y esta lista es lo que de verdad cubre —no lo que sería
 #     bonito que cubriera—: la invocación directa; la dirigida con `-C`, `--git-dir` o
-#     `--git-dir=`; un `cd`/`pushd` encadenado por delante, también dentro de `( … )` o
-#     `{ …; }`; y un `bash -c '…'` (o `sh`/`zsh`) analizado por dentro, hasta 4 niveles.
+#     `--git-dir=`; un `cd`/`pushd` por delante, con `&&`, con `;` o en una línea aparte, y
+#     también dentro de `( … )` o `{ …; }`; y un `bash -c '…'` (o `sh`/`zsh`) analizado por
+#     dentro, hasta 4 niveles.
+#   - La ruta se resuelve como la resolvería el shell: `~`, `~usuario` y variables de
+#     entorno se expanden antes de buscar el repositorio. Sin esto, `cd ~/repo && git
+#     commit` no resolvía nada y caía al fallo abierto de abajo — medido el 2026-09-16, y
+#     era la forma más común de escribirlo.
 #   - Lo que NO cubre, y cae al directorio heredado: una invocación construida en tiempo de
-#     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable—, y
-#     cualquier envoltorio que no sea un shell de la lista. El olvido tiene formas comunes,
-#     no retorcidas; estas no son las comunes.
+#     ejecución —`$CMD commit`, un alias, un `eval` con la orden en una variable, o una
+#     ruta en una variable definida en el propio comando—, y cualquier envoltorio que no sea
+#     un shell de la lista. El olvido tiene formas comunes, no retorcidas; estas no son las
+#     comunes.
 set -uo pipefail
 
 # El análisis vive en `analiza-invocacion.py`, en su propio fichero y con UNA sola invocación

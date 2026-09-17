@@ -15,11 +15,16 @@ Lee el JSON del hook por stdin e imprime una línea:
     COMMIT <ruta>   → sí, y <ruta> es la pista de dónde (o "." si no hay pista)
 """
 import json
+import os
 import shlex
 import sys
 
 # Operadores que separan comandos simples.
-SEPARADORES = {";", "&&", "||", "|", "&", "\n"}
+# El salto de línea NO está, a propósito: `shlex` con `whitespace_split` lo consume como
+# espacio y nunca lo emite como token, así que enumerarlo hacía creer que un `cd` en una
+# línea y un commit en la siguiente estaban cubiertos. Lo están, pero por el escaneo que no
+# abandona el segmento tras un `cd` — no por esta lista.
+SEPARADORES = {";", "&&", "||", "|", "&"}
 
 # Agrupadores que NO son un comando: `(cd X && …)`, `{ cd X && …; }`. Si no se
 # descartan, el primer token del segmento es `(` o `{`, el `cd` no se registra como
@@ -41,6 +46,20 @@ CON_VALOR = {"-C", "--git-dir", "--work-tree", "-c", "--exec-path", "--namespace
 ENVOLTORIOS = {"bash", "sh", "zsh", "dash", "ksh"}
 
 LIMITE_RECURSION = 4
+
+
+def expandir(ruta):
+    """Resuelve la pista como la resolvería el shell que va a ejecutar el comando.
+
+    Variables primero y `~` después: al revés, un `$HOME/...` sin expandir no empieza por
+    `~`, `expanduser` no haría nada y la ruta seguiría sin resolver — que es exactamente
+    cómo se colaban los commits.
+
+    Lo que NO resuelve, y sigue siendo fallo abierto declarado: una ruta construida en
+    tiempo de ejecución —`$(pwd)`, o una variable definida en el propio comando—, porque
+    para eso habría que ejecutar el comando.
+    """
+    return os.path.expanduser(os.path.expandvars(ruta))
 
 
 def tokeniza(cmd):
@@ -78,57 +97,62 @@ def analiza(cmd, profundidad=0):
 
     for seg in segmentos:
         seg = [t for t in seg if t not in AGRUPADORES]
-        if not seg:
-            continue
-
-        # Saltar asignaciones que preceden al comando: FOO=bar git …
         i = 0
-        while (i < len(seg) and "=" in seg[i] and not seg[i].startswith("-")
-               and "/" not in seg[i].split("=")[0]):
-            i += 1
-        if i >= len(seg):
-            continue
-        base = seg[i].rsplit("/", 1)[-1]
+        while i < len(seg):
+            # Saltar asignaciones que preceden al comando: FOO=bar git …
+            while (i < len(seg) and "=" in seg[i] and not seg[i].startswith("-")
+                   and "/" not in seg[i].split("=")[0]):
+                i += 1
+            if i >= len(seg):
+                break
+            base = seg[i].rsplit("/", 1)[-1]
 
-        if base in CAMBIAN_DIR and i + 1 < len(seg):
-            cd_pendiente = seg[i + 1]
-            continue
-
-        if base in ENVOLTORIOS:
-            # `bash -c '<comando>'`: analizar el argumento de -c por dentro.
-            for j in range(i + 1, len(seg) - 1):
-                if seg[j] == "-c":
-                    dentro = analiza(seg[j + 1], profundidad + 1)
-                    if dentro is not None:
-                        # Una ruta relativa de dentro se interpreta desde el `cd`
-                        # que hubiera fuera; sin él, desde el directorio heredado.
-                        return dentro if dentro != "." else (cd_pendiente or ".")
-                    break
-            continue
-
-        if base != "git":
-            continue
-
-        ruta = None
-        j = i + 1
-        while j < len(seg):
-            a = seg[j]
-            if a in CON_VALOR:
-                if a in ("-C", "--git-dir") and j + 1 < len(seg):
-                    ruta = seg[j + 1]
-                j += 2
+            if base in CAMBIAN_DIR and i + 1 < len(seg):
+                cd_pendiente = expandir(seg[i + 1])
+                # Seguir en el MISMO segmento en vez de abandonarlo: `shlex` se come el
+                # salto de línea, así que un `cd` en una línea y el commit de la siguiente
+                # acaban aquí juntos. Abandonar era dejar pasar ese commit sin mirarlo.
+                i += 2
                 continue
-            if a.startswith("--git-dir="):
-                ruta = a.split("=", 1)[1]
-                j += 1
-                continue
-            if a.startswith("-"):
-                j += 1
-                continue
-            # Primer argumento que no es opción ni valor de opción: el subcomando.
-            if a == "commit":
-                return ruta or cd_pendiente or "."
-            break   # otro subcomando de git; este segmento no interesa
+
+            if base in ENVOLTORIOS:
+                # `bash -c '<comando>'`: analizar el argumento de -c por dentro.
+                for j in range(i + 1, len(seg) - 1):
+                    if seg[j] == "-c":
+                        dentro = analiza(seg[j + 1], profundidad + 1)
+                        if dentro is not None:
+                            # Una ruta relativa de dentro se interpreta desde el `cd`
+                            # que hubiera fuera; sin él, desde el directorio heredado.
+                            return dentro if dentro != "." else (cd_pendiente or ".")
+                        break
+                break
+
+            if base != "git":
+                # Lo que sigue son argumentos suyos, no comandos: `echo git commit` no es un
+                # commit. Parar aquí es lo que hace pasar los casos de texto.
+                break
+
+            ruta = None
+            j = i + 1
+            while j < len(seg):
+                a = seg[j]
+                if a in CON_VALOR:
+                    if a in ("-C", "--git-dir") and j + 1 < len(seg):
+                        ruta = expandir(seg[j + 1])
+                    j += 2
+                    continue
+                if a.startswith("--git-dir="):
+                    ruta = expandir(a.split("=", 1)[1])
+                    j += 1
+                    continue
+                if a.startswith("-"):
+                    j += 1
+                    continue
+                # Primer argumento que no es opción ni valor de opción: el subcomando.
+                if a == "commit":
+                    return ruta or cd_pendiente or "."
+                break   # otro subcomando de git; este segmento no interesa
+            break
 
     return None
 

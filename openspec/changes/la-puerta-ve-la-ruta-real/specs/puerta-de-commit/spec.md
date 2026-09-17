@@ -95,6 +95,16 @@ Es la forma más común de escribir un commit en un script de varias líneas, y 
   build`, un `echo`, lo que sea— y el repositorio de destino no tiene firma válida
 - **THEN** la puerta lo bloquea
 
+#### Scenario: Un commit con mensaje de varias líneas
+
+- **WHEN** el comando es `git commit -m "titulo⏎⏎cuerpo"` —o `git commit -F -` con el mensaje
+  en un heredoc— sobre un repositorio sin firma válida
+- **THEN** la puerta lo bloquea
+
+Es como se escriben los commits de este repositorio, y el banco no tenía ni un caso: los 29
+usaban `-m x`. Por ahí se coló el agujero más grave de todo el cambio, invisible durante dos
+rondas de revisión.
+
 #### Scenario: Un `git commit` dentro del cuerpo de un heredoc
 
 - **WHEN** el comando escribe un heredoc cuyo cuerpo contiene la línea `git commit …`, venga

@@ -275,6 +275,36 @@ git status
 git $C -m x" \
      "cd + otro subcomando + commit → bloquea"
 
+echo "▶ el mensaje del commit, que el banco nunca había probado"
+espera bloquea "$TMP/kit_sin_firma" "git $C -m \"titulo
+
+cuerpo del mensaje\"" \
+     "commit con mensaje de varias líneas → bloquea" \
+     "es como se commitea de verdad, y no había NI UN caso: todos usaban -m x"
+espera bloquea "$TMP/kit_sin_firma" "git $C -F - <<EOF
+titulo
+
+cuerpo
+EOF" \
+     "commit -F - con el mensaje en un heredoc → bloquea"
+espera pasa "$TMP/kit_sin_firma" "echo \"documentación:
+git $C -m x
+y ya\" > /tmp/doc.md" \
+     "un echo multilínea que lo menciona → pasa" \
+     "una cadena entrecomillada partida por líneas se convertía en un commit falso"
+
+echo "▶ redirecciones que se parecen a un heredoc pero no lo son"
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+grep foo <<<\"texto\"
+git $C -m x" \
+     "un here-string por medio → bloquea" \
+     "el regex de heredoc casaba dentro del <<< y se tragaba el resto"
+espera bloquea "$TMP/kit_firmado" "cd $TMP/kit_sin_firma
+echo \"se abre con <<EOF\"
+git $C -m x" \
+     "un <<EOF dentro de comillas → bloquea" \
+     "mismo motivo: heredoc fantasma cuyo delimitador no llegaba nunca"
+
 echo "▶ el control que descarta que el bloqueo venga del montaje"
 espera_home pasa "$TMP/kit_sin_firma" "cd $TMP/kit_firmado && git $C -m x" \
      "con HOME apuntado al banco, un repo firmado por ruta absoluta → pasa" \

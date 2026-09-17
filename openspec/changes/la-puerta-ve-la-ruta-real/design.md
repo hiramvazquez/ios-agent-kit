@@ -119,3 +119,37 @@ instalado, así que el arreglo llega con la versión siguiente.
 ## Open Questions
 
 Ninguna. Las dos causas están medidas y las dos soluciones caben en el analizador.
+
+### D2ter. Leer las fronteras del lexer, no reconstruirlas
+
+*Enmendada el 2026-09-16, tras el segundo DEVUELTO.* Las tres versiones anteriores comparten
+un error de raíz, y hasta no verlo en una tabla no quedó claro: **todas intentan reconstruir
+dónde acaba cada comando DESPUÉS de que `shlex` se haya comido los saltos de línea.** Por eso
+cada arreglo abría la dirección contraria del anterior — agujero, bloqueo falso, las dos a la
+vez.
+
+Lo que ninguna miró: `shlex` no ha perdido esa información, la tiene. Expone `lineno`
+mientras tokeniza, y además maneja las comillas. Medido:
+
+```
+git commit -m "titulo\n\ncuerpo"   → 'git'(1) 'commit'(1) '-m'(1) 'titulo\n\ncuerpo'(1→3)
+git add -A\ngit commit -m x        → 'git'(1) 'add'(1) '-A'(1→2) 'git'(2) 'commit'(2)
+cat > n.md <<EOF\n…                → … '<<'(1) 'EOF'(1) 'git'(2) 'commit'(2) 'EOF'(3)
+grep foo <<<"texto"                → 'grep'(1) 'foo'(1) '<<<'(1) 'texto'(1)
+```
+
+Tres cosas caen solas de ahí:
+
+- Un mensaje de commit de varias líneas es **UN token**, así que no se parte. Era el agujero
+  grave del tercer intento, y el banco no lo veía porque usaba `-m x` en sus 29 casos.
+- La frontera entre comandos sale del `lineno` de cada token: no hay que adivinarla.
+- El heredoc se reconoce **por tokens**: `<<` es un token propio, `<<<` es otro distinto, y
+  un `<<EOF` dentro de comillas es un token de texto. Ni here-strings mal leídos ni
+  delimitadores fantasma — los dos fallos de la regex anterior.
+
+*Consecuencia:* se retira `lineas_logicas()` sobre texto crudo y la constante `HEREDOC`. El
+analizador queda del tamaño del original, con el doble de casos cubiertos.
+
+*Lección, escrita para el siguiente:* cuatro intentos, y los tres primeros fueron parches
+sobre el síntoma. Lo que cambió no fue esforzarse más, sino mirar si la información que
+faltaba estaba disponible antes de tirarla.

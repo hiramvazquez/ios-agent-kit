@@ -90,3 +90,20 @@
       nada cuando no reconoce un commit. Corregido: ese escenario desaparece porque el caso
       ya está cubierto, y el fallo abierto que queda —ruta construida en ejecución— sigue
       dicho donde estaba.
+
+## 7. Segundo cierre del juez (DEVUELTO, 2026-09-16)
+
+- [x] 7.1 **El banco no probaba el mensaje del commit.** Los 29 casos usaban `-m x`, así que
+      un `git commit -m "titulo⏎⏎cuerpo"` —la forma en que se commitea este repositorio— no
+      estaba cubierto, y el tercer intento lo dejó invisible. Cinco casos nuevos ANTES de
+      arreglar nada: mensaje con cuerpo, `-F -` con heredoc, `echo` multilínea, here-string y
+      `<<EOF` entre comillas. Verificación: 4 de 43 en rojo antes del arreglo.
+- [x] 7.2 **Cuarta versión de D2 (D2ter), escrita antes de implementar.** Las tres anteriores
+      reconstruían las fronteras de los comandos después de que `shlex` se comiera los saltos.
+      `shlex` no las había perdido: expone `lineno` y maneja las comillas. Ahora se leen de
+      ahí. Verificación: los 43 casos en verde.
+- [x] 7.3 **Comparadas las cuatro versiones sobre 15 formas de comando**: la actual acierta
+      las 15; original, 2º y 3º fallan al menos dos cada una. Verificación: la tabla está en
+      el mensaje del commit.
+- [x] 7.4 Se retiran `lineas_logicas()` sobre texto crudo y la constante `HEREDOC`. El
+      analizador queda del tamaño del original con el doble de casos cubiertos.

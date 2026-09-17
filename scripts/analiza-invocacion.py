@@ -16,7 +16,6 @@ Lee el JSON del hook por stdin e imprime una línea:
 """
 import json
 import os
-import re
 import shlex
 import sys
 
@@ -49,34 +48,6 @@ ENVOLTORIOS = {"bash", "sh", "zsh", "dash", "ksh"}
 LIMITE_RECURSION = 4
 
 
-# `<<EOF`, `<<-'EOF'`, `<< "EOF"`: apertura de heredoc y su delimitador.
-HEREDOC = re.compile(r"""<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1""")
-
-
-def lineas_logicas(cmd):
-    """Parte el comando en líneas, descartando los CUERPOS de heredoc.
-
-    Por qué antes de tokenizar: `shlex` con `whitespace_split` se come el salto de línea, y
-    con él la única pista de dónde acaba un comando. Sin esto hay que adivinarlo, y adivinar
-    costó dos vueltas — una dejando pasar commits, otra bloqueando comandos legítimos porque
-    el `git commit` estaba dentro de un heredoc que nadie iba a ejecutar.
-
-    El cuerpo se descarta por su regla léxica: desde la línea que abre el heredoc hasta la que
-    contiene solo su delimitador. Es lo que hace el shell, no una heurística.
-    """
-    fuera, esperando = [], None
-    for linea in cmd.splitlines():
-        if esperando is not None:
-            if linea.strip() == esperando:
-                esperando = None
-            continue
-        fuera.append(linea)
-        m = HEREDOC.search(linea)
-        if m:
-            esperando = m.group(2)
-    return fuera
-
-
 def expandir(ruta):
     """Resuelve la pista como la resolvería el shell que va a ejecutar el comando.
 
@@ -91,10 +62,61 @@ def expandir(ruta):
     return os.path.expanduser(os.path.expandvars(ruta))
 
 
-def tokeniza(cmd):
+def tokens_con_linea(cmd):
+    """Los tokens del comando, cada uno con la línea en la que empieza.
+
+    La clave está en NO reconstruir las fronteras: `shlex` ya sabe por qué línea va —expone
+    `lineno`— y además maneja las comillas, así que un mensaje de commit de varias líneas es
+    UN token y no se parte. Los tres intentos anteriores fallaron por lo contrario: partían
+    el texto por saltos físicos, o adivinaban dónde acababa un comando después de que el
+    tokenizador se hubiera comido esa información.
+    """
     lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
     lex.whitespace_split = True
-    return list(lex)
+    fuera = []
+    while True:
+        # `lineno` antes de pedir el token es la línea en la que acabó el anterior, que es
+        # donde este empieza salvo por los espacios de en medio.
+        inicio = lex.lineno
+        tok = lex.get_token()
+        if tok is None:
+            break
+        fuera.append((tok, inicio))
+    return fuera
+
+
+def sin_cuerpos_de_heredoc(toks):
+    """Quita los tokens del CUERPO de cada heredoc: ese texto no se ejecuta.
+
+    Se reconoce por tokens, no por texto: `<<` es un token propio y `<<<` es otro distinto,
+    y un `<<EOF` escrito dentro de comillas es un token de texto. Por eso aquí no hay ni
+    here-strings mal leídos ni delimitadores fantasma — que es lo que rompía la versión
+    anterior, hecha con una expresión regular sobre las líneas.
+    """
+    fuera, i = [], 0
+    while i < len(toks):
+        tok, linea = toks[i]
+        fuera.append((tok, linea))
+        if tok in ("<<", "<<-") and i + 1 < len(toks):
+            delimitador = toks[i + 1][0]
+            fuera.append(toks[i + 1])
+            i += 2
+            while i < len(toks) and toks[i][0] != delimitador:
+                i += 1
+            i += 1      # el delimitador de cierre tampoco es un comando
+            continue
+        i += 1
+    return fuera
+
+
+def lineas_logicas(toks):
+    """Agrupa los tokens en líneas, por la línea en la que empieza cada uno."""
+    lineas = []
+    for tok, linea in toks:
+        if not lineas or linea > lineas[-1][0]:
+            lineas.append((linea, []))
+        lineas[-1][1].append(tok)
+    return [tokens for _, tokens in lineas]
 
 
 def analiza(cmd, profundidad=0):
@@ -104,29 +126,28 @@ def analiza(cmd, profundidad=0):
         # nada. El límite existe para que un `bash -c` recursivo no cuelgue el hook, y
         # cuatro niveles no los alcanza ningún commit que alguien escriba sin querer.
         return None
+    try:
+        toks = tokens_con_linea(cmd)
+    except ValueError:
+        # Fallo ABIERTO: comillas sin cerrar, así que no es un comando que vaya a
+        # ejecutarse tal cual. Bloquear ante algo que ni siquiera va a correr convertiría
+        # un fallo del analizador en una sesión inutilizable.
+        return None
 
     cd_pendiente = None
-    for linea in lineas_logicas(cmd):
-        destino, cd_pendiente = analiza_linea(linea, cd_pendiente, profundidad)
+    for tokens in lineas_logicas(sin_cuerpos_de_heredoc(toks)):
+        destino, cd_pendiente = analiza_linea(tokens, cd_pendiente, profundidad)
         if destino is not None:
             return destino
     return None
 
 
-def analiza_linea(cmd, cd_pendiente, profundidad):
-    """Analiza UNA línea lógica.
+def analiza_linea(tokens, cd_pendiente, profundidad):
+    """Analiza los tokens de UNA línea lógica.
 
     Devuelve `(destino o None, pista del cd para la línea siguiente)`. La pista se arrastra
     porque `cd` persiste: un `cd X` en una línea manda sobre el commit de la siguiente.
     """
-    try:
-        tokens = tokeniza(cmd)
-    except ValueError:
-        # Fallo ABIERTO: comillas sin cerrar, así que no es un comando que vaya a ejecutarse
-        # tal cual. Bloquear ante algo que ni siquiera va a correr convertiría un fallo del
-        # analizador en una sesión inutilizable.
-        return None, cd_pendiente
-
     segmentos, actual = [], []
     for tok in tokens:
         if tok in SEPARADORES:
@@ -162,8 +183,7 @@ def analiza_linea(cmd, cd_pendiente, profundidad):
                     if dentro is not None:
                         # Una ruta relativa de dentro se interpreta desde el `cd` que
                         # hubiera fuera; sin él, desde el directorio heredado.
-                        destino = dentro if dentro != "." else (cd_pendiente or ".")
-                        return destino, cd_pendiente
+                        return (dentro if dentro != "." else (cd_pendiente or ".")), cd_pendiente
                     break
             continue
 
@@ -173,21 +193,21 @@ def analiza_linea(cmd, cd_pendiente, profundidad):
         ruta = None
         j = i + 1
         while j < len(seg):
-            a = seg[j]
-            if a in CON_VALOR:
-                if a in ("-C", "--git-dir") and j + 1 < len(seg):
+            arg = seg[j]
+            if arg in CON_VALOR:
+                if arg in ("-C", "--git-dir") and j + 1 < len(seg):
                     ruta = expandir(seg[j + 1])
                 j += 2
                 continue
-            if a.startswith("--git-dir="):
-                ruta = expandir(a.split("=", 1)[1])
+            if arg.startswith("--git-dir="):
+                ruta = expandir(arg.split("=", 1)[1])
                 j += 1
                 continue
-            if a.startswith("-"):
+            if arg.startswith("-"):
                 j += 1
                 continue
             # Primer argumento que no es opción ni valor de opción: el subcomando.
-            if a == "commit":
+            if arg == "commit":
                 return (ruta or cd_pendiente or "."), cd_pendiente
             break   # otro subcomando de git; este segmento no interesa
 

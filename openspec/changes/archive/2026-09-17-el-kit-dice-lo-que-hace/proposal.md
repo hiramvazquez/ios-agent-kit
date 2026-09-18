@@ -54,6 +54,8 @@ Ninguna.
   NO SHALL mover ninguno», que era del cambio que lo escribió.
 - `doc-de-paquetes`: el requisito del acotado por prefijo pierde las dos cláusulas sobre lo
   que ningún documento puede prometer; el límite queda declarado en dos sitios nombrados.
+- `verificacion-firmada`: el requisito «la firma declara con qué se verificó» pierde las
+  fechas y los episodios que llevaba dentro de sus cláusulas; lo que exige no cambia.
 
 ## Fuera de alcance
 
@@ -68,11 +70,11 @@ Ninguna.
 
 ## Criterios de aceptación
 
-- [ ] `grep -c '2026-09-' scripts/*.sh scripts/*.py kit.conf plantillas/* README.md docs/*.md commands/*.md agents/*.md` da 0 en todos. En `openspec/specs/*/spec.md` solo queda fecha en `deteccion-de-duplicados`, en la tabla que sostiene el suelo de 3 líneas.
+- [ ] `grep -c '2026-09-' scripts/*.sh scripts/*.py kit.conf plantillas/* README.md docs/*.md commands/*.md agents/*.md` da 0 en todos. En `openspec/specs/*/spec.md` solo queda fecha en `deteccion-de-duplicados` —la medición que sostiene el suelo de 3 líneas—, en el requisito de versión de `estado-del-kit` —lo retira `la-version-no-se-vigila`— y, hasta que este cambio se archive, en el requisito de la firma que su propio delta reescribe.
 - [ ] Ningún script de `scripts/` tiene más líneas de comentario que de código: `for f in scripts/*.sh scripts/*.py; do c=$(grep -cE '^\s*#' $f); k=$(grep -vcE '^\s*(#|$)' $f); [ $c -le $k ] || echo $f; done` no imprime nada.
 - [ ] `README.md` + `docs/*.md` suman menos de 800 líneas (hoy 1.390): `cat README.md docs/*.md | wc -l`.
 - [ ] `docs/PRIMER-CAMBIO.md` no existe, y `docs/FLUJO.md` contiene «## ADDED Requirements», «ACUERDO-ROTO» y «no toca código».
-- [ ] La norma de los tres comandos separados está escrita una vez: `grep -rlE 'comandos separados|comando aparte|tres comandos' README.md docs commands scripts plantillas openspec/specs` lista solo `docs/PIEZAS.md`, `scripts/verifica.sh` (el mensaje que imprime) y `scripts/puerta-commit.sh` (el mensaje de bloqueo).
+- [ ] La norma de los tres comandos separados está escrita una vez para quien usa el kit: `grep -rlE 'comandos separados|comando aparte|tres comandos' README.md docs commands scripts plantillas openspec/specs` lista solo `docs/PIEZAS.md`, la spec `verificacion-firmada` (donde es acuerdo, no explicación), `scripts/verifica.sh` (su cabecera) y `scripts/puerta-commit.sh` (el mensaje de bloqueo).
 - [ ] Cuándo se invoca el juez está escrito una vez: `grep -rlE 'nadie vaya a leer el acuerdo' README.md docs commands agents plantillas` lista solo `commands/kit-acepta.md`.
 - [ ] La salida de `bash scripts/inyecta-contexto.sh </dev/null` sobre este repositorio es byte a byte la misma que antes del cambio.
 - [ ] `openspec/config.yaml` contiene las tres reglas de proceso del repositorio (juez, una ronda, bancos).

@@ -1,23 +1,11 @@
 #!/usr/bin/env bash
 # Banco de pruebas de `rodaja.sh`, y sobre todo de su modo `--entregado`.
-#
-# Por qué existe: `--entregado` es la ÚNICA fuente de evidencia del juez de aceptación. Si
-# se equivoca, el juez dictamina sobre otra cosa y su veredicto deja de significar nada —
-# que es el fallo que el modo se escribió para cerrar. Nació sin banco, y el revisor de la
-# rodaja encontró dos defectos en él que un banco de cuatro casos habría cazado solo:
-#
-#   - con dos cambios abiertos juzgaba el primero por orden alfabético, aunque le dijeran
-#     cuál juzgar: el juez leía el acuerdo de uno y la lista de tareas del otro;
-#   - sin `--follow`, un `git mv` del directorio del cambio hacía desaparecer del juicio
-#     todo lo commiteado antes del renombrado, sin decir nada.
+# Por qué existe: `--entregado` es la ÚNICA fuente de evidencia del juez de aceptación; si se
+# equivoca, el juez dictamina sobre otra cosa y su veredicto deja de significar nada.
 #
 # Uso:  bash scripts/verifica-rodaja.sh
-#       ROD_BAJO_PRUEBA=<ruta> bash scripts/verifica-rodaja.sh   ← contra otra versión
-#
-# La copia bajo prueba tiene que quedar DENTRO de `scripts/`, como la de la puerta: rodaja.sh
-# carga `lib-kit.sh` de su propio directorio, así que una copia en `/tmp` se queda sin
-# `cambio_activo` y falla entera por una razón que no es la que se está midiendo. Costó una
-# corrida entender eso.
+#       ROD_BAJO_PRUEBA=<ruta> bash scripts/verifica-rodaja.sh   ← contra otra versión; la
+#       copia va DENTRO de `scripts/`, porque rodaja.sh carga `lib-kit.sh` de su directorio.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -90,8 +78,7 @@ contiene "$S" "NuevoSinTrackear.txt"; caso $? \
     "incluye los ficheros nuevos sin trackear"
 # Solo la CABECERA, por lo mismo que el caso del cambio pedido: el `tasks.md` del cambio va
 # sin trackear, así que el diff lo inlinea entero y las dos cadenas aparecen ahí. Mirando la
-# salida completa, este caso pasaba aunque se borrara la cabecera entera — lo cazó el revisor
-# probando justo ese mutante.
+# salida completa, este caso pasaría aunque se borrara la cabecera entera.
 CABECERA="$(printf '%s\n' "$S" | sed -n '1,/^LO ENTREGADO/p')"
 contiene "$CABECERA" "TAREAS CERRADAS" && contiene "$CABECERA" "hecha en el arbol" \
     && contiene "$CABECERA" "TAREAS SIN CERRAR" && contiene "$CABECERA" "pendiente de cambio-uno"
@@ -134,8 +121,8 @@ contiene "$S" "no parece un cambio"; caso $? \
     "un directorio que no es un cambio se dice, no se juzga a medias" \
     "solo se comprobaba que el directorio existiera: apuntar a openspec/ daba una cabecera vacía"
 
-# Estos dos los pidió la tercera revisión: la cláusula estaba en el delta de spec y ningún
-# caso la miraba, así que un mutante que quitara la condición dejaba el banco en verde.
+# La cláusula está en la spec, y sin estos dos casos un mutante que quitara la condición
+# dejaría el banco en verde.
 S="$(entregado "$TMP/dos_activos" openspec/changes/zzz-nuevo)"
 if contiene "$S" "cambios activos"; then
     caso 1 "cuando se nombra el cambio, NO avisa de los demás" \
@@ -163,14 +150,10 @@ fi
 echo "▶ fuera de un repositorio git"
 
 # `cd "$(git rev-parse …)" || …` NO dispara fuera de un repo, porque `cd ""` devuelve 0 en
-# bash: la guarda que este script llevaba escrita no se ejecutaba nunca. Y dos líneas después
-# hay un `mkdir -p .agent-kit`, así que el script CREABA un directorio en el sitio donde
-# estuvieras, fuera de cualquier repositorio, y luego volcaba el `usage` de `git diff` en vez
-# de su mensaje. Comprobado el 2026-09-08 en un directorio pelado.
-#
-# Es la misma regla que el hook de contexto ya cumplía —no escribir donde nadie pidió el
-# kit— sin haber llegado a este hermano. Los dos casos van juntos a propósito: el mensaje sin
-# el «no deja nada escrito» dejaría pasar una versión que avisa y ensucia igual.
+# bash: una guarda escrita así no se ejecuta nunca, y el `mkdir -p .agent-kit` que viene
+# después crearía un directorio donde estuvieras. Es la misma regla que cumple el hook de
+# contexto: no escribir donde nadie pidió el kit. Los dos casos van juntos a propósito: el
+# mensaje sin el «no deja nada escrito» dejaría pasar una versión que avisa y ensucia igual.
 PELADO="$TMP/pelado"
 mkdir -p "$PELADO"
 S="$( cd "$PELADO" && bash "$ROD" 2>&1 )"

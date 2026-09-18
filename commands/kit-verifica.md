@@ -16,6 +16,6 @@ Reglas al leer la salida:
 - Si sale el aviso de **lógica repetida**, míralo antes de seguir. No bloquea, pero si el
   duplicado lo ha añadido este cambio, es tuyo y toca resolverlo ahora — es mucho más caro
   después.
-- Stagea y verifica en comandos SEPARADOS del commit. Se firma el árbol **y** el índice, así
-  que encadenar `git add && git commit` cambia el índice entre la firma y el commit, y la
-  puerta lo rechazará con razón.
+- Se firma el árbol **y** el índice: stagear después de firmar invalida la firma. Stagea
+  antes de verificar, y commitea después, sin encadenar el `add` con el commit. La razón está
+  en `docs/PIEZAS.md`, en la sección de `verifica.sh`.

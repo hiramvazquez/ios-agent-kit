@@ -2,17 +2,15 @@
 
 ## Purpose
 
-Que el veredicto del juez de aceptación sea **comprobable**. Un juez que dictamina sobre una
-entrada vacía no miente: emite un veredicto que nadie puede rebatir ni confirmar, y eso es
-peor que equivocarse, porque no deja rastro. Lo que se juzga tiene que ser lo entregado, y
-cuando no haya nada entregado hay que decirlo en vez de dictaminar sobre lo que se encuentre
-leyendo ficheros sueltos.
+Que el veredicto del juez de aceptación sea **comprobable**: lo que se juzga tiene que ser lo
+entregado, y cuando no haya nada entregado hay que decirlo en vez de dictaminar sobre lo que se
+encuentre leyendo ficheros sueltos, porque un veredicto que nadie puede rebatir ni confirmar es
+peor que uno equivocado.
 
-Lo que **no** pretende: filtrar el diff por el cambio que se juzga. Lo entregado es una
-ventana de tiempo —desde antes de que existiera la propuesta—, no un filtro por rutas, y
-filtrar dejaría fuera precisamente lo que el juez busca: el código que no responde a ningún
-criterio. Quien juzgue tiene que saber que puede estar viendo trabajo de otro cambio abierto,
-y mirarlo antes de llamarlo «lo que nadie pidió».
+Lo que **no** pretende: filtrar el diff por el cambio que se juzga. Lo entregado es una ventana
+de tiempo —desde antes de que existiera la propuesta—, no un filtro por rutas, y quien juzgue
+tiene que saber que puede estar viendo trabajo de otro cambio abierto antes de llamarlo «lo que
+nadie pidió».
 
 ## Requirements
 
@@ -28,10 +26,9 @@ está juzgando en el momento en que se le invoca.
 4. Cuando el conjunto esté vacío de verdad —no hay nada entregado—, el juez SHALL decirlo y
    parar, en vez de dictaminar leyendo ficheros sueltos.
 
-La 1 y la 2 describen el mismo fallo por dos caminos. `git diff main...HEAD` está vacío
-mientras el trabajo no esté commiteado, y en este flujo el commit es posterior al juicio;
-y aunque estuviera commiteado, los ficheros nuevos sin trackear no salen en ningún `git
-diff` —es la ceguera que ya costó una revisión de 700 líneas vista como 26.
+La 1 y la 2 describen el mismo fallo por dos caminos: en este flujo el commit es posterior al
+juicio, así que `git diff main...HEAD` está vacío, y los ficheros nuevos sin trackear no salen
+en ningún `git diff`.
 
 La 4 es la que convierte el fallo en visible. Un juez con `Read` y `Grep` puede dictaminar
 sin diff y no enterarse de que le falta la fuente; y un veredicto emitido sobre una entrada
@@ -59,10 +56,6 @@ que se resuelva desde la raíz del plugin.
 2. Un fallo al ejecutar esa invocación SHALL ser visible en la salida del agente, no
    silencioso.
 
-`Scripts/verifica.sh` es la ruta que hay hoy en el prompt del juez, dos veces. En un proyecto
-real esa ruta o no existe, o existe y es otra cosa: `AppStarter` tiene un `Scripts/` con
-otros dos scripts dentro.
-
 #### Scenario: El juez pide el informe de verificación
 
 - **WHEN** el juez ejecuta la línea que le da el informe de `verifica.sh`
@@ -83,16 +76,8 @@ Cuando se le diga al juez QUÉ cambio juzga, todo lo que reciba SHALL ser de ese
    variable de shell: cada invocación de Bash es un shell nuevo y una variable de la llamada
    anterior llega vacía.
 
-Sin la 1, con dos cambios abiertos el juez leía el acuerdo de uno y la lista de tareas del
-otro, bajo un encabezado que dice «EN ESTE CAMBIO» — y justo después de que su prompt le
-ordenara recorrer la lista y no el diff. La 4 es la otra mitad del mismo fallo: un argumento
-que llega vacío devuelve exactamente el comportamiento que la 1 arregla.
-
-La 2 se escribió después de que un revisor la reprodujera: la redacción anterior prometía que
-«el diff» sería el del cambio nombrado, y no lo es ni puede serlo sin filtrar por rutas —cosa
-que dejaría fuera precisamente lo que el juez busca, el código que no responde a ningún
-criterio—. Prometer un filtro que no existe es peor que declarar la ventana: con dos cambios
-abiertos, el juez habría llamado ACUERDO-ROTO al trabajo del vecino.
+La 4 es la otra mitad de la 1: un argumento que llega vacío devuelve el juicio sobre otro cambio
+bajo un encabezado que dice «EN ESTE CAMBIO».
 
 #### Scenario: Se nombra el cambio y hay otros abiertos
 
@@ -124,15 +109,12 @@ SHALL parar y decir en cuál de tres estados está el cambio, en vez de emitir u
 6. Cuando dos rondas devuelvan hallazgos de la misma clase, el juez SHALL decir si la búsqueda
    converge, mirando cuántas de las instancias nuevas las escribió el arreglo de la ronda anterior.
 
-La 4 es la regla entera, y es estrecha a propósito. La versión anterior contaba como
-comportamiento añadir un fixture a un banco y cambiar lo que una norma manda, y en la duda
-desempataba hacia «sí»: con esa tabla el tope no se disparó ni una vez desde el 2026-09-08, porque
-toda ronda que busca encuentra un caso sin prueba o una frase que reescribir. En prosa, cada
-arreglo reescribe la norma, y reescribirla es lo que fabrica el hallazgo siguiente; ahí tiene que
-decidir el owner, no otra ronda.
+La 4 es la regla entera, y es estrecha a propósito: en prosa, cada arreglo reescribe la norma, y
+reescribirla es lo que fabrica el hallazgo siguiente; ahí tiene que decidir el owner, no otra
+ronda.
 
 La 3 existe porque una lista de salidas que obliga a firmar la menos falsa es peor que no tener
-lista: el 2026-09-08 un juez llegó al tope con dos etiquetas, las dos falsas, y se negó a firmar.
+lista.
 
 **Límite declarado.** Que un juez cuente bien sus rondas no lo comprueba nadie. El contador no lo
 lleva él —cada invocación empieza en blanco— sino la línea de cada ronda en el acuerdo: quien no la
@@ -219,10 +201,6 @@ lo único que se pide.
 
 La 2 protege algo: los prompts de `agents/` prohíben escribir a los agentes a propósito, porque
 editar el acuerdo que se juzga es el fraude que el juez existe para impedir.
-
-La 4 es la mitad que se retira. Anotar las pasadas del revisor con formato fijo servía a un script
-que leía ese registro, y el script se retiró el 2026-09-11: sobre `AppStarter`, el único proyecto
-real, no tenía nada que leer.
 
 **Límite declarado.** Nadie comprueba que se anote. Un orquestador que se lo salte deja el tope sin
 contador.

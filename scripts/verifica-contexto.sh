@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
 # Banco de pruebas de `inyecta-contexto.sh`.
-#
-# Por qué existe: ese hook corre en CADA turno y nadie lo invoca, así que cuando se
-# equivoca no hay quien lo corrija — solo un digest que afirma cosas sobre el trabajo en
-# curso. El 2026-09-07 estuvo una sesión entera diciendo «Sin cambio OpenSpec activo»
-# mientras el repositorio donde se trabajaba tenía uno con siete tareas hechas, y además
-# dejó un `.agent-kit/` en un repositorio que no usa el kit.
+# Por qué existe: el hook corre en CADA turno sin que nadie lo invoque, así que lo que afirma
+# sobre el trabajo en curso solo lo corrige un banco.
 #
 # Uso:  bash scripts/verifica-contexto.sh
-#
-# Se puede apuntar a otra versión con HOOK_BAJO_PRUEBA, para comprobar caso por caso que
-# cada prueba que fija un fallo sale roja contra la versión sin arreglar:
-#
-#   git show <commit>:scripts/inyecta-contexto.sh > scripts/.contexto-viejo.sh
-#   HOOK_BAJO_PRUEBA="$PWD/scripts/.contexto-viejo.sh" bash scripts/verifica-contexto.sh
+#       HOOK_BAJO_PRUEBA=<ruta> bash scripts/verifica-contexto.sh   ← contra otra versión
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,32 +31,26 @@ repo() {
                 printf '# P\n\n## Fuera de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
                     > openspec/changes/mi-cambio/proposal.md ;;
             activo_cero)
-                # La rama que ningún fixture montaba: un cambio activo con CERO tareas
-                # pendientes, que es el estado normal cuando el cambio está terminado y se
-                # va a llamar al juez. `grep -c` sobre cero coincidencias imprime "0" Y sale
-                # con 1; el `$(... || echo 0)` de antes de este cambio no lo sabía y sumaba
-                # un segundo "0", lo que en bash 3.2 abortaba el `if` entero y se perdían
-                # "tareas:", la lista de pendientes y "FUERA de alcance" en silencio. Este
-                # fixture existe para que ese caso deje de pasar por accidente.
+                # Un cambio activo con CERO tareas pendientes: el estado normal cuando el
+                # cambio está terminado y se va a llamar al juez. Con cero coincidencias
+                # `grep -c` imprime "0" Y sale con 1, y el digest tiene que sobrevivir a eso.
                 #
-                # Y su cabecera va en MAYÚSCULAS a propósito: 3 de las 16 propuestas de este
-                # repositorio la escriben así —la activa el 2026-09-11 entre ellas— y el `sed`
-                # de antes distinguía mayúsculas, así que el bloque desaparecía sin decir nada.
-                # El fixture de `activo` la deja en minúsculas: entre los dos cubren las dos.
+                # La cabecera va en MAYÚSCULAS a propósito: hay propuestas que la escriben
+                # así. El fixture de `activo` la deja en minúsculas: entre los dos cubren las
+                # dos formas.
                 mkdir -p openspec/changes/mi-cambio
                 printf '# Tareas\n\n- [x] 1. hecha\n- [x] 2. tambien hecha\n' \
                     > openspec/changes/mi-cambio/tasks.md
                 printf '# P\n\n## FUERA de alcance\n\n- no tocar la caja fuerte\n\n## Otra\n' \
                     > openspec/changes/mi-cambio/proposal.md ;;
             dos)
-                # CINCO cambios abiertos a la vez, creados en orden inverso al
-                # alfabético. OpenSpec permite varios, y el kit elegía uno con `head -1`
-                # sobre un `find`: por el orden del sistema de ficheros.
+                # CINCO cambios abiertos a la vez, creados en orden inverso al alfabético.
+                # OpenSpec permite varios, y el hook tiene que elegir por orden estable, no
+                # por el que devuelva el sistema de ficheros.
                 #
-                # Cinco y no dos, y esto salió de la revisión: con dos, el orden que APFS
-                # devuelve coincidía con el alfabético y el caso pasaba igual con el código
-                # roto — cobertura decorativa. Con cinco no coincide (`find` devuelve
-                # `ccc-tercero` primero aquí), así que el caso distingue de verdad.
+                # Cinco y no dos: con dos, el orden que APFS devuelve coincide con el
+                # alfabético y el caso pasaría igual con el código roto. Con cinco no
+                # coincide (`find` devuelve `ccc-tercero` primero aquí).
                 for c in ccc-tercero eee-quinto bbb-segundo ddd-cuarto aaa-primero; do
                     mkdir -p "openspec/changes/$c"
                     printf '# Tareas\n\n- [ ] 1. pendiente de %s\n' "$c" \
@@ -91,9 +76,9 @@ repo() {
 # máquina real eso tarda y contamina el resultado con dependencias que no son del test.
 # XDG_CACHE_HOME va aparte para poder comprobar dónde acaba el caché.
 #
-# `</dev/null` a propósito: el hook ahora lee stdin para saber qué evento lo invocó, y sin
-# redirigir aquí heredaría el stdin de ESTE banco. Si algún día se corre a mano desde una
-# terminal en vez de en CI, sin esto el banco entero se quedaría esperando EOF.
+# `</dev/null` a propósito: el hook lee stdin para saber qué evento lo invocó, y sin
+# redirigir aquí heredaría el stdin de ESTE banco; corrido a mano desde una terminal, el
+# banco entero se quedaría esperando EOF.
 digest() {
     local r="$1"
     (
@@ -110,7 +95,7 @@ except Exception:
 
 # digest_stderr <repo> → imprime SOLO lo que el hook escribió en stderr, para el caso que
 # exige que con cero tareas pendientes no escriba nada ahí. `digest()` lo descarta a
-# propósito porque el resto de casos no lo necesitan; separarlo evita tocar su firma.
+# propósito porque el resto de casos no lo necesitan.
 digest_stderr() {
     local r="$1"
     (
@@ -153,22 +138,18 @@ mkdir -p "$TMP/home"
 # de este banco: el nombre no coincide con nada de aquí a propósito. Si el `find` del hook
 # recorriera la máquina entera en vez de acotarse al repositorio observado, cualquier
 # repositorio de este banco lo vería — empezando por `sin_deps_propias`, que no tiene ni una
-# dependencia propia. Medido el 2026-09-08 con el repo real: `ios-agent-kit` (cero .swift)
-# anunciaba paquetes de `AppStarter` y `DemoMulti`, y un repositorio vacío en /tmp recibía la
-# misma frase.
+# dependencia propia.
 mkdir -p "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-a1b2c3/SourcePackages/checkouts/PaqueteAjeno"
 echo "reglas de un proyecto que no es ninguno de estos repos" \
     > "$TMP/home/Library/Developer/Xcode/DerivedData/OtroProyectoDeLaMaquina-a1b2c3/SourcePackages/checkouts/PaqueteAjeno/AGENTS.md"
 
 # Y otro cuyo nombre EMPIEZA por el de un repo del banco, sin guion en medio:
 # `sin_deps_propiasextra-…`. Sin él, este banco no mide el borde del acotado, solo que se
-# distinguen dos nombres sin relación ninguna — «medir lo fácil».
+# distinguen dos nombres sin relación ninguna.
 #
-# Y desde que la resolución vive en `lib-kit.sh` esto tiene una consecuencia concreta: los dos
-# bancos miden LA MISMA función. Medido el 2026-09-08 mutándola a `${proyecto}*` (sin el
-# guion): el banco de `doc-paquetes.sh` la cazaba y este pasaba en verde los suyos. Un banco
-# que dice «las dependencias son las de ESTE repositorio» y no mide dónde acaba «este» no está
-# midiendo lo que anuncia. Lo encontró el juez de aceptación.
+# La resolución vive en `lib-kit.sh`, así que este banco y el de `doc-paquetes.sh` miden LA
+# MISMA función: un banco que dice «las dependencias son las de ESTE repositorio» tiene que
+# medir dónde acaba «este».
 mkdir -p "$TMP/home/Library/Developer/Xcode/DerivedData/sin_deps_propiasextra-b4d1dea/SourcePackages/checkouts/PaqueteDePrefijo"
 echo "reglas de un proyecto cuyo nombre empieza por el de un repo del banco" \
     > "$TMP/home/Library/Developer/Xcode/DerivedData/sin_deps_propiasextra-b4d1dea/SourcePackages/checkouts/PaqueteDePrefijo/AGENTS.md"
@@ -198,13 +179,10 @@ contiene "$D" "/opsx:propose"; caso $? \
 
 echo "▶ el cambio terminado no rompe el digest (cero tareas pendientes)"
 
-# La rama que ningún fixture montaba: `con_cambio` (arriba) siempre tuvo UNA tarea
-# pendiente, y con cero — el estado normal cuando el cambio está terminado y se va a llamar
-# al juez — `grep -c` imprime "0" Y sale con 1. El `$(... || echo 0)` de antes de este
-# cambio no distinguía eso de "no hubo salida" y sumaba un segundo "0", que en bash 3.2
-# aborta el `if` entero: se perdían "tareas:", la lista de pendientes y "FUERA de alcance"
-# en el mismo turno en que más importan. Reproducido el 2026-09-08 contra el hook de antes
-# de este cambio con `HOOK_BAJO_PRUEBA`.
+# `con_cambio` (arriba) siempre tiene UNA tarea pendiente. Con cero —el estado normal cuando
+# el cambio está terminado y se va a llamar al juez— `grep -c` imprime "0" Y sale con 1; si
+# el hook trata eso como «no hubo salida», el `if` aborta en bash 3.2 y se pierden "tareas:",
+# la lista de pendientes y "FUERA de alcance" en el turno en que más importan.
 D="$(digest "$TMP/con_cambio_hecho")"
 contiene "$D" "tareas:"; caso $? \
     "con cero tareas pendientes, el digest sigue diciendo cuántas hay hechas" \
@@ -229,10 +207,10 @@ fi
 
 echo "▶ un cambio activo sin lista de tareas"
 
-# `docs/FLUJO.md` recomienda saltarse `tasks.md` en un cambio pequeño de alcance claro, y ahí el
-# digest decía «tareas: 0/0 hechas»: se lee como «no queda nada por hacer» cuando lo cierto es
-# que ese cambio no lleva lista. Se le quita la lista al repo del caso anterior, que ya no se
-# usa más abajo.
+# `docs/FLUJO.md` recomienda saltarse `tasks.md` en un cambio pequeño de alcance claro, y
+# «tareas: 0/0 hechas» se leería como «no queda nada por hacer» cuando lo cierto es que ese
+# cambio no lleva lista. Se le quita la lista al repo del caso anterior, que ya no se usa
+# más abajo.
 rm -f "$TMP/con_cambio_hecho/openspec/changes/mi-cambio/tasks.md"
 D="$(digest "$TMP/con_cambio_hecho")"
 if contiene "$D" "tareas:"; then
@@ -288,16 +266,14 @@ else
         "D1=[$(printf '%s' "$D1" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')] D2=[$(printf '%s' "$D2" | grep -o 'Paquete[A-Za-z]*' | tr '\n' ' ')]"
 fi
 
-# El criterio decía que el caché «evita el recorrido en turnos consecutivos» y NADIE lo
-# comprobaba: solo se afirmaba en un comentario. Lo señaló un juez de aceptación. Se fija
-# añadiendo una dependencia DESPUÉS del primer turno: si el segundo la ve, es que ha vuelto
-# a recorrer y el caché no sirve para nada.
+# El caché tiene que evitar el recorrido en turnos consecutivos, y eso se mide añadiendo una
+# dependencia DESPUÉS del primer turno: si el segundo la ve, es que ha vuelto a recorrer.
 mkdir -p "$TMP/con_cambio/.build/checkouts/PaqueteTardio"
 echo reglas > "$TMP/con_cambio/.build/checkouts/PaqueteTardio/AGENTS.md"
 D3="$(digest "$TMP/con_cambio")"
-# Se exige la PRESENCIA de la vieja además de la ausencia de la nueva. Solo con la
-# ausencia, un hook que dejara de inyectar la línea de paquetes pasaría este caso sin
-# haber cacheado nada — lo encontró un juez probando ese mutante.
+# Se exige la PRESENCIA de la vieja además de la ausencia de la nueva: solo con la ausencia,
+# un hook que dejara de inyectar la línea de paquetes pasaría este caso sin haber cacheado
+# nada.
 if contiene "$D3" "PaqueteUno" && ! contiene "$D3" "PaqueteTardio"; then
     caso 0 "el segundo turno no vuelve a recorrer: usa el caché"
 else
@@ -309,10 +285,7 @@ echo "▶ las dependencias se acotan al prefijo del repositorio"
 
 # `sin_deps_propias` no depende de ningún paquete y se digesta aquí por PRIMERA vez, con el
 # DerivedData ajeno ya montado — así el `find` corre de verdad y no se limita a leer un
-# caché escrito antes de montar `PaqueteAjeno`. Medido el 2026-09-08 contra el hook de antes
-# de este cambio: `ios-agent-kit` (cero ficheros .swift) anunciaba paquetes de AppStarter y
-# DemoMulti, y un repositorio vacío en /tmp recibía la misma frase — el `find` recorría todo
-# `~/Library/Developer/Xcode/DerivedData` sin filtrar por proyecto.
+# caché escrito antes de montar `PaqueteAjeno`.
 D="$(digest "$TMP/sin_deps_propias")"
 if contiene "$D" "PaqueteAjeno"; then
     caso 1 "un repo sin dependencias propias no recibe las de un proyecto de OTRO nombre" \
@@ -324,7 +297,7 @@ fi
 # La otra mitad del borde, y la que mide de verdad la función compartida: un vecino cuyo
 # nombre empieza por el del repo pero SIN el guion. Tiene que ser sin guion — con él
 # (`sin_deps_propias-algo`) casaría también con el patrón correcto, que es el límite declarado
-# en `lib-kit.sh` y que este cambio deja abierto a propósito.
+# en `lib-kit.sh` y que queda abierto a propósito.
 if contiene "$D" "PaqueteDePrefijo"; then
     caso 1 "ni las de uno cuyo nombre empieza por el suyo SIN guion" \
         "sin el guion en el patrón, un repo 'App' se llevaría lo de 'AppStarter-<hash>'"
@@ -335,10 +308,9 @@ fi
 echo "▶ el JSON declara el evento que lo invoca"
 
 # El mismo script está registrado en dos eventos de `hooks.json`: `UserPromptSubmit` en
-# cada turno y `SessionStart` con el matcher `compact`. Antes de este cambio, `hookEventName`
-# era literal en el script y salía "UserPromptSubmit" sin mirar el JSON de stdin — así que
-# el segundo caso de abajo salía en rojo contra esa versión, y el primero pasaba por
-# casualidad (es el mismo valor que el literal de antes).
+# cada turno y `SessionStart` con el matcher `compact`. `hookEventName` tiene que salir del
+# JSON de stdin, no de un literal: con un literal, el primer caso pasa por casualidad y el
+# segundo no.
 E="$(evento_emitido "$TMP/con_cambio" UserPromptSubmit)"
 if [ "$E" = "UserPromptSubmit" ]; then
     caso 0 "invocado como UserPromptSubmit, el hookEventName emitido es UserPromptSubmit"
@@ -361,14 +333,11 @@ D1="$(digest "$TMP/dos_cambios")"
 D2="$(digest "$TMP/dos_cambios")"
 E1="$(printf '%s' "$D1" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
 E2="$(printf '%s' "$D2" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
-# Se exige el MÍNIMO por `LC_ALL=C`, no solo que dos corridas coincidan entre sí.
-#
-# La primera versión de este caso comparaba `E1` con `E2` y ya está, y el revisor de la
-# rodaja lo cazó: dos `find` seguidos sobre un directorio que no ha cambiado devuelven el
-# mismo orden en cualquier sistema de ficheros, así que la aserción pasaba igual con el
-# código roto. Cobertura decorativa. Los directorios se crean a propósito en orden inverso
-# al alfabético (`bbb-segundo` antes que `aaa-primero`), que es lo que separa «ordenado» de
-# «lo que devolvió el sistema de ficheros».
+# Se exige el MÍNIMO por `LC_ALL=C`, no solo que dos corridas coincidan entre sí: dos `find`
+# seguidos sobre un directorio que no ha cambiado devuelven el mismo orden en cualquier
+# sistema de ficheros, así que comparar `E1` con `E2` pasaría igual con el código roto. Los
+# directorios se crean a propósito en orden inverso al alfabético (`bbb-segundo` antes que
+# `aaa-primero`), que es lo que separa «ordenado» de «lo que devolvió el sistema de ficheros».
 if [ "$E1" = "aaa-primero" ] && [ "$E1" = "$E2" ]; then
     caso 0 "elige el primero por orden estable, no el que devuelva el sistema de ficheros"
 else
@@ -382,10 +351,9 @@ contiene "$D1" "5 cambios activos"; caso $? \
 
 echo "▶ no escribe en directorios compartidos"
 
-# LÍMITE DECLARADO de este caso: es LÉXICO, no dinámico. El fichero que había se creaba y se
-# borraba dentro de la misma corrida, así que mirar qué queda en el temporal del sistema no
-# lo habría visto nunca. Lo que se comprueba es que el hook no NOMBRE `/tmp`, que es la
-# única señal mecánica disponible de que vuelva a escribir ahí.
+# LÍMITE DECLARADO de este caso: es LÉXICO, no dinámico. Un fichero que se crea y se borra
+# dentro de la misma corrida no se ve mirando qué queda en el temporal del sistema. Lo que se
+# comprueba es que el hook no NOMBRE `/tmp`, que es la única señal mecánica disponible.
 if grep -v '^[[:space:]]*#' "$HOOK" | grep -q '/tmp/'; then
     caso 1 "el hook no escribe en el temporal compartido del sistema" \
         "usaba /tmp/.ic.\$\$ —nombre derivable del PID— en cada turno de cualquier repositorio"
@@ -393,37 +361,28 @@ else
     caso 0 "el hook no escribe en el temporal compartido del sistema"
 fi
 
-# El número de repos se CUENTA. Escrito a mano decía 4 cuando ya había 5, y solo pasaba
-# porque el quinto se digestaba después de contar: se rompía en cuanto alguien moviera un
-# bloque. Es el mismo censo a mano que este kit prohíbe en los acuerdos.
+# El número de repos se CUENTA, no se escribe a mano: un censo a mano se rompe en cuanto
+# alguien mueve un bloque, y es el mismo censo que este kit prohíbe en los acuerdos.
 REPOS="$(find "$TMP" -maxdepth 2 -name .git -type d 2>/dev/null | wc -l | tr -d ' ')"
 CACHES="$(find "$TMP/cache/ios-agent-kit" -type f 2>/dev/null | wc -l | tr -d ' ')"
 if [ "$CACHES" -eq "$REPOS" ]; then IGUALES=0; else IGUALES=1; fi
 caso "$IGUALES" "el caché vive fuera del repo, un fichero por repositorio ($CACHES de $REPOS)" \
     "vivía en .agent-kit/ dentro del repo observado, así que fuera no hay ninguno"
 
-# Los rojos que quedan por cerrar son de ESTE cambio, no del que trajo el banco: los tres
-# casos nuevos —orden estable, aviso de varios activos, y no escribir en /tmp— los añadió
-# `el-kit-se-aplica-a-si-mismo`.
 echo "▶ no se cuelga esperando una entrada que no llega"
 
-# El hook lee stdin desde que declara el evento invocante, y `[ -t 0 ]` solo reconoce el caso
+# El hook lee stdin para saber qué evento lo invoca, y `[ -t 0 ]` solo reconoce el caso
 # terminal: con un pipe ABIERTO que nunca cierra, esperar EOF es esperar para siempre. Corre
-# ANTES de cada turno, así que colgarlo es colgar la sesión. Lo encontró una medición de coste
-# que se quedó parada ocho minutos, no una prueba — que es justo por qué este caso existe.
-#
-# Contra la versión de HEAD sale VERDE, y es correcto: allí el hook no leía stdin y no podía
-# colgarse. Lo que fija no es un fallo vivo, es que la lectura nueva no traiga el cuelgue.
+# ANTES de cada turno, así que colgarlo es colgar la sesión.
 #
 # `set -m` pone el job en su PROPIO grupo de procesos, y se mata el GRUPO —no el pid—. Sin
 # eso, matar el shell del hook deja vivo el proceso que está leyendo el pipe, y es él quien
-# cuelga a este banco: el primer intento de escribir este caso detectaba el cuelgue
-# correctamente y luego se colgaba él, que es peor que no tenerlo.
-# Y corre DENTRO de un repo de fixture, con el `HOME` y el caché del banco, como los otros
-# casos. La primera versión no lo hacía y el revisor la cazó por partida doble: escribía en el
-# caché REAL del usuario, y —peor— pasaba en falso desde cualquier cwd sin repositorio git,
-# porque el hook sale en `git rev-parse` ANTES de llegar a leer stdin. Un caso que protege
-# contra colgar la sesión y pierde los dientes según desde dónde se le invoque no protege nada.
+# cuelga a este banco.
+#
+# Corre DENTRO de un repo de fixture, con el `HOME` y el caché del banco, como los otros
+# casos: desde un cwd sin repositorio git el hook sale en `git rev-parse` ANTES de llegar a
+# leer stdin y el caso pasaría en falso, y sin el `HOME` del banco escribiría en el caché
+# REAL del usuario.
 MARCA_FIN="$TMP/hook-termino"
 rm -f "$MARCA_FIN"
 set -m
@@ -448,9 +407,9 @@ rm -f "$MARCA_FIN"
 
 echo "▶ la línea de verificación dice con qué se firmó"
 
-# Este banco no tenía ni un caso sobre la línea de verificación del digest, y es la línea que
-# más se lee: llega en cada turno. Se firma de verdad —`verifica.sh` con un kit.conf trivial—
-# en vez de fabricar el marker a mano, porque la huella tiene que cuadrar con el árbol.
+# La línea de verificación es la que más se lee: llega en cada turno. Se firma de verdad
+# —`verifica.sh` con un kit.conf trivial— en vez de fabricar el marker a mano, porque la
+# huella tiene que cuadrar con el árbol.
 repo firmado vacio si
 ( cd "$TMP/firmado" && HOME="$TMP/home" bash "$DIR/verifica.sh" ) >/dev/null 2>&1
 TC_MARKER="$(sed -n 's/^toolchain: //p' "$TMP/firmado/.agent-kit/verificacion.txt" | head -1)"
@@ -468,7 +427,7 @@ else caso 1 "el hook no interroga a ningún compilador" \
     "detectar el toolchain en el hook costaría 0,3 s en cada turno"
 fi
 
-# Un marker anterior a este campo: la línea queda como estaba, sin inventarse un dato.
+# Un marker sin el campo `toolchain`: la línea queda como estaba, sin inventarse un dato.
 grep -v "^toolchain: " "$TMP/firmado/.agent-kit/verificacion.txt" > "$TMP/firmado/.agent-kit/v" \
     && mv "$TMP/firmado/.agent-kit/v" "$TMP/firmado/.agent-kit/verificacion.txt"
 D="$(digest "$TMP/firmado")"

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Caza lógica repetida: el mismo cuerpo de función escrito en dos sitios.
 
-El caso real que motiva esto: tres `extension Date` en tres view models distintos
-haciendo lo mismo. Ningún linter lo ve —cada una es correcta por separado— y ninguna
-review lo caza, porque el revisor mira UN diff y las tres nacieron en semanas distintas.
+Ningún linter lo ve —cada copia es correcta por separado— y ninguna review lo caza, porque
+el revisor mira UN diff y las copias nacen en semanas distintas.
 
 Qué hace: extrae cada `func`/`var` computada con cuerpo, lo normaliza (fuera comentarios,
 espacios y el nombre propio) y agrupa por huella. Dos cuerpos idénticos en ficheros
@@ -17,9 +16,9 @@ Uso:  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/busca-duplicados.py" [rutas...]
 
 Sobre `--tocados`: un proyecto vivo arrastra duplicados preexistentes que ya se miraron y
 se decidieron. Listarlos enteros en CADA verificación convierte el aviso en papel pintado
-—se leyó seis veces seguidas sin que nadie actuara— y entierra el único que importa: el que
-ESTE cambio acaba de introducir. Con `--tocados` se reporta un grupo solo si alguna de sus
-copias está en un fichero del diff, y los demás se resumen en una línea.
+y entierra el único que importa: el que ESTE cambio acaba de introducir. Con `--tocados` se
+reporta un grupo solo si alguna de sus copias está en un fichero del diff, y los demás se
+resumen en una línea.
 
 Sale 1 si encuentra algo (de lo reportado); 0 si está limpio.
 """
@@ -41,29 +40,17 @@ RAICES = [Path(p) for p in (argv or ["App", "Sources", "Packages"]) if Path(p).e
 def tocado(*rutas):
     """¿Alguna de estas rutas está en el diff? Sin `--tocados`, todo cuenta como tocado."""
     return True if TOCADOS is None else any(str(r) in TOCADOS for r in rutas)
-# El suelo de ruido, y la medición que lo fija.
-#
-# Subirlo de 3 a 4 quitaba un falso positivo —dos dobles de test cuyo cuerpo de tres
-# líneas es un `return` armado— y se llevaba por delante dos duplicados REALES de tres
-# líneas, `pascalCase()` y `displayPath()`, copiados entre `Sources/ArchInitSupport` y
-# `Plugins/GenerateFeature`: justo la clase que este detector existe para cazar. El trato
-# era perder dos hallazgos verdaderos para quitarse uno falso.
-#
-# Así que 3, con el ruido conocido y asumido. Y la lección, que vale más que el número:
-# aquella subida se justificó contando GRUPOS (28→5, 6→5) sin mirar CUÁLES desaparecían.
-# Un recuento agregado no dice si lo que se fue era lo que sobraba.
+# El suelo de líneas, y la medición que lo fija (la tabla completa, con nombres, está en la
+# spec `deteccion-de-duplicados`): subirlo de 3 a 4 quitaba un falso positivo —dos dobles de
+# test— y se llevaba dos duplicados REALES de tres líneas copiados entre un target y un
+# plugin, justo la clase que este detector existe para cazar. Toda medición para moverlo
+# tiene que decir QUÉ grupos cambian de lado, no cuántos.
 MIN_LINEAS = 3
 
-# El segundo suelo, y su razón.
-#
-# Sin él, un cuerpo de tres líneas cuya única sustancia normalizada es una llave, una
-# asignación trivial y un `return` se reporta como duplicado: coincidencia de forma, no la
-# lógica repetida que este detector existe para cazar.
-#
-# No se mueve sin una medición por identidad —cuáles desaparecen, no cuántos—, que es lo que
-# `deteccion-de-duplicados` exige antes de tocar cualquiera de los dos suelos. El caso exacto
-# que este número decide está montado en `verifica-duplicados.sh`, y va ahí y no aquí a
-# propósito: un número con fecha y sin fixture envejece igual que uno sin fecha.
+# El segundo suelo: sin él, un cuerpo de tres líneas cuya única sustancia normalizada es
+# una llave, una asignación trivial y un `return` se reporta como duplicado, que es
+# coincidencia de forma y no lógica repetida. El caso exacto que decide este número está
+# montado en `verifica-duplicados.sh`.
 MIN_CARACTERES = 60
 
 def sin_ruido(txt):
@@ -94,16 +81,10 @@ def extensiones(ruta):
     for m in re.finditer(r"^\s*(?:public\s+|internal\s+)?extension\s+(\w+)", ruta.read_text(errors="replace"), re.M):
         yield m.group(1), ruta.name
 
-# Un fichero real se cuenta UNA vez, aunque se llegue a él por dos rutas.
-#
-# Un symlink no es una copia deliberada: es el mismo fichero. Enlazar las fuentes es el apaño
-# estándar cuando un build tool plugin de SwiftPM no puede depender de un target de librería,
-# así que aparece en cualquier repositorio de paquetes — y en uno real, cuatro symlinks
-# produjeron 21 de los 28 grupos del informe.
-#
-# Se deduplica por identidad del fichero —`resolve()`— y no por una lista de directorios a
-# ignorar: una lista hay que mantenerla y envejece, y la pregunta que hay que responder no es
-# «¿salto este directorio?» sino «¿son dos ficheros o es uno?».
+# Un fichero real se cuenta UNA vez, aunque se llegue a él por dos rutas: un symlink no es
+# una copia deliberada. Enlazar fuentes es el apaño estándar cuando un build tool plugin de
+# SwiftPM no puede depender de un target de librería. Se deduplica por identidad del fichero
+# —`resolve()`— y no por una lista de directorios a ignorar, que habría que mantener.
 _vistos = {}
 for _r in RAICES:
     for _f in sorted(_r.rglob("*.swift")):

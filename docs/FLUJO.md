@@ -3,33 +3,16 @@
 Cómo encaja todo, contado de principio a fin sobre un caso concreto. Si tienes que
 explicarle el kit a alguien, este es el documento.
 
-Empezamos con una tarea de Jira, pero lo primero es decir lo que **no** hay: **el kit no
-habla con Jira**. Nadie lee el ticket por ti. El flujo empieza cuando tú lo pegas en la
-sesión. Si algún día quieres esa integración, es un MCP de Atlassian, no una pieza de esto.
-
----
+Empezamos con una tarea de Jira, pero lo primero es decir lo que **no** hay: el kit no habla
+con Jira. Nadie lee el ticket por ti; el flujo empieza cuando tú lo pegas en la sesión.
 
 ## Dónde se trabaja
 
-**Todo el flujo ocurre dentro de una sesión de Claude Code**, con comandos de barra:
-`/opsx:propose`, `/opsx:apply`, `/kit-verifica`, `/kit-acepta`, `/opsx:archive`. No hay que
-salir a la terminal en ningún paso del día a día.
-
-La terminal solo aparece dos veces, y ninguna es parte del flujo: para **instalar** el
-plugin y el CLI de OpenSpec la primera vez, y para **actualizar** el kit cuando cambie.
-Está en [INSTALACION.md](INSTALACION.md).
-
-## El reparto
-
-| | responsabilidad |
-|---|---|
-| **Tú** | traduces el ticket, apruebas el acuerdo, decides lo que es decisión de producto |
-| **OpenSpec** | guarda el acuerdo en el repo y lo valida |
-| **El agente** | propone, implementa, verifica |
-| **Dos jueces** | uno pregunta *¿rompe algo?*, otro *¿es lo acordado?* |
-| **Tres hooks** | recuerdan, y uno bloquea |
-
----
+Todo el flujo ocurre dentro de una sesión de Claude Code, con comandos de barra. La terminal
+solo aparece para instalar y actualizar el kit ([INSTALACION.md](INSTALACION.md)). Tú traduces
+el ticket, apruebas el acuerdo y decides lo que es decisión de producto; OpenSpec guarda el
+acuerdo y lo valida; el agente propone, implementa y verifica; dos jueces preguntan *¿rompe
+algo?* y *¿es lo acordado?*; hay tres hooks, que recuerdan, y uno de ellos bloquea.
 
 ## 0. El ticket
 
@@ -38,9 +21,7 @@ PROJ-482 — "Al volver de la ficha de producto, el listado se recarga entero
             y se pierde el scroll"
 ```
 
-Abres Claude Code en la raíz del proyecto y lo pegas. Nada más.
-
----
+Abres Claude Code en la raíz del proyecto y lo pegas.
 
 ## 1. Proponer — se acuerda, no se programa
 
@@ -48,9 +29,8 @@ Abres Claude Code en la raíz del proyecto y lo pegas. Nada más.
 /opsx:propose "PROJ-482: al volver de la ficha, el listado no debe recargarse ni perder el scroll"
 ```
 
-El agente **tiene prohibido tocar código en este paso**. Lo dice la propia skill de
-OpenSpec: el request autoriza planificación, aunque pida construir algo. Explora, pregunta
-lo que no esté claro, y escribe en `openspec/changes/proj-482-listado-no-recarga/`:
+El agente tiene prohibido tocar código en este paso. Explora, pregunta lo que no esté claro,
+y escribe en `openspec/changes/proj-482-listado-no-recarga/`:
 
 | fichero | qué lleva |
 |---|---|
@@ -60,28 +40,41 @@ lo que no esté claro, y escribe en `openspec/changes/proj-482-listado-no-recarg
 
 Las reglas de tu `openspec/config.yaml` se le inyectan solas. Dos que importan:
 
-- **Un criterio tiene que poder comprobarse mirando el resultado.** *"El listado va más
-  fluido"* no pasa; *"`ProductsView` conserva su `ScrollPosition` al volver, y hay un test
-  que lo fija"* sí.
-- **Nombra ficheros concretos.** *"Las pantallas que recargan"* no dice cuáles, y por tanto
+- **Un criterio tiene que poder comprobarse mirando el resultado.** *«El listado va más
+  fluido»* no pasa; *«`ProductsView` conserva su `ScrollPosition` al volver, y hay un test
+  que lo fija»* sí.
+- **Nombra ficheros concretos.** *«Las pantallas que recargan»* no dice cuáles, y por tanto
   nadie puede verificar que estén todas.
 
-El formato del delta no es prosa libre. Si no lleva la forma que el CLI espera,
-`openspec list --specs` dirá `requirements 0` y ni `validate` ni `archive` servirán de nada
-— está en [PRIMER-CAMBIO.md](PRIMER-CAMBIO.md).
+### El delta de spec, en el formato del CLI
 
----
+Esto es lo que más cuesta la primera vez. No es prosa libre: si no lleva esta forma,
+`openspec list --specs` dice `requirements 0` y ni `validate` ni `archive` sirven de nada.
+
+```markdown
+## ADDED Requirements
+
+### Requirement: El listado conserva el scroll al volver de la ficha
+
+`ProductsView` SHALL conservar su posición de scroll cuando el usuario vuelva de la ficha
+de un producto, y SHALL NOT recargar el listado si los datos no han cambiado.
+
+#### Scenario: Volver de la ficha
+
+- **WHEN** el usuario hace pop de la ficha de un producto
+- **THEN** el listado muestra la misma posición de scroll que tenía
+- **AND** no se lanza ninguna carga de red
+```
+
+Encabezados y `SHALL` en inglés; el cuerpo, en tu idioma. Un bloque `## MODIFIED
+Requirements` lleva el requisito **entero**, con todos los escenarios que sobreviven.
+Comprueba con `openspec validate --all` antes de seguir.
 
 ## 2. Lees el acuerdo ⬅ el momento importante
 
-Son dos minutos y es donde se gana o se pierde todo. Estás corrigiendo un malentendido
-**antes** de que cueste una tarde. Si el agente entendió otra cosa, aquí lo ves: está
-escrito, en una página, sin código alrededor que lo disimule.
-
-Si no te convence, se corrige el `proposal.md` y se vuelve a proponer. No hay nada que
-revertir, porque no se ha escrito una línea de código todavía.
-
----
+Son dos minutos y es donde se gana o se pierde todo: estás corrigiendo un malentendido antes
+de que cueste una tarde. Si no te convence, se corrige el `proposal.md` y se vuelve a
+proponer. No hay nada que revertir.
 
 ## 3. Implementar
 
@@ -89,22 +82,15 @@ revertir, porque no se ha escrito una línea de código todavía.
 /opsx:apply
 ```
 
-Ejecuta las tareas marcando `[x]`. Mientras tanto, **en cada turno**, el hook
-`UserPromptSubmit` le reinyecta el acuerdo: las tareas que quedan, el *fuera de alcance*, y
-las reglas que ningún linter puede comprobar.
+Ejecuta las tareas marcando `[x]`. En cada turno, el hook `UserPromptSubmit` le reinyecta el
+acuerdo: las tareas que quedan, el fuera de alcance, y las reglas que ningún linter puede
+comprobar. No se le pide que recuerde —cree que se acuerda, y no relee—: se le pone el texto
+delante otra vez, corto. Dos reglas que ese recordatorio repite:
 
-Esa es la respuesta al problema de que un agente "se olvida" de una skill a las dos horas:
-no se le pide que recuerde —cree que se acuerda, y no relee—, se le pone el texto delante
-otra vez, corto.
-
-Dos reglas que ese recordatorio repite:
-
-- **Antes de escribir una función, `/kit-duplicados`.** Es barato y evita lo que dio origen
-  a esta pieza: el mismo cuerpo escrito tres veces en tres semanas distintas.
+- **Antes de escribir una función, `/kit-duplicados`.** Es barato y evita el mismo cuerpo
+  escrito tres veces en tres semanas distintas.
 - **Si descubres que el acuerdo estaba mal, se corrige el acuerdo por escrito.** Lo
   prohibido es seguir en silencio porque «es obvio que hace falta».
-
----
 
 ## 4. Verificar
 
@@ -112,18 +98,14 @@ Dos reglas que ese recordatorio repite:
 /kit-verifica
 ```
 
-Corre lo que diga tu `kit.conf`, pasa el detector de duplicados, y **firma el resultado
-contra el `sha256` del árbol que acaba de verificar**. La firma vive en
-`.agent-kit/verificacion.txt`, fuera de git.
+Corre lo que diga tu `kit.conf`, pasa el detector de duplicados, y firma el resultado contra
+el `sha256` del árbol que acaba de verificar. La firma vive en `.agent-kit/verificacion.txt`,
+fuera de git, y dice **con qué** se verificó —`toolchain: Swift 6.4 · Xcode 27.0`— y **qué no
+cubre**, si tu `kit.conf` lo declara en `LIMITES`. Un verde no significa «esto pasa»,
+significa «esto pasó aquí».
 
-La firma dice **con qué** se verificó —`toolchain: Swift 6.4 · Xcode 27.0`— y **qué no cubre**,
-si tu `kit.conf` lo declara en `LIMITES`. Un verde no significa «esto pasa», significa «esto
-pasó aquí»: si tu CI compila con otra versión, eso lo dice el CI y no esta firma.
-
-Los duplicados **avisan, no bloquean**: uno puede ser deliberado, y eso lo decide quien
-tiene el cambio delante.
-
----
+Los duplicados avisan, no bloquean: uno puede ser deliberado, y eso lo decide quien tiene el
+cambio delante.
 
 ## 5. El reviewer — *¿esto rompe algo?*
 
@@ -131,82 +113,44 @@ tiene el cambio delante.
 /kit-revisa
 ```
 
-Sub-agente con contexto fresco y solo el diff delante. Corrección, seguridad, o un
-requisito explícito del encargo. Estilo y refactors oportunistas se mencionan en una línea
-y **no bloquean**: un revisor que reporta preferencias enseña a quien lo lee a ignorarlo, y
-entonces deja de servir para lo que sí importa.
+Sub-agente con contexto fresco y solo el diff delante. Corrección, seguridad, o un requisito
+explícito del encargo. Estilo y refactors oportunistas se mencionan en una línea y no
+bloquean: un revisor que reporta preferencias enseña a quien lo lee a ignorarlo.
 
-Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED. Con GREEN o AMBER
-se marca el punto (`rodaja.sh --revisada`); con RED no, para que lo arreglado entre en la
-revisión siguiente en vez de darse por bueno.
-
-**Y hay una segunda condición para marcar: si arreglar lo que el revisor encontró cambió lo que
-hace el código que se entrega, ese arreglo no lo ha visto nadie.** Se vuelve a pasar, y se marca
-entonces. Corregir pruebas o prosa no obliga: el eje es el mismo que el del tope del juez, en
-`agents/aceptacion.md`.
-
-Salió de un caso real, y no del kit: el 2026-09-09, en un cambio de `AppStarter`, la segunda
-pasada encontró una spec que se contradecía consigo misma y que al archivar se habría fundido en la
-canónica.
-
-Anotar la pasada en el acuerdo es opcional.
+Veredicto `GREEN` / `AMBER` / `RED`. Un RED sin reproducción no es un RED. Con GREEN o AMBER se
+marca el punto (`rodaja.sh --revisada`); con RED no, para que lo arreglado entre en la
+revisión siguiente. Y una segunda condición para marcar: **si arreglar lo que el revisor
+encontró cambió lo que hace el código que se entrega, ese arreglo no lo ha visto nadie.** Se
+vuelve a pasar, y se marca entonces. Corregir pruebas o prosa no obliga.
 
 ### Se revisa al cerrar cada tarea, no al final
 
-Esto es lo que más cambia respecto a lo que uno haría por instinto, y salió de medirlo.
-
 Revisar al final significa revisar el cambio **entero**, y volver a revisarlo entero en cada
 vuelta: el coste es «tamaño de lo revisado × número de rondas», y así los dos factores están
-al máximo. En un cambio real fueron 700 líneas pasando nueve veces entre revisor y juez,
-cuando los bugs vivían en tres tareas concretas.
+al máximo. Y un hallazgo al final llega cuando el contexto ya se perdió y cuando devolver una
+cosa devuelve las que venían detrás.
 
-Y el coste no es lo peor. Un hallazgo al final llega cuando el contexto ya se perdió, cuando
-el arreglo toca código escrito encima, y cuando devolver una cosa devuelve las que venían
-detrás.
+No hace falta proceso nuevo: `tasks.md` ya trocea el trabajo. `rodaja.sh` recuerda dónde
+acabó la revisión anterior —con un objeto de `git stash create`, sin tocar tu índice— y te
+enseña lo que hay desde ahí. La primera rodaja siempre es la más grande; si una pasa de 400
+líneas, el script avisa de que se está revisando tarde.
 
-No hace falta proceso nuevo: `tasks.md` ya trocea el trabajo. `rodaja.sh` solo recuerda
-dónde acabó la revisión anterior —con un objeto de `git stash create`, sin tocar tu índice
-ni obligarte a commitear cada tarea— y te enseña lo que hay desde ahí, junto con las tareas
-cerradas desde entonces.
+Con un matiz: en SwiftPM la unidad que compila es el target, y una rodaja que no compila no
+se puede verificar ni revisar. Creando código nuevo, la primera rodaja es «la feature entera
+compilando»; modificando código existente sí se trocea fino. **La rodaja la define el
+compilador, no `tasks.md`.**
 
-La primera rodaja siempre es la más grande. Si una pasa de 400 líneas, el script lo dice:
-no rechaza la revisión, avisa de que se está revisando tarde.
-
-**Con un matiz que salió de probarlo sobre una feature nueva:** en SwiftPM la unidad que
-compila es el target, y una rodaja que no compila no se puede verificar ni revisar. Creando
-código, la primera rodaja es «la feature entera compilando» —850 líneas en la prueba real—
-porque el modelo no enlaza sin la firma del servicio y el target no compila hasta que están
-el ViewModel y la Vista. La rodaja la define el compilador, no `tasks.md`. Modificando
-código existente sí se trocea fino; creándolo, no.
-
----
-
-## 6. El juez de aceptación — *¿es lo acordado?* · **opcional**
+## 6. El juez de aceptación — *¿es lo acordado?* · opcional
 
 ```
 /kit-acepta
 ```
 
-**Este paso no es obligatorio**, y es el único del flujo que no lo es. El que sí lo es antes de
-archivar es el revisor del paso 5. El juez se invoca **cuando nadie vaya a leer el acuerdo contra
-lo entregado**:
+Es el único paso del flujo que no es obligatorio. Cuándo merece pagarlo lo dice el propio
+comando, `/kit-acepta`. Cuesta una ronda entera, así que conviene decidirlo al empezar.
 
-- el cambio es grande o toca varias capas —más de unos cinco ficheros—,
-- el alcance se movió al implementar,
-- o quien orquesta no es quien acordó.
-
-Fuera de esos casos, decide quien orquesta y cuesta una ronda entera, así que conviene decidirlo
-al empezar y no al final. En la auditoría del kit —cinco cambios y once commits, con catorce
-hallazgos en seis pasadas— no se invocó ni una vez y el revisor encontró todo; pero eran cambios
-pequeños, de prosa, con el owner mirando cada paso. Los tres casos de arriba son justo los
-contrarios, y de ellos esa auditoría no dice nada: no se dio ninguno.
-
-Y lo que no prueba, dicho porque es fácil leerlo al revés: **no es que el juez no encontrara
-nada** — es que no se le preguntó. La única vez que se usó de verdad devolvió ACUERDO-ROTO a un
-cambio que compilaba y pasaba 144 tests.
-
-Lee el `proposal.md`, el delta y el diff completo, y va **criterio por criterio**, cada uno
-con evidencia (`fichero:línea`):
+Lee el `proposal.md`, el delta y lo entregado, y va **criterio por criterio**, cada uno con
+evidencia (`fichero:línea`):
 
 | veredicto | qué significa |
 |---|---|
@@ -214,31 +158,35 @@ con evidencia (`fichero:línea`):
 | **DEVUELTO** | falta algo. Dice qué, y para |
 | **ACUERDO-ROTO** | hay criterios incomprobables, o el diff hace cosas que ningún criterio pedía |
 
-Busca tres cosas **a propósito**, porque si no se buscan se escapan:
-
-1. **El requisito que se evaporó.** Recorre **la lista**, no el diff: el diff enseña lo que
-   se hizo, solo la lista enseña lo que falta. Es el modo de fallo más común — el agente
-   empieza por lo difícil, lo resuelve bien, y lo fácil del final se queda sin hacer porque
-   «ya parecía terminado».
-2. **El requisito a medias.** Hecho para el camino feliz y no para el error, o en una de
-   las tres pantallas que lo pedían.
-3. **Lo que nadie pidió.** Código que no responde a ningún criterio.
+Busca tres cosas a propósito: el requisito que se evaporó (recorre **la lista**, no el
+diff), el requisito a medias, y lo que nadie pidió.
 
 **Anota la ronda en una línea** al final de `tasks.md`: número, veredicto, y si tus arreglos
-cambiaron lo que hace el código. Es el contador de su tope, porque él empieza en blanco en cada
-invocación; la forma está en `/kit-acepta`.
+cambiaron lo que hace el código. Es el contador de su tope, porque él empieza en blanco en
+cada invocación; la forma está en `/kit-acepta`.
 
 ### Por qué no basta con el reviewer
 
-La primera vez que se usó, devolvió **ACUERDO-ROTO** a un cambio que compilaba, pasaba 144
-tests y tenía el linter de arquitectura en verde: había hecho justo lo que su propio *fuera
-de alcance* prohibía. Y era **necesario** hacerlo — pero ese es exactamente el momento de
-volver al acuerdo y renegociarlo por escrito, no de seguir porque es obvio.
+Este es un veredicto real, sobre un cambio que subía dos paquetes y adoptaba la cancelación
+del trabajo en vuelo al desmontar una pantalla:
 
-Ni el compilador, ni los tests, ni el reviewer lo veían. El compilador no opina de alcance;
-los tests pasaban; y el reviewer habría dicho GREEN, porque el diff **en sí** era correcto.
+> El cambio **compila, pasa 144 tests y hace lo que hacía falta**. Y aun así rompió su
+> propio acuerdo en dos sitios:
+>
+> 1. **Hizo lo que su «Fuera de alcance» prohibía.** Subir el `from:` de los tres
+>    manifiestos no estaba autorizado. Y no fue capricho: era necesario —el resolutor de
+>    Xcode se quedaba en la versión vieja—, pero eso es justamente el momento de volver al
+>    acuerdo y renegociarlo por escrito.
+> 2. **Un criterio escrito de forma incomprobable.** «Las pantallas que lanzan trabajo
+>    largo» no dice cuáles.
+>
+> Ninguno de los dos fallos lo habría visto nada de lo que ya había: el compilador no opina
+> de alcance, los 144 tests pasan, el linter de arquitectura está verde, y un reviewer
+> mirando el diff habría dicho GREEN — porque el diff, en sí, es correcto.
 
----
+El cambio no se revirtió: **se corrigió el acuerdo**, que era lo que estaba mal, y por
+escrito. Esa es la dirección legítima. La prohibida es la contraria — retocar el acuerdo en
+silencio para que encaje con lo entregado.
 
 ## 7. Archivar
 
@@ -249,41 +197,35 @@ los tests pasaban; y el reviewer habría dicho GREEN, porque el diff **en sí** 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a
 `openspec/changes/archive/<fecha>-<nombre>/`.
 
-**Si pasaste el juez** —que es opcional desde el paso 6—, su veredicto manda para archivar. **No
-archiva con ACUERDO-ROTO** —se corrige el acuerdo primero, por escrito— **ni con un DEVUELTO
-del producto**: una pieza que no hace lo acordado. Con un DEVUELTO que no es del producto —lo que
-queda es prosa— y el presupuesto de rondas agotado, **decides tú**: puedes archivar, y la deuda
-queda escrita en el acuerdo.
+Si pasaste el juez, su veredicto manda: **no se archiva con ACUERDO-ROTO** —se corrige el
+acuerdo primero, por escrito— **ni con un DEVUELTO del producto**, una pieza que no hace lo
+acordado. Con un DEVUELTO que no es del producto y el presupuesto de rondas agotado, decides
+tú: puedes archivar, y la deuda queda escrita en el acuerdo.
 
-**Y si arreglar lo que el juez señaló cambió lo que hace el código, pásalo por el revisor antes de
-archivar**: el juez pregunta si es lo acordado, no si rompe algo. Build y tests lo acabarán viendo
-—la firma se invalida y la puerta de commit obliga a re-verificar en el paso 8—; la pregunta del
-revisor, no. Corregir pruebas o prosa no obliga.
+Y si arreglar lo que el juez señaló cambió lo que hace el código, pásalo por el revisor antes
+de archivar: el juez pregunta si es lo acordado, no si rompe algo. Nada lo comprueba: el kit
+ha decidido no poner un hook en el archivado, así que lo sabe quien arregló.
 
-**Nada lo comprueba, y no porque no se pueda**: `/opsx:archive` corre por la herramienta Bash,
-donde la puerta de commit ya intercepta `git commit`. El kit ha decidido no poner ahí otro hook
-—`hooks/hooks.json` exige que uno nuevo traiga escrito el fallo que lo motiva—, así que lo sabe
-quien arregló.
-
-Tu spec viva acaba de crecer. Dentro de seis meses, cuando alguien pregunte *"¿esto se
-recarga al volver o no?"*, la respuesta está escrita, con la razón al lado.
-
----
+Tu spec viva acaba de crecer. Dentro de seis meses, cuando alguien pregunte *«¿esto se
+recarga al volver o no?»*, la respuesta está escrita, con la razón al lado.
 
 ## 8. Commit y cierre del ticket
 
-Al intentar `git commit`, el hook de `PreToolUse` comprueba la firma. Si el árbol cambió
-desde que verificaste, **bloquea** y dice por qué.
-
-Por eso stagear, verificar y commitear van en **tres comandos separados**: se firma el árbol
-**y** el índice —el uno porque es lo que se compila y lo que commitea un `-a`, el otro porque
-es lo que commitea un `git commit` a secas—, así que encadenar `git add && git commit` cambia
-el índice entre la firma y el commit.
+Al intentar `git commit`, la puerta comprueba la firma. Si el árbol cambió desde que
+verificaste, bloquea y dice por qué. Stagear, verificar y commitear van por separado, y la
+razón está en [PIEZAS.md](PIEZAS.md#verificash--la-firma).
 
 En el PR va el código **y** el cambio de `openspec/`. Quien lo revise lee el `proposal.md` y
 sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.
 
----
+## Un cambio que no toca código
+
+Pasa más de lo que parece y es correcto. Ejemplo real: decidir si un login en vuelo debe
+sobrevivir a su pantalla. La decisión fue **mantener el comportamiento actual**, así que no
+hubo diff de código, solo un escenario nuevo en la spec con la razón al lado. Antes, ese
+login se cancelaba por accidente, porque nadie miró el default de la dependencia. Después se
+cancela por decisión. El comportamiento es idéntico; lo que cambia es que deja de ser una
+casualidad.
 
 ## Lo que corre de fondo sin que nadie lo pida
 
@@ -293,15 +235,13 @@ sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.
 | `SessionStart(compact)` | tras compactar | lo mismo — es justo cuando se pierden las reglas |
 | `PreToolUse` | antes de cada Bash | bloquea `git commit` sin firma válida |
 
-Los tres corren fuera del contexto del modelo, así que su código no cuesta tokens. Lo que sí
-cuesta es **lo que devuelven**: el digest del acuerdo entra en el contexto una vez por turno, y
-las copias anteriores siguen ahí hasta que se compacta. Cuánto ocupa, en
-[PIEZAS.md](PIEZAS.md#coste).
+Su código corre fuera del contexto del modelo; lo que cuesta es lo que devuelven, y está
+en [PIEZAS.md](PIEZAS.md#coste).
 
 ## Cuánto proceso pide cada cambio
 
 No todo cambio necesita los seis pasos, y forzarlos es la forma más rápida de que la gente
-deje de usar esto. La regla salió de medir un cambio de cuatro líneas con el flujo entero:
+deje de usar esto:
 
 | tamaño del cambio | qué escribes | ¿conviene el juez? |
 |---|---|---|
@@ -309,35 +249,16 @@ deje de usar esto. La regla salió de medir un cambio de cuatro líneas con el f
 | varios ficheros, o toca varias capas | proposal + delta + tasks | sí, aquí es donde paga |
 | el alcance creció a mitad | lo que ya tuvieras, **más la enmienda por escrito** | sí, y por eso mismo |
 
-**Ninguna fila obliga.** El juez dejó de ser un paso del flujo el 2026-09-14: la columna dice
-cuándo aporta, no qué hay que hacer. Quien orquesta decide, y lo que decide es pagar una ronda.
-
-Lo que **nunca** se salta es el **«Fuera de alcance»** y el **delta de spec**, aunque el
-cambio sea de una línea. En el cambio de cuatro líneas que sirvió para medir esto, el
-«Fuera de alcance» decía *«regenerar imágenes de referencia: el texto no cambia, así que no
-deben cambiar»* — y esa frase es la que convirtió «cambia cuatro fixtures» en «cambia cuatro
-fixtures y demuestra que ni un píxel se movió». El reflejo ante un snapshot que se queja es
-regrabarlo, y regrabar ahí habría destruido en silencio la única señal que el cambio existía
-para proteger.
-
-`tasks.md`, en cambio, fue el único artefacto que hubo que enmendar dos veces sin aportar
-nada que el proposal no dijera ya. Para un cambio pequeño es un documento cuyo único efecto
-posible es quedarse desincronizado.
-
-**Y no escribas números de línea en la prosa.** Caducan durante la propia implementación que
-los cita: en ese mismo cambio, añadir un `import` los desplazó y llegaron falsos al juicio.
-`grep` los encuentra siempre; el markdown los conserva mal para siempre.
-
----
+Ninguna fila obliga: la columna dice cuándo aporta, no qué hay que hacer. Lo que **nunca** se
+salta es el **«Fuera de alcance»** y el **delta de spec**, aunque el cambio sea de una línea.
+Y no escribas números de línea en la prosa: caducan durante la propia implementación que los
+cita. `grep` los encuentra siempre.
 
 ## Cuántas rondas merece esto
 
 La tabla de arriba decide qué artefactos escribes. Esta decide **cuántas vueltas de revisor
-pagas** —y de juez, si decides invocarlo—, que es donde de verdad se va el coste y no es lo
-mismo. Con el juez opcional desde el paso 6, presupuestar «dos rondas» significa dos del
-revisor; la del juez, si la hay, se suma aparte.
-
-**Presupuéstalas antes de invocar a nadie**, según lo que vayas a poner bajo juicio:
+pagas** —y de juez, si decides invocarlo—, que es donde de verdad se va el coste.
+Presupuéstalas antes de invocar a nadie, según lo que vayas a poner bajo juicio:
 
 | lo que se pone bajo juicio | rondas a presupuestar |
 |---|---|
@@ -346,61 +267,29 @@ revisor; la del juez, si la hay, se suma aparte.
 | prosa: un prompt, una spec, una norma | **2, y prepárate para parar** |
 | **las dos cosas** — código y una norma nueva | **manda la prosa**: presupuesta como si fuera solo eso |
 
-**Cuidado con la última fila, que es fácil aplicarla a todo y entonces no sirve de nada.** No
-dispara porque el cambio *tenga* delta de spec —el flujo nunca deja saltárselo, así que eso lo
-cumplen todos—. Dispara cuando la prosa es **lo que se juzga**, no la vara con la que se mide:
-
-- El delta describe cómo se comporta el código y el juez mide el código contra él → **filas 1
-  y 2**. Es el caso normal.
-- El cambio **reescribe un prompt, una norma o una spec**, y eso es el producto entregado →
-  **fila 3**. Aquí no hay tests que cierren nada, y cada arreglo reescribe la norma: por eso no
-  converge sola.
-
-El eje es qué se juzga y no cuánto ocupa: el tamaño del cambio mueve el coste de una ronda mucho
-menos que el número de rondas. Lo que cuesta una, fechado y con sus límites, está en
-`docs/PIEZAS.md`.
+La última fila no dispara porque el cambio *tenga* delta de spec —eso lo cumplen todos—.
+Dispara cuando la prosa es **lo que se juzga**: el cambio reescribe un prompt, una norma o una
+spec, y eso es el producto entregado. Ahí no hay tests que cierren nada, y cada arreglo
+reescribe la norma: por eso no converge sola. El tamaño del cambio mueve el coste de una
+ronda mucho menos que el número de rondas, así que **acotar las rondas rinde más que acotar
+el alcance**.
 
 ### Qué hacer cuando se agote
 
-**Para y decide tú.** Puedes pagar otra vuelta, partir el cambio, o archivar con la deuda escrita en
-el acuerdo si lo que queda no es del producto (paso 7). Lo que no vale es seguir por inercia.
-
-El tope del juez es lo mismo por el otro lado: él lo detecta desde dentro —dos rondas sin cambiar
-lo que el código hace— y el presupuesto lo declaras tú antes. Si llega antes el tope, manda el tope.
-
-Las rondas no las cuenta el kit: no hay contador de rondas ni de coste, así que las cuentas tú
-contra el presupuesto.
+**Para y decide tú.** Puedes pagar otra vuelta, partir el cambio, o archivar con la deuda
+escrita en el acuerdo si lo que queda no es del producto (paso 7). Lo que no vale es seguir
+por inercia. El tope del juez es lo mismo por el otro lado: él lo detecta desde dentro —dos
+rondas sin cambiar lo que el código hace— y el presupuesto lo declaras tú antes. Las rondas
+no las cuenta el kit: las cuentas tú contra el presupuesto.
 
 ## Los tres sitios donde decide un humano
 
-1. **Aprobar el acuerdo** (paso 2). Dos minutos, y evita la tarde perdida.
-2. **Las decisiones de producto.** El agente no las toma: las deja escritas como cambio
-   activo, y `openspec list` te las enseña cada vez que preguntas qué hay abierto.
-3. **Los duplicados**: extraer, o dejarlo con una razón.
-
-## Qué queda en el repo cuando termina
-
-```
-openspec/specs/<dominio>/spec.md               ← la verdad actual, un requisito más
-openspec/changes/archive/2026-09-07-proj-482/  ← el acuerdo, las tareas y el veredicto
-```
-
-Y en el código, el diff. Nada de andamiaje: los agentes, hooks y scripts viven en el
-plugin, fuera de tu repo.
-
----
+Aprobar el acuerdo (paso 2); las decisiones de producto, que el agente deja escritas como
+cambio activo y `openspec list` enseña; y los duplicados: extraer, o dejarlo con una razón.
 
 ## Lo que este flujo NO hace
 
-Conviene decirlo cuando se lo expliques a alguien, porque prometer de más es la forma más
-rápida de que dejen de usarlo:
-
-- **No impide que el modelo alucine.**
-- **No obliga a nadie a leer una skill.** Pone el texto delante; no hay forma de forzar una
-  lectura.
-- **No defiende contra quien se lo quiera saltar** (`--no-verify`, otra terminal, un git
-  invocado de otra forma). Eso no se puede cerrar desde dentro de la misma máquina.
-
-Lo que sí hace: frena el **error de proceso** —el modelo no miente, se olvida— y convierte
-la deriva en algo **visible y comprobable** en vez de invisible. Es menos de lo que promete
-un sistema de gobernanza, y bastante más de lo que hay sin él.
+No impide que el modelo alucine; no obliga a nadie a leer una skill (pone el texto delante,
+no fuerza la lectura); y no defiende contra quien se lo quiera saltar (`--no-verify`, otra
+terminal). Lo que sí hace: frena el **error de proceso** —el modelo no miente, se olvida— y
+convierte la deriva en algo visible y comprobable.

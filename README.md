@@ -4,13 +4,10 @@ Trabajo con agentes sobre proyectos iOS, sin que el andamiaje se coma el proyect
 
 Se apoya en [OpenSpec](https://github.com/Fission-AI/OpenSpec) para acordar qué se va a
 construir **antes** de construirlo, y le añade lo que OpenSpec no trae y que en la práctica
-hace falta: está en la tabla de aquí abajo, que es la que manda.
+hace falta.
 
 **En tu app acaban dos cosas:** la carpeta `openspec/` (que es tuya: son tus specs) y un
-`kit.conf` corto. Nada más. Los agentes, los comandos, los hooks y los
-scripts viven en el plugin, no en tu repo.
-
----
+`kit.conf` corto. Los agentes, los comandos, los hooks y los scripts viven en el plugin.
 
 ## Qué resuelve
 
@@ -19,78 +16,42 @@ scripts viven en el plugin, no en tu repo.
 | El agente hace algo distinto de lo que se pidió, y nadie se entera hasta que un humano lo mira | **juez de aceptación** — compara lo entregado contra lo acordado, criterio por criterio, con evidencia |
 | El agente escribe código correcto que rompe algo | **reviewer** — contexto fresco, una sola pregunta: ¿esto rompe algo? |
 | Empieza bien y acaba repitiendo lógica que ya existía | **detector de duplicados** — el mismo cuerpo de función en dos ficheros |
-| "Los tests pasan" dicho sobre un árbol que ya cambió | **verificación firmada** contra el `sha256` del árbol que se verificó |
-| "Verificado" leído como "esto pasa", cuando solo pasó aquí | la firma **declara su alcance**: con qué toolchain corrió, y qué no cubre según el propio proyecto |
+| «Los tests pasan» dicho sobre un árbol que ya cambió | **verificación firmada** contra el `sha256` del árbol que se verificó, y una **puerta de commit** que la exige |
+| «Verificado» leído como «esto pasa», cuando solo pasó aquí | la firma **declara su alcance**: con qué toolchain corrió y qué no cubre |
 | Se olvida de las reglas a mitad de sesión, o tras compactar | **inyección del acuerdo** en cada turno y tras cada compactación |
 
-Y lo que **no** hace, dicho por delante: no impide que un modelo alucine, no obliga a nadie
-a leer una skill, y no defiende contra alguien decidido a saltárselo (`--no-verify`, otra
-terminal). Frena el **error de proceso**, que es el fallo real y el más caro.
-
----
+Lo que **no** hace: no impide que un modelo alucine, no obliga a nadie a leer una skill, y no
+defiende contra alguien decidido a saltárselo (`--no-verify`, otra terminal). Frena el **error
+de proceso**, que es el fallo real y el más caro.
 
 ## Puesta en marcha
 
-### Una vez por máquina
+Una vez por máquina, con Node instalado:
 
 ```bash
-npm install -g @fission-ai/openspec@latest     # necesita Node
+npm install -g @fission-ai/openspec@latest
 ```
 
-**Dentro de una sesión de Claude Code** — es la forma normal, y la única que necesitas:
+Y dentro de una sesión de Claude Code:
 
 ```
 /plugin marketplace add hiramvazquez/ios-agent-kit
 /plugin install ios-agent-kit
 ```
 
-Reinicia la sesión después: los plugins se cargan al arrancar.
+Reinicia la sesión: los plugins se cargan al arrancar. La misma operación desde la terminal,
+los errores conocidos y cómo actualizar están en [INSTALACION.md](docs/INSTALACION.md).
 
-<details>
-<summary>La misma operación desde la terminal (equivalente, útil para guiones y CI)</summary>
-
-```bash
-claude plugin marketplace add hiramvazquez/ios-agent-kit
-claude plugin install ios-agent-kit@hiram-kits -y
-claude plugin details ios-agent-kit      # el inventario de piezas, contado por el CLI
-claude plugin list                       # Status ✔ enabled
-```
-
-Es la forma con la que está verificada la instalación de este kit, porque un agente no
-puede teclear comandos de barra: los escribe el humano.
-</details>
-
-**Todo el trabajo del día a día es con comandos de barra dentro de Claude Code**
-(`/opsx:propose`, `/kit-verifica`, `/kit-acepta`…). La terminal solo hace falta para
-instalar, actualizar y diagnosticar.
-
-Coste: lo que quede siempre activo por sesión te lo dice ese mismo `plugin details`, y no se
-copia a ningún documento — que es como se acabó teniendo el mismo número en tres sitios y uno de
-ellos viejo. Lo que sí está escrito en [PIEZAS.md](docs/PIEZAS.md#coste) es lo que ningún comando
-dice: lo que cuesta el digest de cada turno y lo que cuesta una ronda de juicio. Lo estructural
-sí se
-puede decir sin número: los agentes y comandos solo cuestan cuando se invocan, y los hooks
-corren fuera del contexto del modelo — pero **el texto que devuelven sí entra en él**. El de la
-puerta no devuelve nada salvo cuando bloquea; el que inyecta el acuerdo devuelve un digest en
-cada turno, y esa es la pieza que más paga por sesión larga.
-
-### Una vez por proyecto
+Una vez por proyecto, con la sesión abierta en la raíz del repositorio:
 
 ```
 /kit-init
 ```
 
-Mira el repo —qué paquetes hay, qué comandos de build y test— y deja montado:
-
-- `openspec/` con `openspec init`, en español,
-- `kit.conf` con **los comandos reales de tu proyecto**,
-- `openspec/config.yaml` con las reglas (criterios de aceptación obligatorios, etc.),
-- `.agent-kit/` en el `.gitignore`.
-
-Termina corriendo `/kit-verifica`. Si no sale verde a la primera, el `kit.conf` está mal y
-se arregla ahí mismo.
-
----
+Mira el repo —qué paquetes hay, qué comandos de build y test— y deja `openspec/`, un
+`kit.conf` con los comandos reales del proyecto, las reglas en `openspec/config.yaml` y
+`.agent-kit/` en el `.gitignore`. Termina corriendo `/kit-verifica`: si no sale verde a la
+primera, el `kit.conf` está mal y se arregla ahí mismo.
 
 ## El día a día
 
@@ -98,30 +59,14 @@ se arregla ahí mismo.
 /opsx:propose "lo que quieras construir"   →  proposal + delta de spec + tareas. CERO código.
 /opsx:apply                                →  se implementa, marcando tareas
 /kit-verifica                              →  build, tests y duplicados, firmado
-/kit-revisa                                →  ¿esto rompe algo? UNA TAREA, no el cambio entero
-/kit-acepta                                →  ¿es lo acordado? criterio por criterio
-                                              OPCIONAL: se invoca cuando nadie vaya a leer
-                                              el acuerdo contra lo entregado
+/kit-revisa                                →  ¿esto rompe algo? una tarea, no el cambio entero
+/kit-acepta                                →  ¿es lo acordado? opcional; cuándo, lo dice él
 /opsx:archive                              →  el delta se funde en la spec viva
 ```
 
-Los dos últimos pasos antes de archivar son distintos **a propósito**: un cambio puede
-estar impecable —arquitectura, tests, lint— y no ser lo que se pidió. El reviewer no lo ve
-porque no es su pregunta.
-
-**El obligatorio de los dos es el revisor.** El juez se invoca cuando nadie vaya a leer el
-acuerdo contra lo entregado: cambios grandes o que tocan varias capas —más de unos cinco
-ficheros—, alcance que se movió al implementar, o cuando quien orquesta no es quien acordó.
-
-### El caso que lo justifica
-
-El juez de aceptación se estrenó contra un cambio que compilaba, pasaba 144 tests y tenía
-el linter de arquitectura en verde. Lo devolvió **ACUERDO-ROTO**: había hecho exactamente
-lo que su propio "Fuera de alcance" prohibía. Era necesario hacerlo — y ese es justo el
-momento de renegociar el acuerdo por escrito, no de seguir porque es obvio. No lo veía
-nada de lo que ya había.
-
----
+Los dos jueces preguntan cosas distintas a propósito: un cambio puede estar impecable
+—arquitectura, tests, lint— y no ser lo que se pidió. El obligatorio antes de archivar es el
+revisor. El paso a paso, con un caso real, está en [FLUJO.md](docs/FLUJO.md).
 
 ## Qué acaba dentro de tu proyecto
 
@@ -135,27 +80,20 @@ tu-app/
 └── .agent-kit/        ← firma de verificación (gitignored)
 ```
 
-Y nada más. Si algún día desinstalas el plugin, lo que queda es documentación tuya que
-sigue teniendo sentido sin él.
-
-### `kit.conf`
+Si algún día desinstalas el plugin, lo que queda es documentación tuya que sigue teniendo
+sentido sin él. `kit.conf` es esto:
 
 ```bash
 FUENTES="App Packages"
-
-# Opcional: qué NO cubre tu firma. Viaja EN la firma, así que lo lee quien mira el verde.
-LIMITES="- El CI compila con otro Xcode: lo que solo falla ahí no lo ve esta firma."
-
+LIMITES="- El CI compila con otro Xcode: lo que solo falla ahí no lo ve esta firma."   # opcional
 verificaciones() {
     paso "Platform · build"  bash -c 'cd Packages/Platform && swift build'
     paso "Platform · tests"  bash -c 'cd Packages/Platform && swift test'
 }
 ```
 
-Cada `paso` lleva un nombre legible y un comando. Si alguno sale distinto de 0, no hay
-firma y la puerta de commit no deja pasar.
-
----
+Cada `paso` lleva un nombre legible y un comando; si alguno sale distinto de 0, no hay firma
+y la puerta de commit no deja pasar. `LIMITES` viaja en la firma: lo lee quien mira el verde.
 
 ## Qué trae el plugin
 
@@ -165,85 +103,30 @@ firma y la puerta de commit no deja pasar.
 | `agents/reviewer.md` | revisor de corrección |
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta`, `/kit-estado` |
-| `hooks/hooks.json` | los tres hooks |
-| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh` de las piezas que usan los proyectos. Cuáles hay se cuenta con `ls scripts/verifica-*.sh` |
+| `hooks/hooks.json` | tres hooks: el que inyecta el acuerdo en cada turno, el que lo reinyecta tras compactar, y el que bloquea un commit sin firma |
+| `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh` |
+
+Qué hace cada pieza, cuándo se dispara y **qué no hace** está en [PIEZAS.md](docs/PIEZAS.md).
 
 ### Para mejorar el kit
 
 ```bash
-bash scripts/autocomprueba.sh          # ANTES de publicar. Comprueba lo que el CLI rechaza
+bash scripts/autocomprueba.sh          # ANTES de publicar: comprueba lo que el CLI rechaza
 # sube la versión en .claude-plugin/plugin.json, commit y push
 claude plugin marketplace update hiram-kits
 claude plugin update ios-agent-kit@hiram-kits    # `install` NO actualiza: dice "ya instalado"
-claude plugin list                                # Status ✔ enabled, con la versión nueva
 ```
 
-**Y abre una conversación nueva.** Una conversación reanudada puede seguir cargando la versión con la
-que empezó aunque la nueva ya esté instalada: pasó retomando una desde el historial de la app.
-`/kit-estado` avisa si la conversación va desfasada y dice qué hacer.
-
-Los proyectos que lo usan no tocan nada, salvo que cambie el contrato de `kit.conf`.
-
-### Los tres hooks
-
-| evento | qué hace |
-|---|---|
-| `UserPromptSubmit` | inyecta el acuerdo vigente y las tareas pendientes, en cada turno |
-| `SessionStart(compact)` | lo reinyecta tras compactar, que es cuando se pierde |
-| `PreToolUse` | **bloquea** un commit sin firma de verificación válida |
-
-El digest que se inyecta empieza diciendo **de qué repositorio habla**, y no es un adorno:
-el plugin se instala para el usuario, no para un proyecto, así que el hook lee el
-repositorio del directorio que hereda la sesión — que no tiene por qué ser aquel en el que
-estás trabajando. Nombrarlo no elimina ese desfase (no hay ninguna señal de dónde trabaja
-el modelo, y adivinarla sería peor que callarse), pero convierte «sin cambio activo» —falso
-sobre el trabajo en curso— en «en este repositorio, sin cambio activo», que es cierto. Un
-repositorio sin `openspec/` recibe además eso mismo dicho, en vez de la orden de abrir una
-propuesta que allí nadie puede seguir. Y el hook no escribe nada dentro del repositorio que
-observa: su caché vive en `~/.cache/ios-agent-kit`, con la ruta del repositorio en la clave.
-
-Las dependencias que te anuncia son **las de tu repositorio**, no las de tu máquina. Parece
-obvio y no lo era: durante un tiempo el caché era uno por repositorio y su contenido, el de
-toda la máquina, así que este mismo kit —que no tiene un solo fichero Swift— anunciaba las
-dependencias de otro proyecto abierto en Xcode. Se acotan casando el nombre de tu carpeta con
-el `<Proyecto>-<hash>` de DerivedData. Es una heurística, y sus límites están escritos en
-`scripts/lib-kit.sh` — el que conviene saber: si tu `.xcodeproj` se llama distinto de la
-carpeta que lo contiene, el hook se calla en vez de anunciarte las de otro; pero si **otro**
-proyecto se llama como el tuyo más un guion (`spm` y `spm-pro`), todavía te puede anunciar los
-suyos.
-
-`PreToolUse` es el único evento de Claude Code capaz de bloquear. Por eso es el único
-hook que bloquea aquí: no por diseño elegante, por lo que la herramienta permite.
-
-La puerta juzga **el repositorio al que va el commit**, no el directorio desde el que corre
-la sesión: analiza la invocación y sigue la pista de un `-C`, un `--git-dir` o un `cd`
-encadenado por delante. Y se desentiende de los repositorios sin `kit.conf` — ahí no hay
-flujo que proteger, y exigir una firma que `verifica.sh` tampoco puede crear allí dejaría el
-commit sin salida.
-
-Sigue la pista también cuando el `cd` va agrupado —`(cd X && …)`, `{ cd X && …; }`— o
-envuelto en un `bash -c '…'`. Esa lista no es de adorno: la primera versión decía «un `cd`
-encadenado por delante» a secas y era **falsa**, porque el primer token del segmento era `(`
-y el `cd` no se registraba. Lo encontró un juez de aceptación con el banco en verde.
-
-Lo que **no** frena, dicho porque un límite que no se declara se convierte en una promesa
-falsa: `--no-verify`, un commit desde otra terminal, y una invocación construida en tiempo
-de ejecución (`$CMD`, un alias, un `eval`), que cae al directorio heredado. Frena el olvido,
-y el olvido tiene formas comunes. Los casos que sí cubre están fijados en
-`scripts/verifica-puerta.sh`, que imprime cuántos son — aquí no se escribe el número, que
-es como se acabó diciendo «diez» donde el banco decía once.
-
----
+Y abre una conversación nueva: una reanudada puede seguir cargando la versión con la que
+empezó. `/kit-estado` avisa si la conversación va desfasada.
 
 ## La regla que impide que esto crezca
 
-La tentación, cuando algo se escapa, es hacer **la lista de todo lo que hay que vigilar** y
-escribir un detector por línea. Esa lista es infinita. Un workflow anterior de esta casa
-llegó a 36.740 líneas en nueve semanas por ese camino, y sus propias métricas decían que
-sus detectores mecánicos hacían 1.279 corridas con **cero hallazgos**, mientras el revisor
-—que solo tiene una pregunta abierta— encontraba cosas reales.
-
-Así que cada cosa que se escapa se clasifica antes de reaccionar:
+La tentación, cuando algo se escapa, es hacer la lista de todo lo que hay que vigilar y
+escribir un detector por línea. Esa lista es infinita, y los detectores mecánicos acaban
+corriendo miles de veces con cero hallazgos mientras el revisor —que solo tiene una pregunta
+abierta— encuentra cosas reales. Así que cada cosa que se escapa se clasifica antes de
+reaccionar:
 
 | ¿quién podía haberlo visto? | dónde va |
 |---|---|
@@ -251,57 +134,22 @@ Así que cada cosa que se escapa se clasifica antes de reaccionar:
 | Es mecánico y ningún linter lo ve | detector propio, **solo si ya falló dos veces** |
 | Solo se ve leyendo con criterio | **se mejora la pregunta** del revisor o del juez, no se escribe código |
 
-Y el orden importa: **primero se mejora la pregunta, después se escribe el detector.**
-Cambiar una línea de un prompt cuesta una línea; un detector cuesta un script, su test y su
-mantenimiento para siempre.
+Primero se mejora la pregunta, después se escribe el detector: cambiar una línea de un prompt
+cuesta una línea; un detector cuesta un script, su banco y su mantenimiento para siempre. Hoy
+hay un solo detector propio, el de duplicados.
 
-Hoy hay **un solo** detector propio, el de duplicados, y está porque esa clase ya mordió
-tres veces: tres `extension Date` en tres view models distintos, cada una correcta por
-separado.
-
-### La otra deriva: el arreglo que fabrica el hallazgo siguiente
-
-Lo de arriba acota los **detectores**. Pero hay una segunda forma de crecer, y es más difícil de
-ver porque cada paso parece responsable: se recibe un hallazgo de revisión, se arregla, y **el
-arreglo abre el siguiente**.
-
-Medido en este repositorio el 2026-09-11, auditándolo con su propio kit: **un solo cambio dio
-cinco hallazgos en dos rondas de revisor, y dos de los cinco salieron del arreglo de la ronda
-anterior** — firmar el árbol para cerrar `git commit -am` abrió el agujero del índice, y firmar
-los dos abrió la colisión de los diffs concatenados. Uno lo escribió el arreglo; el otro era una
-frase que el arreglo volvió falsa. Ese día entero fueron cuatro rondas y ocho hallazgos sobre
-tres cambios.
-
-Cada ronda costó entre 130k y 260k tokens. **Esa cifra no se puede recomprobar**: sale de las
-notificaciones de los sub-agentes de aquel día, que no viven en el repositorio — el mismo límite
-que [PIEZAS.md](docs/PIEZAS.md#coste) declara para las suyas.
-
-Lo que corta ese bucle no es otra regla mecánica; son tres cosas, y las tres las decide una
-persona:
-
-| | |
-|---|---|
-| **Presupuestar las rondas antes de empezar** | está en [FLUJO.md](docs/FLUJO.md#cuántas-rondas-merece-esto), y en prosa son dos |
-| **Parar y archivar con la deuda escrita** | un DEVUELTO que no es del producto no obliga a otra ronda |
-| **Preferir restar** | ese mismo día, lo que encogió el repo no fue arreglar nada: fue borrar 7.720 líneas que nadie leía, y **no tocar** los bancos — que son los que cazaron los cinco hallazgos |
-
-Por eso el digest de cada turno lleva la regla en una línea —«un hallazgo se arregla en su causa
-y restando: no es motivo para un fichero nuevo»— y `/kit-revisa` y `/kit-acepta` la repiten al
-recibir el veredicto, que es el momento en que se decide.
-
-Sí: para predicar «prefiere restar», esa línea **añade** 89 caracteres a cada turno, para
-siempre. Es deliberado y es la rama barata de la regla de arriba — cambiar una línea de un prompt
-cuesta una línea; un detector cuesta un script, su banco y su mantenimiento.
-
----
+Y la otra deriva, más difícil de ver porque cada paso parece responsable: se recibe un
+hallazgo, se arregla, y **el arreglo abre el siguiente**. Lo que la corta no es otra regla
+mecánica: presupuestar las rondas antes de empezar, parar y archivar con la deuda escrita, y
+preferir restar. Por eso el digest de cada turno lleva la regla en una línea: «un hallazgo se
+arregla en su causa y restando: no es motivo para un fichero nuevo».
 
 ## Documentación
 
 | | |
 |---|---|
-| [**El flujo completo**](docs/FLUJO.md) | de una tarea de Jira a un commit, paso a paso. **Empieza por aquí** |
-| [Instalación](docs/INSTALACION.md) | paso a paso, con los errores reales y cómo salir de ellos |
-| [Tu primer cambio](docs/PRIMER-CAMBIO.md) | el bucle completo sobre un caso de verdad, con el formato de las specs |
+| [**El flujo completo**](docs/FLUJO.md) | de una tarea a un commit, paso a paso, con un caso real. **Empieza por aquí** |
+| [Instalación](docs/INSTALACION.md) | instalar, actualizar, desinstalar, y qué hacer cuando algo falla |
 | [Las piezas](docs/PIEZAS.md) | qué hace cada una, cuándo se dispara, y **qué no hace** |
 
 ## Requisitos

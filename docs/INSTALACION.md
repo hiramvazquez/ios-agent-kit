@@ -1,11 +1,9 @@
 # Instalación
 
-Todo lo de aquí está ejecutado y verificado, incluidos los errores. Si algo no te sale, mira
-[Cuando algo falla](#cuando-algo-falla) antes de tocar nada.
+Instalar, actualizar, desinstalar, y qué hacer cuando algo falla. El flujo de trabajo está en
+[FLUJO.md](FLUJO.md); qué hace cada pieza, en [PIEZAS.md](PIEZAS.md).
 
 ## 1. Node y el CLI de OpenSpec — una vez por máquina
-
-El kit se apoya en [OpenSpec](https://github.com/Fission-AI/OpenSpec), que es un CLI de npm.
 
 ```bash
 brew install node                              # si no lo tienes
@@ -13,48 +11,25 @@ npm install -g @fission-ai/openspec@latest
 openspec --version                             # 1.12.0 o superior
 ```
 
-Sin esto el kit funciona a medias: los scripts y los agentes van, pero no tienes
-`/opsx:propose`, ni validación de specs, ni archivado automático — que es la mitad del valor.
+Sin esto no tienes `/opsx:propose`, ni validación de specs, ni archivado.
 
 ## 2. El plugin — una vez por máquina
 
-**La forma normal es dentro de una sesión de Claude Code**, escribiendo:
+Dentro de una sesión de Claude Code:
 
 ```
 /plugin marketplace add hiramvazquez/ios-agent-kit
 /plugin install ios-agent-kit
 ```
 
-Y reiniciar la sesión: los plugins se cargan al arrancar.
-
-**La terminal hace lo mismo** y es la forma con la que está verificado este kit (un agente
-no puede teclear comandos de barra — los escribe el humano). Sirve además para guiones y
-para CI:
+Y reinicia la sesión: los plugins se cargan al arrancar. Desde la terminal es lo mismo, y
+sirve para guiones y CI:
 
 ```bash
 claude plugin marketplace add hiramvazquez/ios-agent-kit
 claude plugin install ios-agent-kit@hiram-kits -y
 claude plugin list          # debe decir: Status ✔ enabled
 ```
-
-Elige una; no hay diferencia en el resultado.
-
-Comprueba qué quedó instalado:
-
-```bash
-claude plugin details ios-agent-kit
-```
-
-Ese comando inventaría las piezas —skills, agentes y hooks— y dice cuántos tokens quedan
-siempre activos por sesión. Los números salen de ahí y **no se escriben en la documentación**:
-un inventario copiado a un documento caduca en el momento de escribirse, y este llegó a quedarse
-corto sin que nadie se enterara. Lo que sí está escrito, porque ningún comando lo dice, es lo
-que cuesta el digest que se inyecta en cada turno y lo que cuesta una ronda de juicio:
-[PIEZAS.md](PIEZAS.md#coste).
-
-Lo que sí conviene saber sin correr nada: lo caro se paga al invocarlo, no por estar
-instalado. Y de los hooks, el código corre fuera del modelo y no cuesta contexto, pero **el
-texto que devuelven sí**: el que inyecta el acuerdo mete un digest en cada turno.
 
 ## 3. Tu proyecto — una vez por proyecto
 
@@ -64,7 +39,7 @@ Con Claude Code abierto en la raíz del proyecto:
 /kit-init
 ```
 
-Mira el repo antes de escribir nada —qué paquetes hay, qué comandos de build y test— y deja:
+Mira el repo antes de escribir nada y deja:
 
 | qué | dónde | qué es |
 |---|---|---|
@@ -73,13 +48,13 @@ Mira el repo antes de escribir nada —qué paquetes hay, qué comandos de build
 | `openspec/config.yaml` | dentro de `openspec/` | las reglas: criterios de aceptación obligatorios, etc. |
 | `.agent-kit/` en `.gitignore` | raíz | la firma de verificación es estado local |
 
-Termina con `/kit-verifica`. **Si no sale verde a la primera, el `kit.conf` está mal** — y
-ese es el momento de arreglarlo, no la primera vez que alguien intente commitear.
+Termina con `/kit-verifica`. Si no sale verde a la primera, el `kit.conf` está mal, y ese es el
+momento de arreglarlo.
 
 ### Si prefieres hacerlo a mano
 
-Las plantillas viven en el clon del marketplace, no en tu proyecto. `hiram-kits` es el nombre con
-el que lo añadiste en el paso 1; si usaste otro, cámbialo aquí.
+Las plantillas viven en el clon del marketplace, no en tu proyecto. `hiram-kits` es el nombre
+con el que lo añadiste; si usaste otro, cámbialo aquí.
 
 ```bash
 KIT=~/.claude/plugins/marketplaces/hiram-kits
@@ -93,55 +68,43 @@ $EDITOR kit.conf               # pon los comandos reales de tu proyecto
 $EDITOR openspec/config.yaml   # rellena el `context` con módulos, capas y reglas
 ```
 
-**Son dos plantillas, no una.** El segundo `cp` pisa el `config.yaml` que acaba de generar
-`openspec init`, y eso es lo que se quiere: sin él te quedas sin las reglas de criterios de
-aceptación y de archivado, que es la mitad de lo que hace `/kit-init`.
-
-Aquí ponía un `cp` que sacaba la ruta de `claude plugin details … | grep -o '/.*ios-agent-kit'`.
-Ese comando **no imprime ninguna ruta** —inventaría piezas y coste—, así que el `grep` salía
-vacío y el `cp` apuntaba a `/plantillas/…`. Comprobado el 2026-09-11 y otra vez el 2026-09-12.
+Son dos plantillas, no una: el segundo `cp` pisa el `config.yaml` que acaba de generar
+`openspec init`, y eso es lo que se quiere.
 
 ## Cuando algo falla
 
-**`Status: ✘ failed to load`** — `claude plugin list` te dice el motivo exacto. Los dos que
-me encontré montando esto: `plugin.json` declarando rutas que ya son las de por defecto, y
-`hooks.json` con los eventos fuera del objeto `hooks`. Los dos están corregidos; si te sale
-con una versión tuya modificada, el mensaje del CLI nombra la clave concreta.
+**`Status: ✘ failed to load`** — `claude plugin list` te dice el motivo exacto. Los dos
+clásicos: `plugin.json` declarando rutas que ya son las de por defecto, y `hooks.json` con los
+eventos fuera del objeto `hooks`. `bash scripts/autocomprueba.sh` los caza antes de publicar.
 
-**`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1. Es deliberado: "no
-pude mirar" no es lo mismo que "está mal". Créalo con `/kit-init`.
+**`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1: «no pude mirar» no es
+lo mismo que «está mal». Créalo con `/kit-init`.
 
 **`Unknown command: /opsx:apply`** (o `/opsx:propose`, o `/opsx:archive`), mientras los
 `/kit-*` sí funcionan — **la sesión está abierta en el directorio equivocado**. Ábrela en la
-raíz del repositorio, no un nivel por encima.
-
-Los dos juegos de comandos vienen de sitios distintos y por eso fallan por separado, que es
-lo que despista:
+raíz del repositorio, no un nivel por encima. Los dos juegos de comandos vienen de sitios
+distintos y por eso fallan por separado:
 
 | comandos | de dónde vienen | dónde funcionan |
 |---|---|---|
 | `/kit-verifica`, `/kit-acepta`… | del **plugin**, instalado para tu usuario | desde cualquier directorio |
 | `/opsx:propose`, `/opsx:apply`… | de `.claude/commands/` **del proyecto**, que instala `openspec init` | solo si la sesión tiene ese repo como raíz |
 
-Con la sesión un nivel por encima te queda medio flujo funcionando y la otra mitad
-respondiendo «Unknown command», que no dice nada de la causa. Los ficheros están donde tienen
-que estar; simplemente nadie los ha cargado.
-
-**La puerta bloquea un commit que crees válido** — la firma es de OTRO árbol. Pasa siempre
-por lo mismo: encadenar `git add && git commit`. Stagea, verifica y commitea en **tres
-comandos separados**: se firma el árbol **y** el índice, así que stagear después de firmar
-cambia lo firmado.
+**La puerta bloquea un commit que crees válido** — la firma es de otro árbol. Casi siempre es
+por encadenar `git add && git commit`: se firma el árbol **y** el índice, así que stagear
+después de firmar cambia lo firmado. Stagea, verifica y commitea por separado (la razón, en
+[PIEZAS.md](PIEZAS.md#verificash--la-firma)).
 
 **`openspec list --specs` dice `requirements 0`** — tu spec es prosa que el parser no
-reconoce. Necesita `### Requirement:` con "SHALL" y `#### Scenario:` con WHEN/THEN. Está
-explicado en [PRIMER-CAMBIO.md](PRIMER-CAMBIO.md).
+reconoce. Necesita `### Requirement:` con SHALL y `#### Scenario:` con WHEN/THEN. El formato
+está en [FLUJO.md](FLUJO.md#el-delta-de-spec-en-el-formato-del-cli).
 
 **No aparecen los comandos `/kit-*`** — reinicia la sesión de Claude Code. Los plugins se
 cargan al arrancar.
 
-**`Agent type 'reviewer' not found`** — lo mismo, y el síntoma engaña porque no es que el
-agente no aparezca: es que **falla al invocarlo**. Los sub-agentes del plugin tampoco
-existen en una sesión que ya estaba abierta cuando se instaló. Reinicia.
+**`Agent type 'reviewer' not found`** — lo mismo, y el síntoma engaña porque el agente no es
+que no aparezca: es que falla al invocarlo. Los sub-agentes del plugin tampoco existen en una
+sesión que ya estaba abierta cuando se instaló. Reinicia.
 
 ## Actualizar
 
@@ -152,13 +115,11 @@ claude plugin marketplace update hiram-kits       # trae el repo nuevo
 claude plugin update ios-agent-kit@hiram-kits     # instala la versión nueva
 ```
 
-**`claude plugin install` NO actualiza** — si ya está instalado responde "ya instalado" y
-se queda con la versión vieja, sin avisar de que hay otra. El comando es `update`.
+`claude plugin install` **no** actualiza: si ya está instalado responde «ya instalado» y se
+queda con la versión vieja. El comando es `update`.
 
-Después, **abre una conversación nueva**. Una reanudada puede seguir cargando la versión con la que
-empezó: retomar una desde el historial de la app siguió con la vieja, aun cerrando y volviendo a abrir
-la app. Con `--continue` o `--resume` no está comprobado. `/kit-estado` avisa si la conversación va
-desfasada y dice qué hacer.
+Después, abre una conversación nueva: una reanudada puede seguir cargando la versión con la
+que empezó. `/kit-estado` avisa si la conversación va desfasada y dice qué hacer.
 
 Los proyectos que usan el kit no tocan nada, salvo que cambie el contrato de `kit.conf`.
 

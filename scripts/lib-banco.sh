@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Arnés común de los bancos de pruebas del kit (`verifica-puerta.sh`,
-# `verifica-contexto.sh`).
+# Arnés común de los bancos de pruebas del kit (`verifica-*.sh`): el montaje temporal,
+# `repo_base`, la aserción `caso` y el cierre `resumen`.
 #
-# Por qué existe: el segundo banco nació copiando ~33 líneas del primero —el montaje
-# temporal, el cuerpo de `repo()`, el cierre de `caso()` y el resumen entero—. Lo señaló un
-# juez de aceptación, y con razón: el propio digest que este kit inyecta en cada turno dice
-# «antes de escribir una función, busca si ya existe». Se escribió mientras se leía eso.
+# Por qué existe: para que el montaje y el cierre se escriban una vez y no una por banco.
 #
-# No se carga solo: cada banco hace `. "$(dirname "$0")/lib-banco.sh"`.
+# No se carga solo: cada banco hace `. "$(dirname "$0")/lib-banco.sh`.
 
 # --- estado -------------------------------------------------------------------------------
 
@@ -68,9 +65,8 @@ caso() {
 
 # resumen <etiqueta de lo probado> <cambio que cierra los rojos>
 #
-# El número de casos se CUENTA. Antes iba escrito a mano («los once casos») en el banco y
-# repetido en `kit.conf`, y el mismo commit que lo escribió ya se contradecía con el README.
-# Un censo a mano envejece en cuanto alguien añade un caso, y nadie se entera.
+# El número de casos se CUENTA aquí, no se escribe a mano en el banco ni en `kit.conf`: un
+# censo a mano envejece en cuanto alguien añade un caso, y nadie se entera.
 resumen() {
     local etiqueta="$1" cambio="${2:-}"
     echo

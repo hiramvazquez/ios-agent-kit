@@ -2,19 +2,15 @@
 
 ## Purpose
 
-Poner el acuerdo delante del modelo en cada turno, corto y atribuido. Contra la deriva no
-sirve obligar a leer una skill: el modelo cree que se acuerda y no relee. Lo que sirve es que
-el texto esté delante otra vez, siempre.
+Poner el acuerdo delante del modelo en cada turno, corto y atribuido: contra la deriva no sirve
+obligar a leer una skill, porque el modelo cree que se acuerda y no relee; lo que sirve es que el
+texto esté delante otra vez, siempre. Atribuido, porque el hook lee el repositorio del directorio
+que hereda la sesión, que no tiene por qué ser aquel en el que se trabaja, y un digest que
+describe otro repositorio empuja en la dirección contraria a la que fue puesto.
 
-«Atribuido» es la mitad que costó aprender. El hook lee el repositorio del directorio que
-hereda la sesión, que no tiene por qué ser aquel en el que se trabaja, y un digest que
-describe otro repositorio empuja exactamente en la dirección contraria a la que fue puesto.
-Nombrarlo NO elimina ese desfase —no hay señal disponible de dónde trabaja el modelo, y
-adivinarla sería peor que callarse—, pero convierte «sin cambio activo», falso sobre el
-trabajo en curso, en «en este repositorio, sin cambio activo», que es cierto.
-
-Y no escribe nada dentro del repositorio que observa: corre en toda sesión del usuario,
-también en repositorios que nunca pidieron el kit.
+Lo que **no** pretende: adivinar dónde trabaja el modelo —no hay señal disponible, y adivinarla
+sería peor que callarse— ni escribir nada dentro del repositorio que observa, porque corre en
+toda sesión del usuario, también en repositorios que nunca pidieron el kit.
 
 ## Requirements
 
@@ -26,49 +22,19 @@ del que lo ha leído, y SHALL producirlo entero sea cual sea el estado de las ta
 1. El digest SHALL nombrar ese repositorio, incluso cuando no haya nada que contar sobre él.
 2. Un repositorio sin `openspec/` SHALL producir un digest que lo diga, y que NO ordene
    abrir una propuesta.
-3. Un repositorio con `openspec/` SHALL producir el mismo digest que producía antes de
-   este cambio, **salvo las líneas de atribución que exige la cláusula 1**.
-4. Con un cambio activo y **cero** tareas pendientes, el digest SHALL incluir la línea de
+3. Con un cambio activo y **cero** tareas pendientes, el digest SHALL incluir la línea de
    recuento de tareas y el bloque «FUERA de alcance», y el hook NO SHALL escribir nada en
    la salida de error.
-5. El bloque «FUERA de alcance» SHALL reconocerse **sea cual sea la caja de su cabecera**:
+4. El bloque «FUERA de alcance» SHALL reconocerse **sea cual sea la caja de su cabecera**:
    `## Fuera de alcance` y `## FUERA de alcance` SHALL dar el mismo resultado.
-6. Un cambio activo **sin `tasks.md`** NO SHALL producir la línea de recuento de tareas, y SHALL
+5. Un cambio activo **sin `tasks.md`** NO SHALL producir la línea de recuento de tareas, y SHALL
    seguir produciendo el resto del digest.
-7. Las reglas innegociables SHALL incluir **qué hacer con un hallazgo de revisión**: buscar la
+6. Las reglas innegociables SHALL incluir **qué hacer con un hallazgo de revisión**: buscar la
    causa antes de reaccionar y preferir restar, porque un hallazgo no justifica por sí solo un
    fichero nuevo. SHALL caber en una línea.
 
-La 4 es nueva y no es un detalle de formato. `grep -c` imprime `0` **y** sale con 1, así que
-el idiom `$(grep -c … || echo 0)` deja `"0\n0"`; en bash 3.2 —el de macOS, el que resuelve
-`#!/usr/bin/env bash`— un error de expansión aritmética aborta **el compound entero**, no solo
-su línea. El resultado es que el digest pierde en silencio el recuento, la lista de
-pendientes y el «fuera de alcance», que es una de las reglas innegociables que este hook
-existe para inyectar.
-
-Y lo pierde exactamente cuando el cambio está terminado, que es el turno en que se llama al
-juez y se commitea: el momento en que esa regla más manda. El banco no lo veía porque su
-fixture monta siempre **una** tarea pendiente. El mismo `grep -c` está escrito bien —con
-`|| true`, que no imprime nada— en `rodaja.sh`, dos ficheros más allá.
-
-La 5 y la 6 salen de la auditoría del 2026-09-11. Las dos hacen lo mismo por dos puertas: el
-digest afirma algo falso y nadie se entera. Con la cabecera en mayúsculas —3 de las 16
-propuestas de este repositorio, incluida la activa— el «fuera de alcance» desaparecía sin decir
-nada, que es la clase de fallo silencioso que la cláusula 4 ya cerró por el otro lado. Y sin
-`tasks.md` —lo que `docs/FLUJO.md` recomienda para un cambio pequeño— el digest decía
-`tareas: 0/0 hechas`, que se lee como «no queda nada por hacer» cuando lo cierto es que ese
-cambio no lleva lista.
-
-La 7 sale del mismo día, y de la otra clase de deriva: no la de los detectores que el README ya
-acota, sino la del **arreglo que fabrica el hallazgo siguiente**. En un solo cambio de ese día
-—el de la firma— hubo cinco hallazgos en dos rondas, y **dos salieron del arreglo de la ronda
-anterior**: uno lo escribió el arreglo y el otro era una frase que el arreglo volvió falsa. El
-sitio es el digest porque es el único texto que un agente lee sin falta, y el momento en que
-decide entre arreglar la causa o añadir un fichero es justo cuando recibe el veredicto.
-
-**Límite declarado.** Que la regla esté delante no obliga a nadie a seguirla, igual que las otras
-tres: el digest pone el texto, no impone la conducta. Lo que sí hace es que nadie pueda decir que
-no estaba escrito.
+**Límite declarado.** Que la regla esté delante no obliga a nadie a seguirla: el digest pone el
+texto, no impone la conducta.
 
 #### Scenario: Un cambio con todas las tareas cerradas
 
@@ -104,7 +70,7 @@ no estaba escrito.
 #### Scenario: Un repositorio con OpenSpec y sin cambio activo
 
 - **WHEN** el hook corre en un repositorio con `openspec/` y ningún cambio activo
-- **THEN** el digest dice lo mismo que decía antes de este cambio
+- **THEN** el digest dice que no hay cambio activo y que hay que proponer antes de tocar código
 - **AND** lo atribuye a ese repositorio
 
 ### Requirement: El hook no escribe en repositorios que no usan el kit
@@ -124,25 +90,6 @@ repositorio observado.
 6. **El acotado es por prefijo y no por identidad**, con la consecuencia que eso tiene: un
    repositorio `spm` SÍ recibe las de `spm-pro`. Ese límite SHALL estar declarado donde vive
    la resolución.
-
-Las cláusulas 5 y 6 sustituyen a una 5 que prometía un absoluto —«NO SHALL recibir las de
-otro proyecto de la misma máquina»— que el acotado por prefijo rompe. Reproducido el
-2026-09-08: un repositorio `spm`, sin dependencias propias, recibía `PaqueteDelVecino` desde
-`spm-pro-555444`.
-
-**Por qué se corrige aquí y no en otro cambio.** Este es el que hizo que las dos piezas
-compartan la MISMA función y el que decidió declarar sus límites como canon. Archivarlo
-dejando la norma del hermano diciendo lo contrario sobre la misma función es, literalmente, el
-defecto que este cambio persigue — «la regla que llegó a un fichero y no a su hermano»— cometido
-en la capa del acuerdo.
-
-Se corrigieron una por una todas las instancias que se fueron encontrando, y aun así esta se
-escapó dos rondas seguidas —y con ella el escenario de aquí abajo, dentro del arreglo—, porque
-el criterio que las buscaba estaba escrito en términos **léxicos** («que ningún documento diga que falla hacia
-el lado seguro») mientras lo que protege es **semántico**: que ningún documento prometa una
-garantía de acotado que el código no da. Este no dice esa frase; dice algo más fuerte y más
-falso. Es el hueco léxico-semántico que el prompt del juez de aceptación ya tiene escrito como
-la trampa más fina de los censos, aplicada a una promesa en vez de a un número.
 
 #### Scenario: Un repositorio sin dependencias en una máquina con otros proyectos
 
@@ -175,19 +122,15 @@ El hook que inyecta el acuerdo NO SHALL crear ficheros fuera de su caché declar
 
 1. NO SHALL escribir en un directorio compartido por todos los usuarios de la máquina con un
    nombre derivable del identificador de proceso.
-2. El digest producido SHALL ser el mismo que antes de este cambio, salvo lo que exija la
-   cláusula de los cambios activos múltiples.
 
-Este hook corre en cada turno de cualquier repositorio por el que pase una sesión, así que un
-temporal de nombre adivinable en un directorio escribible por cualquiera es un riesgo
-innecesario para lo que hace: componer tres líneas de texto. Es además la extensión natural
-de la regla que este mismo hook ya cumple —no escribir dentro del repositorio observado— al
-único sitio donde todavía escribe.
+Este hook corre en cada turno de cualquier repositorio por el que pase una sesión: un temporal
+de nombre adivinable en un directorio escribible por cualquiera es un riesgo innecesario para
+componer tres líneas de texto.
 
 #### Scenario: El hook compone el digest con tareas pendientes
 
 - **WHEN** el hook corre en un repositorio con un cambio activo y tareas sin cerrar
-- **THEN** el digest sale igual que antes
+- **THEN** el digest lleva las tareas pendientes
 - **AND** no queda ningún fichero nuevo en el directorio temporal del sistema
 
 ### Requirement: El hook declara el evento que lo ha invocado
@@ -200,11 +143,9 @@ invoca.
 3. Sin señal del evento invocante, SHALL emitir `UserPromptSubmit`, que es el caso mayoritario
    y el comportamiento de hoy.
 
-El mismo script está registrado en los dos eventos y emite `UserPromptSubmit` siempre. La
-documentación de Claude Code exige que ese campo sea el nombre del evento, así que la rama de
-`SessionStart(compact)` está anunciando un contrato que no es el suyo — y esa rama existe para
-reinyectar el acuerdo **tras compactar**, que es cuando se pierde, y es una de las cinco
-promesas de cabecera del `README`.
+El mismo script está registrado en los dos eventos, y la documentación de Claude Code exige que
+ese campo sea el nombre del evento. La rama de `SessionStart(compact)` existe para reinyectar el
+acuerdo **tras compactar**, que es cuando se pierde.
 
 **Límite declarado:** que el efecto se aplique de verdad solo se ve compactando una sesión
 real con el plugin instalado. Lo que se puede fijar aquí es la forma del JSON; el efecto vive

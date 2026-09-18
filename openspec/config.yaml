@@ -7,18 +7,31 @@ context: |
 
   ESTE repo es el plugin ios-agent-kit, no una app iOS. No hay Swift ni build:
   es bash (`scripts/`), markdown (`commands/`, `agents/`, `skills/`, `docs/`,
-  `plantillas/`) y un `busca-duplicados.py`. `hooks/hooks.json` declara los hooks
-  y `.claude-plugin/plugin.json` la versión.
+  `plantillas/`) y dos python. `hooks/hooks.json` declara los hooks y
+  `.claude-plugin/plugin.json` la versión.
 
   El kit se INSTALA en las apps del usuario; lo que acaba en la app es `openspec/`
   y `kit.conf`. Este `openspec/` es el del propio kit — el kit se come su comida.
 
-  Reglas de este repo, que ya estaban escritas y siguen mandando:
+  Reglas de este repo:
   - `hooks/hooks.json` lo dice en su `_nota`: tres hooks y ninguno de adorno. Cada
     uno existe porque resuelve un fallo observado. Un cuarto tiene que traer escrito
     el fallo que lo motiva.
-  - Los límites se declaran, no se disimulan: `puerta-commit.sh` ya escribe en su
-    cabecera qué NO puede frenar. Un arreglo que estreche ese límite tiene que
-    reescribir la declaración, no borrarla.
+  - Los límites se declaran, no se disimulan: cada pieza escribe en su cabecera qué
+    NO cubre. Un arreglo que estreche ese límite tiene que reescribir la declaración.
   - `README.md` y `docs/` describen el kit a quien lo instala. Si el comportamiento
     cambia, cambian con él en el mismo cambio.
+  - Un comentario o una spec dice lo que la pieza hace HOY y por qué, en dos o tres
+    líneas. La historia —qué ponía antes, quién lo cazó, en qué fecha— vive en el
+    log de git y en `openspec/changes/archive/`, no en el fuente.
+  - Cada norma vive en un solo sitio; los demás enlazan. Un cambio de comportamiento
+    toca los ficheros que cambian, no todos los que la mencionan.
+
+  Proceso de este repo, porque aquí no hay compilador ni tests y el juicio solo
+  tiene prosa que juzgar:
+  - El juez de aceptación (`/kit-acepta`) NO se invoca sobre este repositorio. La
+    prosa no converge bajo juicio: cada arreglo reescribe la norma.
+  - El revisor (`/kit-revisa`) da UNA ronda por cambio, y decide el owner. No hay
+    segunda ronda por hallazgos de redacción.
+  - Un caso de banco nace por un fallo que llegó a un proyecto real, nunca por una
+    ronda de revisión.

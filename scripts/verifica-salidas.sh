@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
 # Banco de pruebas de `verifica.sh`: sus códigos de salida y su firma.
-#
-# Por qué existe, y por qué tan tarde: es la pieza central del kit —la que decide si hay
-# firma y por tanto si la puerta deja commitear— y era la única cuyo contrato cambió en este
-# cambio sin que ninguna prueba lo fijara. El juez de aceptación lo señaló: se abrieron tres
-# bancos para cerrar ese agujero en otras piezas y se dejó abierto justo aquí.
-#
-# Los dos casos que importan tienen historia:
-#   - «tres pasos en rojo no es 3»: el script salía con el NÚMERO de fallos, así que tres
-#     pasos rojos eran indistinguibles de «no hay kit.conf», mientras la doc pública prometía
-#     que se distinguían.
-#   - «--comprueba tras una verificación en rojo»: el marker se quedaba con su línea `diff:`
-#     y la puerta respondía «firma válida» sobre un árbol que había fallado. Ese ya lo cazó
-#     un juez en su día; aquí queda fijado para que no vuelva.
+# Por qué existe: es la pieza que decide si hay firma y por tanto si la puerta deja
+# commitear, y su contrato tiene que estar fijado por algo más que la doc.
 #
 # Uso:  bash scripts/verifica-salidas.sh
-#       VERIFICA_BAJO_PRUEBA=<ruta> bash scripts/verifica-salidas.sh   ← contra otra versión
-#
-# La copia bajo prueba va DENTRO de `scripts/`: `verifica.sh` busca a `busca-duplicados.py`
-# como vecino suyo.
+#       VERIFICA_BAJO_PRUEBA=<ruta> bash scripts/verifica-salidas.sh   ← contra otra versión;
+#       la copia va DENTRO de `scripts/`, porque busca a `busca-duplicados.py` como vecino.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -49,8 +36,8 @@ conf() {
         echo 'verificaciones() {'
         echo '    paso "uno bueno" true'
         # Nada de `seq 1 $n`: el `seq` de BSD cuenta HACIA ATRÁS cuando el primero es
-        # mayor que el último, así que `seq 1 0` imprime «1 0» y el repo «verde» nacía con
-        # dos pasos rojos dentro. Lo cazó este mismo banco en su primera corrida.
+        # mayor que el último, así que `seq 1 0` imprime «1 0» y el repo «verde» nacería con
+        # dos pasos rojos dentro.
         i=0
         while [ "$i" -lt "$n" ]; do i=$((i+1)); echo "    paso \"malo $i\" false"; done
         echo '}'
@@ -134,10 +121,9 @@ igual "$C" 0; caso $? "sin ningún commit, esa firma vale ($C)"
 # Y que DISTINGA: se stagea algo más y la firma tiene que dejar de valer. Contra una huella que
 # mire solo el árbol, este caso sale rojo — los dos de arriba no, y por eso hace falta.
 #
-# Lo que este caso NO fija, desde que la huella emite los dos diffs: quitar la caída al índice.
-# El `git diff --cached` sigue en la tubería, así que sin el `if` lo único que se gana es un
-# «fatal: ambiguous argument HEAD» en stderr. Aquí ponía que sin la caída la huella era la del
-# vacío, y eso describía la fórmula anterior. Lo midió el revisor.
+# Lo que este caso NO fija: quitar la caída al índice. El `git diff --cached` sigue en la
+# tubería, así que sin el `if` lo único que se gana es un «fatal: ambiguous argument HEAD» en
+# stderr.
 ( cd "$TMP/virgen" && echo otro > otro.txt && git add otro.txt ) >/dev/null 2>&1
 C="$(codigo "$TMP/virgen" --comprueba)"
 igual "$C" 1; caso $? "sin ningún commit, stagear algo más invalida la firma ($C)" \
@@ -149,8 +135,7 @@ igual "$C" 1; caso $? "sin nada verificado, --comprueba rechaza ($C)"
 echo "▶ la firma declara su alcance"
 
 # Lo que se prueba aquí no es el formato por el formato: es que un verde no se pueda leer sin
-# leer con qué se consiguió. El rojo de AppStarter del 2026-09-17 duró doce corridas porque la
-# firma local decía «verificado» y el CI compilaba con otro toolchain.
+# leer con qué se consiguió, porque el CI puede compilar con otro toolchain.
 FIRMA="$(cat "$TMP/verde/.agent-kit/verificacion.txt")"
 contiene "$FIRMA" "toolchain: "; caso $? "la cabecera de la firma dice con qué se verificó"
 contiene "$FIRMA" "limites: sin declarar"
@@ -182,22 +167,20 @@ caso $? "y trae el texto que escribió el proyecto"
 contiene "$(cat "$TMP/con_limites/.agent-kit/verificacion.txt")" "limites: declarados"
 caso $? "la cabecera de la firma dice que los declara"
 
-# Una firma ANTERIOR a este campo sigue valiendo: el riesgo declarado en el design. Se simula
-# quitándole las dos líneas nuevas a un marker verde, sin tocar el árbol.
+# Una firma ANTERIOR a estos campos sigue valiendo. Se simula quitándole las dos líneas a un
+# marker verde, sin tocar el árbol.
 grep -v "^toolchain: \|^limites: " "$TMP/verde/.agent-kit/verificacion.txt" > "$TMP/verde/.agent-kit/v.viejo" \
     && mv "$TMP/verde/.agent-kit/v.viejo" "$TMP/verde/.agent-kit/verificacion.txt"
 C="$(codigo "$TMP/verde" --comprueba)"
 igual "$C" 0; caso $? "un marker sin los campos nuevos sigue siendo válido ($C)" \
     "si esto rechaza, actualizar el kit invalida la firma de todos los proyectos a la vez"
 
-# La divergencia que costó un día el 2026-09-15: el `swift` del PATH no es el de Xcode. Se
-# simula con un shim que anuncia otra versión, y lo que se exige es que lo DIGA y que NO
-# bloquee — hay proyectos que usan un toolchain de swift.org a propósito.
+# La divergencia entre el `swift` del PATH y el de Xcode se simula con un shim que anuncia
+# otra versión, y lo que se exige es que lo DIGA y que NO bloquee — hay proyectos que usan un
+# toolchain de swift.org a propósito.
 FALSO="$TMP/falso_swift"; mkdir -p "$FALSO"
-# Sin «Apple» a propósito: es el banner de un toolchain de swift.org, y con el prefijo
-# obligatorio en el patrón de `version_swift` este shim se leía igual con las dos versiones del
-# patrón, así que el caso no protegía el arreglo que lo quitó. Lo midió el revisor: devolviendo
-# el prefijo, el banco seguía verde. Ahora un caso cubre las dos cosas.
+# Sin «Apple» a propósito: es el banner de un toolchain de swift.org, y el patrón de
+# `version_swift` tiene que leerlo sin exigir ese prefijo. Un caso cubre las dos cosas.
 printf '#!/bin/sh\necho "Swift version 9.9.9 (swiftlang-9.9.9)"\n' > "$FALSO/swift"
 chmod +x "$FALSO/swift"
 S="$( cd "$TMP/verde" && HOME="$TMP/home" PATH="$FALSO:$PATH" bash "$VER" 2>&1 )"
@@ -207,7 +190,7 @@ contiene "$S" "✅ verde · toolchain: Swift 9.9.9"
 caso $? "y avisa sin bloquear: la verificación sigue firmando" \
     "bloquear aquí rompería a quien usa un toolchain de swift.org a propósito"
 # Y en el MARKER, no solo en la salida: es la firma la que tiene que llevarlo, porque es lo que
-# se lee después. Lo pidió el revisor: este caso asertaba sobre stdout y decía «la firma».
+# se lee después.
 contiene "$(cat "$TMP/verde/.agent-kit/verificacion.txt")" "OJO: el swift del PATH"
 caso $? "y la firma se lo queda, no solo la salida"
 

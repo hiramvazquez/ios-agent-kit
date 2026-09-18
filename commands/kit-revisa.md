@@ -14,8 +14,7 @@ Dile qué cambio se está implementando —por su ruta— y que corra él la rod
 seguridad o un requisito explícito del encargo.
 
 **Y dile qué hacer si la rodaja avisa de varios cambios activos:** `rodaja.sh` sin argumentos
-elige el primero por orden y solo avisa —no acepta que se le diga cuál—, así que el aviso, que
-antes salía aquí, ahora lo ve solo él. Que se quede con la ruta que le has dado: lo único que
+elige el primero por orden y solo avisa. Que se quede con la ruta que le has dado: lo único que
 depende de esa elección es la lista de tareas cerradas; el diff es del repositorio entero.
 
 ## Qué hacer con lo que devuelva, antes de tocar nada
@@ -28,9 +27,8 @@ Un veredicto no es una lista de tareas. Para cada hallazgo, decide **en este ord
    arregla donde vive el defecto.
 
 Y cuenta las rondas contra el presupuesto que declaraste (`docs/FLUJO.md`). El modo de fallo
-caro no es el hallazgo: es que **tu arreglo fabrique el siguiente** — ha pasado, y una ronda
-cuesta más que el cambio entero. Si la segunda solo devuelve redacción, para y que decida el
-owner.
+caro no es el hallazgo: es que **tu arreglo fabrique el siguiente**. Si la segunda ronda solo
+devuelve redacción, para y que decida el owner.
 
 Cuando devuelva **GREEN o AMBER**, marca el punto:
 
@@ -44,25 +42,12 @@ siguiente revisión en vez de darse por bueno.
 **Y con GREEN o AMBER tampoco, si arreglar lo que encontró cambió lo que hace el código que se
 entrega.** Marcar significa «desde aquí no se vuelve a revisar», y ese arreglo no lo ha visto
 nadie: vuelve a pasarlo y marca entonces. Corregir pruebas o prosa no obliga. Es el mismo eje que
-el tope del juez, en `agents/aceptacion.md`.
-
-Salió de un caso real: el 2026-09-09, en `AppStarter`, quien implementaba volvió a pasarlo después
-de arreglar, y la segunda pasada encontró una spec que se contradecía consigo misma y que al
-archivar se habría fundido en la canónica.
-
-Si el segundo arreglo vuelve a cambiar el código, toca otra pasada; lo que acota la serie es el
-presupuesto de rondas de `docs/FLUJO.md`.
-
-Anotar la pasada en el acuerdo es opcional, y sin formato: hazlo si te sirve.
+el tope del juez, en `agents/aceptacion.md`. Lo que acota la serie es el presupuesto de rondas.
 
 **Úsalo al cerrar cada tarea de `tasks.md`, no al final del cambio.** Revisar al final
 significa revisar todo, y volver a revisarlo todo en cada vuelta. Un hallazgo tardío además
 llega cuando el contexto se perdió y cuando devolver una cosa devuelve las que vinieran
 detrás.
 
-**Este es el paso obligatorio antes de archivar.** `/kit-acepta` no lo es: pregunta otra cosa
-—el reviewer, si el código está bien; el juez, si es lo que se acordó— y se invoca **cuando
-nadie vaya a leer el acuerdo contra lo entregado**: cambios grandes o que tocan varias capas
-—más de unos cinco ficheros—, alcance que se movió al implementar, o cuando quien orquesta no es
-quien acordó. Un cambio puede
-estar impecable y no ser lo pedido, y eso solo lo ve el juez.
+**Este es el paso obligatorio antes de archivar.** `/kit-acepta` pregunta otra cosa —si es lo
+acordado— y es opcional: cuándo merece pagarlo lo dice él.

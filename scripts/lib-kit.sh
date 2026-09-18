@@ -10,20 +10,10 @@
 #     ACTIVOS_N  cuántos hay
 #     ACTIVOS    las rutas de TODOS, una por línea y en el mismo orden, o vacío
 #
-# Se llama SIN subshell —`cambio_activo` y luego `$ACTIVO`, nunca `$(cambio_activo)`— porque
-# devuelve tres cosas y una sustitución de comandos se comería las otras dos.
-#
-# `ACTIVOS` es una cadena y no un array: expandir un array vacío bajo `set -u` aborta en bash
-# 3.2, que es lo que `derivados_propios` tiene que esquivar más abajo.
-#
-# Vive aquí porque la usan el hook de contexto, `rodaja.sh` y `estado.sh`, y copiada ya se cobró
-# un fallo: cada copia elegía con `head -1` sobre un `find`, o sea por el orden del sistema de
-# ficheros, así que con dos cambios abiertos el digest podía hablar de uno mientras la marca de
-# revisión copiaba las tareas del otro.
-#
-# El orden lo fija `LC_ALL=C sort`, para que no dependa del sistema de ficheros ni del idioma
-# de la máquina. Cuál es «el» activo cuando hay varios sigue siendo arbitrario, pero arbitrario
-# y ESTABLE, y quien llama puede decir que hay más de uno en vez de callárselo.
+# Se llama SIN subshell —`cambio_activo` y luego `$ACTIVO`, nunca `$(cambio_activo)`—: una
+# sustitución de comandos se comería dos de las tres. `ACTIVOS` es una cadena y no un array
+# porque expandir un array vacío bajo `set -u` aborta en bash 3.2. El orden lo fija
+# `LC_ALL=C sort`: cuál es «el» activo cuando hay varios es arbitrario, pero estable.
 cambio_activo() {
     ACTIVO=""
     ACTIVOS=""
@@ -42,22 +32,9 @@ cambio_activo() {
 #     TAREAS_HECHAS  cuántas tareas de su `tasks.md` están marcadas
 #     TAREAS_TOTAL   cuántas hay
 #
-# Las dos VACÍAS si el cambio no tiene `tasks.md`, y no a cero: un cambio pequeño no lleva lista
-# —lo recomienda `docs/FLUJO.md`—, y «tareas: 0/0 hechas» se lee como «no queda nada por hacer»
-# cuando lo cierto es que ese cambio no tiene lista. Quien llama mira `TAREAS_TOTAL` vacía.
-#
-# Se llama SIN subshell, por lo mismo que `cambio_activo`.
-#
-# `|| true` y NO `|| echo 0`: `grep -c` imprime "0" Y sale con estado 1 cuando no hay
-# coincidencias, así que el segundo idiom añade un SEGUNDO "0" y deja "0\n0". En bash 3.2 —el de
-# macOS— expandir la resta de abajo con eso es un error de expansión aritmética, y ese error
-# aborta el COMPOUND ENTERO de quien llama: en el hook se perdían en silencio "tareas:", la lista
-# de pendientes y el "FUERA de alcance", justo en el turno en que el cambio está terminado y más
-# mandan. El contenido va por `printf` en vez de dejar que `grep` abra el fichero, para que "cero
-# coincidencias" siga imprimiendo "0".
-#
-# Vive aquí porque la usan el hook de contexto y `estado.sh`, y la trampa de arriba no se ve
-# reescribiéndola de memoria.
+# Las dos VACÍAS si el cambio no tiene `tasks.md`, y no a cero: «0/0 hechas» se lee como «no
+# queda nada por hacer». Se llama SIN subshell. `|| true` y NO `|| echo 0`: `grep -c` imprime
+# "0" Y sale con 1 sin coincidencias, y con "0\n0" la resta aborta en bash 3.2.
 recuento_tareas() {
     TAREAS_HECHAS=""
     TAREAS_TOTAL=""
@@ -71,30 +48,14 @@ recuento_tareas() {
     TAREAS_HECHAS=$((TAREAS_TOTAL - pendientes))
 }
 
-# huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE, los dos.
+# huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE.
 #
-# LOS DOS, y cada uno cierra un agujero distinto:
-#
-#   - El ÁRBOL es lo que `verificaciones()` compila, y lo que se lleva un `git commit -a` o un
-#     pathspec. Firmando solo el índice, verificar sin nada stageado firma el diff VACÍO y esa
-#     firma sigue valiendo después de editar.
-#   - El ÍNDICE es lo que se lleva un `git commit` a secas. Firmando solo el árbol, stagear
-#     veneno y devolver el fichero a su contenido de HEAD deja la huella igual, y se commitea
-#     algo que nunca se compiló.
-#
-# EL SEPARADOR TAMPOCO ES ADORNO: pegados sin marca, el hunk del último fichero por orden puede
-# migrar del diff del árbol al del índice sin cambiar un byte, y la huella no se mueve.
-#
-# CONSECUENCIA ASUMIDA: stagear después de firmar cambia el índice y por tanto invalida la
-# firma. Por eso stagear, verificar y commitear van en comandos separados. Es el lado correcto
-# en el que equivocarse: lo contrario es dejar pasar contenido que nadie miró.
-#
-# Sin ningún commit todavía no hay `HEAD` con el que comparar —`git diff HEAD` falla—, y ahí el
-# índice es la única referencia que existe.
-#
-# Vive aquí porque la usan `verifica.sh` —que firma— y el hook de contexto —que dice si la firma
-# vale—: si las dos no dan el mismo número, el digest anuncia «la firma es de OTRO árbol» en
-# cada turno de un árbol recién firmado.
+# Los dos, porque cada uno cierra un agujero distinto: el árbol es lo que se compila y lo que
+# se lleva un `git commit -a` o un pathspec; el índice es lo que se lleva un `git commit` a
+# secas. El separador impide que un hunk migre de un diff al otro sin mover la huella.
+# Consecuencia asumida: stagear después de firmar invalida la firma. Sin ningún commit no
+# hay `HEAD`, y el índice es la única referencia. Única definición: la usan quien firma
+# (`verifica.sh`) y quien dice si la firma vale (el hook de contexto).
 huella_diff() {
     if git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
         { git diff HEAD; echo '--- índice ---'; git diff --cached; }
@@ -103,30 +64,16 @@ huella_diff() {
     fi | shasum -a 256 | cut -d' ' -f1
 }
 
-# toolchain — imprime en UNA línea con qué se ha verificado.
+# toolchain — imprime en UNA línea con qué se ha verificado: el `swift` del PATH, el Xcode
+# seleccionado, y un aviso si el swift del PATH no es el que expone `xcrun`.
 #
-# POR QUÉ EXISTE. La firma decía «verificado» y lo único que puede decir es «verificado con el
-# toolchain de esta máquina». El 2026-09-17 AppStarter llevaba doce corridas de CI en rojo con la
-# firma local en verde: el diagnóstico que lo tumbaba lo produce Swift 6.2.4 —el del CI— y no lo
-# produce Swift 6.4 —el de aquí—. Ninguna firma local puede ver eso; lo que sí puede es decir con
-# qué corrió, para que quien lea el verde sepa qué le falta.
+# «Verificado» solo puede significar «verificado con el toolchain de esta máquina»; esto
+# dice cuál. La divergencia se AVISA, no se bloquea: hay proyectos que usan un toolchain de
+# swift.org a propósito. Una línea y corta: la consume el digest de cada turno, que lee la
+# línea del marker en vez de volver a llamar aquí (detectar cuesta 0,3 s).
 #
-# Vive aquí, y no en `verifica.sh`, por lo mismo que `huella_diff`: la escribe quien firma y la
-# LEEN el digest y `/kit-estado`. Pero esos dos leen la línea del marker, no vuelven a llamar
-# aquí — detectar cuesta 0,3 s, despreciable una vez por verificación e inaceptable en un hook
-# que corre en cada turno.
-#
-# UNA LÍNEA, y corta: la consume el digest, que se inyecta en cada turno. `Swift 6.4 · Xcode
-# 27.0` dice lo que hace falta; el build number no distingue nada que importe para esto.
-#
-# LA DIVERGENCIA que avisa es la que costó un día el 2026-09-15: el `swift` del PATH era el de
-# swiftly (6.3.3) mientras Xcode traía 6.4, y el build moría en `build-tool plugin failures` sin
-# compilar una línea, con un diagnóstico que no nombra el toolchain. Se AVISA, no se bloquea:
-# hay proyectos que usan un toolchain de swift.org a propósito.
-#
-# LÍMITE DECLARADO. Esto describe el entorno, no lo valida: si no hay nada que interrogar dice
-# «no identificado» y sale con 0. Un paso que aborta por no poder describir el entorno convierte
-# un dato informativo en una puerta, y el kit se usa en repositorios sin Xcode.
+# LÍMITE DECLARADO: describe el entorno, no lo valida. Si no hay nada que interrogar dice «no
+# identificado» y sale con 0: el kit se usa en repositorios sin Xcode.
 toolchain() {
     local swift_path="" swift_xcrun="" xcode="" linea=""
 
@@ -150,14 +97,9 @@ toolchain() {
 
 # version_swift <orden…> — la versión de Swift que anuncia esa orden, o vacío.
 #
-# Separada de `toolchain` porque se interroga DOS veces —el del PATH y el de `xcrun`— y la
-# comparación de las dos es el aviso de divergencia. `head -1` porque `swift --version` imprime
-# también la línea del target, que aquí no aporta.
-#
-# El patrón NO exige «Apple»: un toolchain de swift.org en Linux anuncia `Swift version 6.0.3`,
-# y con el prefijo obligatorio esta función lo saltaba en silencio y la línea acabava
-# atribuyendo la corrida al Swift de `xcrun` — afirmando un compilador que no ejecutó los pasos.
-# Lo encontró el revisor; en macOS no es alcanzable, pero el modo de fallo era mentir, no callar.
+# El patrón NO exige el prefijo «Apple»: un toolchain de swift.org anuncia `Swift version
+# 6.0.3`, y saltarlo en silencio atribuiría la corrida al Swift de `xcrun`. `head -1` porque
+# `swift --version` imprime también la línea del target.
 version_swift() {
     "$@" --version 2>/dev/null | sed -n 's/.*Swift version \([0-9][0-9.]*\).*/\1/p' | head -1
 }
@@ -165,40 +107,23 @@ version_swift() {
 # derivados_propios <raíz> — deja una variable puesta:
 #     DD_PROPIO  array con los directorios de DerivedData que son de ESE repositorio
 #
-# Se llama SIN subshell, por lo mismo que `cambio_activo`: un array no sobrevive a una
-# sustitución de comandos.
-#
-# POR QUÉ EXISTE. Sin acotar, un `find` sobre `~/Library/Developer/Xcode/DerivedData` devuelve
-# los paquetes de TODOS los proyectos de la máquina, y el kit anuncia a un repositorio las
-# dependencias de otro. Vive aquí y no copiada en los dos sitios que la usan —el hook de
-# contexto y `doc-paquetes.sh`— porque copiarla ya dejó una de las dos sin arreglar.
+# Se llama SIN subshell: un array no sobrevive a una sustitución de comandos. Sin acotar, un
+# `find` sobre DerivedData devuelve los paquetes de TODOS los proyectos de la máquina.
 #
 # LA HEURÍSTICA, DECLARADA. Xcode nombra cada carpeta `<Proyecto>-<hash>`, donde `<Proyecto>`
-# es el nombre del `.xcodeproj` o `.xcworkspace` — un dato que no se tiene sin abrir el
-# proyecto. Se aproxima con el nombre del directorio del repositorio, que coincide en el caso
-# común: clonar y abrir sin renombrar la carpeta.
+# es el nombre del `.xcodeproj` o `.xcworkspace`. Se aproxima con el nombre del directorio del
+# repositorio, que coincide en el caso común. Lo que se pierde, y no todo es seguro:
 #
-# QUÉ SE PIERDE, en tres formas y NO todas seguras:
+#   (a) Falso negativo si el `.xcodeproj` se llama distinto de la carpeta: no encuentra su
+#       propio DerivedData y se calla. Ese es el lado seguro.
+#   (b) Dos repositorios con el mismo nombre de carpeta comparten el filtro.
+#   (c) **Y este NO es seguro:** el hash no está restringido en el patrón, así que un proyecto
+#       cuyo nombre EMPIECE por el tuyo más un guion casa igual. Un repositorio `spm` recibe lo
+#       de `spm-pro-<hash>`. Acotarlo de verdad —exigir la forma del hash, o leer el
+#       `info.plist` de cada carpeta— es otra decisión con su propia medición.
 #
-#   (a) Falso negativo si el `.xcodeproj` se llama distinto de la carpeta que lo contiene —un
-#       monorepo, una carpeta renombrada—: no encuentra su propio DerivedData y se calla.
-#       Este sí es el lado seguro del error.
-#
-#   (b) Dos repositorios con el mismo nombre de carpeta comparten el filtro; Xcode los
-#       distingue por el hash y esto no.
-#
-#   (c) **Y este NO es seguro, así que va escrito y no disimulado:** el hash de Xcode no está
-#       restringido en el patrón, así que un proyecto cuyo nombre EMPIECE por el tuyo más un
-#       guion casa igual. Un repositorio llamado `spm` recibe lo de `spm-pro-<hash>`. Acotarlo
-#       de verdad —exigir la forma del hash, o leer el `info.plist` de cada carpeta— es otra
-#       decisión con su propia medición. Lo que no se puede es seguir diciendo por ahí que
-#       «falla hacia el lado seguro», porque en (c) no lo hace.
-#
-# `nullglob` hace que, sin ninguna carpeta que case, el array quede VACÍO en vez de con el
-# patrón literal. Quien lo use debe expandirlo con `${DD_PROPIO[@]+"${DD_PROPIO[@]}"}`: en bash
-# 3.2 expandir `"${arr[@]}"` de un array vacío bajo `set -u` es «unbound variable» y aborta el
-# script entero, y `"${arr[@]:-}"` pasa un argumento vacío que no todo `find` tiene por qué
-# tolerar.
+# `nullglob` deja el array VACÍO si nada casa. Quien lo use debe expandirlo con
+# `${DD_PROPIO[@]+"${DD_PROPIO[@]}"}`: en bash 3.2 expandir un array vacío bajo `set -u` aborta.
 derivados_propios() {
     local proyecto="${1##*/}" _ng
     # Se RESTAURA el estado previo en vez de apagarlo: un `shopt -u` incondicional destruye el
@@ -206,7 +131,6 @@ derivados_propios() {
     _ng="$(shopt -p nullglob)"
     shopt -s nullglob
     # SC2034: shellcheck no ve el uso porque está en los scripts que cargan esta lib, no aquí.
-    # `cambio_activo` no lo necesita porque lee `ACTIVO` dentro de su propio bucle.
     # shellcheck disable=SC2034
     DD_PROPIO=("$HOME/Library/Developer/Xcode/DerivedData/${proyecto}-"*)
     eval "$_ng"
@@ -215,7 +139,6 @@ derivados_propios() {
 # version_json — la primera `"version"` del JSON que le llega por la entrada estándar.
 #
 # Por la entrada y no por nombre de fichero, porque `verifica.sh` también la saca de un `git show`.
-# Es un `sed` y no un parser, y basta: los `plugin.json` llevan `"version"` una vez, arriba.
 version_json() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1; }
 
 # version_kit <raíz-del-kit> — qué versión del kit corre, cuál está instalada y cuál trae el
@@ -227,27 +150,11 @@ version_json() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' | head -1; }
 #     KIT_ID           `<nombre>@<marketplace>`, que es como lo nombra `claude plugin`
 #     CONSEJO_VERSION  qué hacer, en una frase, o vacío si no hay nada que hacer
 #
-# Se llama SIN subshell, por lo mismo que `cambio_activo`. Solo LEE: ni red ni escritura. Mirar el
-# remoto del marketplace es cosa de `verifica.sh`, una vez al día.
-#
-# POR QUÉ TRES VERSIONES Y NO DOS. Hasta el 2026-09-15 se comparaba la que corre con la del clon, y
-# el consejo era siempre `claude plugin update`. El 2026-09-14 eso aconsejó mal: con la 1.12.2 ya
-# instalada, una conversación REANUDADA desde el historial de la app seguía cargando la 1.10.0 —conservó
-# la raíz del plugin con la que empezó—, así que actualizar ya estaba hecho y lo que faltaba era una
-# conversación nueva. Con `--continue` o `--resume` no está medido.
-# Sin mirar la instalada no hay forma de distinguir un caso del otro.
-#
-# EL ORDEN DE LOS CONSEJOS: si el marketplace trae otra versión que la instalada, actualizar va
-# primero y la conversación nueva detrás, en la misma frase. Solo con lo instalado al día queda
-# únicamente la conversación.
-#
-# LÍMITES DECLARADOS:
-#   - `installed_plugins.json` es un fichero interno de Claude Code, no un contrato. Si no se puede
-#     leer, se compara la que corre con la del clon, que es lo que se hacía antes.
-#   - El clon se busca como antes: el primer marketplace cuyo `plugin.json` de raíz lleve el mismo
-#     nombre. Sin clon no hay `<marketplace>` con el que buscar la instalada, y se calla.
-#   - Con el kit cargado desde un directorio de desarrollo, la que corre y la instalada también
-#     difieren, y el consejo de conversación nueva no aplica. No se detecta.
+# Se llama SIN subshell. Solo LEE: ni red ni escritura. Tres versiones y no dos: con solo la
+# que corre y la del clon no se distingue «falta actualizar» de «la actualización está
+# instalada y esta conversación sigue con la vieja». LÍMITES: `installed_plugins.json` es un
+# fichero interno de Claude Code, no un contrato; sin clon del marketplace se calla; con el
+# kit cargado desde un directorio de desarrollo el consejo no aplica y no se detecta.
 #
 # SC2034: `CONSEJO_VERSION` se lee en los scripts que cargan esta lib, no aquí.
 # shellcheck disable=SC2034

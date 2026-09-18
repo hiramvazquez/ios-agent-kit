@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # /kit-estado: ¿cómo estamos? En una pantalla y al instante, sin compilar ni tocar nada.
 #
-# POR QUÉ EXISTE. Los demás comandos del kit sirven para HACER —verificar, revisar, juzgar—, y el
-# único que ya decía parte de esto, `/kit-verifica`, ejecuta el `kit.conf` entero: en un proyecto
-# iOS son minutos, y una pregunta que tarda minutos no se hace. El 2026-09-14 el owner lo dijo así:
-# «a veces estoy a ciegas».
+# Los demás comandos del kit sirven para HACER —verificar, revisar, juzgar—, y el único que
+# ya decía parte de esto, `/kit-verifica`, ejecuta el `kit.conf` entero: en un proyecto iOS
+# son minutos, y una pregunta que tarda minutos no se hace.
 #
 # NO DECIDE NADA. Cada línea la decide otra pieza, y aquí solo se junta:
 #   - el trabajo sin guardar, de `git status`;
@@ -12,29 +11,26 @@
 #   - la firma, de `verifica.sh --comprueba`, que es el veredicto de la puerta de commit;
 #   - la lógica repetida, de `busca-duplicados.py`;
 #   - la versión del kit y qué hacer con ella, de `version_kit` (`lib-kit.sh`).
-# Si una de estas respuestas se calculara aquí por su cuenta, podría contradecir a la pieza que de
-# verdad decide, y el estado mentiría justo sobre lo que se le pregunta.
+# Si una de estas respuestas se calculara aquí por su cuenta, podría contradecir a la pieza
+# que de verdad decide.
 #
-# SOLO LEE. No toca el árbol de trabajo, no crea `.agent-kit/` ni nada dentro, y no consulta ningún
-# remoto. `GIT_OPTIONAL_LOCKS=0` impide que `git status` reescriba el índice de paso, que es lo que
-# hace por defecto para refrescar la información de los ficheros.
+# SOLO LEE. No toca el árbol de trabajo, no crea `.agent-kit/` y no consulta ningún remoto.
+# `GIT_OPTIONAL_LOCKS=0` impide que `git status` reescriba el índice de paso.
 #
-# Sale con 0 siempre que haya podido mirar, aunque lo que cuente esté en rojo: es una pregunta, no
-# una puerta. Fuera de un repositorio git sale con 1, como sus hermanos.
+# Sale con 0 siempre que haya podido mirar, aunque lo que cuente esté en rojo: es una pregunta,
+# no una puerta. Fuera de un repositorio git sale con 1, como sus hermanos.
 #
 # LÍMITES DECLARADOS:
 #   - «Sin empujar» y «sin traer» son respecto al último `fetch`: mirar el remoto exige red.
-#   - Carga `kit.conf` para saber dónde buscar duplicados, igual que `/kit-duplicados`, y cargarlo
-#     ejecuta código del repositorio.
-#   - Del detector de duplicados se queda con sus líneas de resumen, que reconoce por el emoji con
-#     el que empiezan. Si el detector cambia esos emojis, la línea desaparece sin avisar.
-#   - No tiene banco: su salida no la comprueba nada salvo leerla. Lo que decide cada línea sí vive
-#     en piezas con banco o con criterio de aceptación propio.
-#   - Lo que `GIT_OPTIONAL_LOCKS` NO impide: el `git diff HEAD` con el que `verifica.sh --comprueba`
-#     calcula la huella de la firma sí refresca la caché del índice (`.git/index`): esa variable la
-#     respeta `git status`, y medido, `git diff` no. Lo stageado no cambia, y el hook de contexto hace ese
-#     mismo cálculo en cada turno; evitarlo exigiría cambiar la huella, y con ella la firma y la
-#     puerta. Lo midió la revisión del 2026-09-15, y el owner decidió declararlo.
+#   - Carga `kit.conf` para saber dónde buscar duplicados, y cargarlo ejecuta código del
+#     repositorio.
+#   - Del detector de duplicados se queda con sus líneas de resumen, que reconoce por el emoji
+#     con el que empiezan. Si el detector cambia esos emojis, la línea desaparece sin avisar.
+#   - No tiene banco: su salida no la comprueba nada salvo leerla. Lo que decide cada línea sí
+#     vive en piezas con banco.
+#   - El `git diff HEAD` con el que `verifica.sh --comprueba` calcula la huella sí refresca la
+#     caché del índice (`.git/index`): `GIT_OPTIONAL_LOCKS` lo respeta `git status`, y `git
+#     diff` no. Lo stageado no cambia; evitarlo exigiría cambiar la huella.
 set -uo pipefail
 export GIT_OPTIONAL_LOCKS=0
 
@@ -50,10 +46,9 @@ cd "$RAIZ" || exit 1
 # ── Trabajo sin guardar ────────────────────────────────────────────────────────────────────────
 # Una sola llamada: la cabecera `## ` trae rama, upstream y adelantados/atrasados, y cada línea
 # `XY ruta` dice si el fichero está stageado (X) o tiene cambios sin stagear (Y). Las cadenas de
-# la cabecera en `--porcelain` no se traducen, así que no dependen del idioma de la máquina.
+# la cabecera en `--porcelain` no se traducen.
 #
-# `--untracked-files=all` para contar FICHEROS sin trackear y no directorios: sin él, una carpeta
-# nueva con seis ficheros dentro sale como «1 sin trackear».
+# `--untracked-files=all` para contar FICHEROS sin trackear y no directorios.
 CAB=""; STAGEADOS=0; SIN_STAGEAR=0; SIN_TRACKEAR=0
 while IFS= read -r l; do
     case "$l" in
@@ -64,8 +59,8 @@ while IFS= read -r l; do
     esac
 done < <(git status --porcelain=v1 --branch --untracked-files=all 2>/dev/null)
 
-# «No commits yet on » se quita ANTES de partir la cabecera, y no en su propia rama del `case`: un
-# clon de un repositorio vacío trae upstream igual (`No commits yet on main...origin/main [gone]`).
+# «No commits yet on » se quita ANTES de partir la cabecera: un clon de un repositorio vacío
+# trae upstream igual (`No commits yet on main...origin/main [gone]`).
 SIN_COMMITS=""
 case "$CAB" in "No commits yet on "*) CAB="${CAB#"No commits yet on "}"; SIN_COMMITS=", sin commits todavía" ;; esac
 SIGUE=""
@@ -130,9 +125,7 @@ if [ -f "$M" ]; then
     # que falta cuando el CI dice una cosa y la firma local decía otra.
     TC="$(sed -n 's/^toolchain: //p' "$M" | head -1)"
     LIM="$(sed -n 's/^limites: //p' "$M" | head -1)"
-    # Solo si el veredicto no lo trae ya: cuando la firma vale, `--comprueba` lo dice, y
-    # repetirlo dos líneas más abajo es ruido. Cuando NO vale, esta línea es la única que
-    # cuenta con qué se verificó la última vez, que es justo cuando se pregunta.
+    # Solo si el veredicto no lo trae ya: cuando la firma vale, `--comprueba` lo dice.
     case "$VEREDICTO" in
         *"toolchain: "*) [ -n "$TC" ] && echo "  límites del proyecto: ${LIM:-sin declarar}" ;;
         *) [ -n "$TC" ] && echo "  toolchain: $TC · límites del proyecto: ${LIM:-sin declarar}" ;;

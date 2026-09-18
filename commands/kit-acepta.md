@@ -8,16 +8,21 @@ Su trabajo es una sola pregunta: **¿lo entregado es lo acordado?** Criterio por
 con evidencia (`fichero:línea`), y uno de tres veredictos: ACEPTADO, DEVUELTO o
 ACUERDO-ROTO.
 
-**No es un paso obligatorio** —el obligatorio antes de archivar es `/kit-revisa`—. Se invoca
-**cuando nadie vaya a leer el acuerdo contra lo entregado**: cambios grandes o que tocan varias
-capas —más de unos cinco ficheros—, alcance que se movió al implementar, o cuando quien orquesta
-no es quien acordó. Cuesta
-una ronda entera, así que la decisión de pagarla es tuya y conviene tomarla al empezar, con el
-presupuesto de `docs/FLUJO.md` delante.
-
 No es el reviewer y no lo sustituye: un cambio puede estar impecable —arquitectura, tests,
 lint— y no ser lo que se pidió. Eso solo se ve comparando el resultado con el acuerdo, al
 final, con la cabeza fresca.
+
+## Cuándo se invoca
+
+**No es un paso obligatorio**; el obligatorio antes de archivar es `/kit-revisa`. Se invoca
+**cuando nadie vaya a leer el acuerdo contra lo entregado**:
+
+- cambios grandes o que tocan varias capas —más de unos cinco ficheros—,
+- alcance que se movió al implementar,
+- o cuando quien orquesta no es quien acordó.
+
+Cuesta una ronda entera, así que la decisión de pagarla es tuya y conviene tomarla al
+empezar, con el presupuesto de rondas de `docs/FLUJO.md` delante.
 
 Pásale el cambio: `openspec list` para ver cuál está activo, y su carpeta en
 `openspec/changes/<nombre>/`.
@@ -47,18 +52,12 @@ ahí.
 
 **La escribes tú, no el juez.** Editar el acuerdo que juzga es justo lo que su prompt le prohíbe.
 
-Lo que encontró, si quieres guardarlo, va debajo y sin formato. Las pasadas del revisor no hace
-falta anotarlas.
-
 ## Antes de archivar
 
 Si arreglar lo que el juez señaló **cambió lo que hace el código que se entrega**, ese arreglo no
 lo ha visto ningún revisor: el juez pregunta si es lo acordado, no si rompe algo. Pásalo por
-`/kit-revisa` antes de archivar. Corregir pruebas o prosa no obliga.
-
-Nada lo comprueba, y es una decisión, no una imposibilidad: el kit no pone un hook en el archivado
-mientras nadie haya medido que esta instrucción no basta. Build y tests lo acaban viendo —la puerta
-de commit obliga a re-verificar—; la pregunta del revisor, no.
+`/kit-revisa` antes de archivar. Corregir pruebas o prosa no obliga. Nada lo comprueba: lo sabe
+quien arregló.
 
 Qué hacer si se agota el presupuesto de rondas con un DEVUELTO que no es del producto está en
 `docs/FLUJO.md`, paso 7.

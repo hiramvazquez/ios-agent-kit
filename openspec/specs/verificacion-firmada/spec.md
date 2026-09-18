@@ -3,14 +3,12 @@
 ## Purpose
 
 Que «verificado» signifique algo que se puede comprobar: la verificación se firma contra el
-`sha256` del árbol que se verificó, y la firma vale para ese árbol y solo si el resultado fue
-verde.
+`sha256` del árbol que se verificó, dice con qué toolchain corrió y qué no cubre, y la firma vale
+para ese árbol y solo si el resultado fue verde. Y que se distinga **«no pude mirar»** de **«está
+mal»**: confundirlos hace que un gate roto parezca un proyecto roto, y al revés.
 
-Y que se distinga **«no pude mirar»** de **«está mal»**. No son lo mismo: confundirlos hace
-que un gate roto parezca un proyecto roto, y al revés. Por eso el código de salida reserva un
-valor propio para el primer caso, y el recuento de pasos fallidos vive donde de verdad se
-lee —el informe y la firma— en vez de en un código de salida que no puede decir dos cosas a
-la vez.
+Lo que **no** pretende: que el verde valga para otro toolchain que el que corrió; lo que hace es
+que el verde diga de qué habla.
 
 ## Requirements
 
@@ -26,9 +24,7 @@ del caso en que ha verificado y hay pasos en rojo.
 3. El número de pasos en rojo SHALL seguir siendo legible en el informe y en la línea
    `resultado:` de la firma.
 
-Hoy el script sale con el número de fallos, así que exactamente tres pasos en rojo son
-indistinguibles de «no hay `kit.conf`» — y la documentación pública del kit afirma que se
-distinguen. La 3 existe porque el recuento no se pierde: se mueve a donde de verdad se lee.
+La 3 existe porque el recuento no se pierde: vive donde de verdad se lee.
 
 #### Scenario: Tres pasos en rojo
 
@@ -59,15 +55,9 @@ La 1 es el fallo real y no una precaución: con `set -u` —que usan todos los s
 degrada, **aborta**, y `/kit-verifica` sale sin firma, así que la puerta de commit bloquea el
 commit. El kit queda inservible para quien abra un terminal con su configuración por defecto.
 
-La 2 se la gana por las dos mitades de la regla. **Falló en varios scripts y en varios cambios,
-a lo largo de semanas**, y su recuento exacto no se escribe aquí a propósito: parte de las
-apariciones nunca llegó a commitearse, así que ningún `git log` puede devolver el número. Lo que
-sí se comprueba, cada vez que corre `/kit-verifica`, es que no queda ninguna: lo dice el paso
-«variables pegadas».
-
-Y no hay forma más barata de verla: `bash -n` sale con 0, `shellcheck --severity=warning` sale con 0, y
-los bancos pasan en verde porque el agente corre con el locale vacío. Es invisible a todo el
-instrumental que ya existe y visible para el usuario a la primera.
+La 2 existe porque no hay forma más barata de verla: `bash -n` sale con 0,
+`shellcheck --severity=warning` sale con 0, y los bancos pasan en verde porque el agente corre
+con el locale vacío.
 
 La 3 existe porque un paso que marcara las dos formas sería inútil: el mensaje correcto lleva el
 mismo carácter, y la diferencia son exactamente las llaves.
@@ -107,13 +97,10 @@ son lo que cualquier forma de commit puede llevarse.
 4. Un cambio posterior a la firma SHALL invalidarla, esté en el árbol, en el índice, o en los
    dos.
 
-Los dos lados tienen su fallo, y firmar uno solo deja el otro abierto. Con la huella del
-índice, firmar con nada stageado y commitear después con `-a` o con un pathspec mete código que
-nadie ha verificado: el índice sigue vacío y la huella no se mueve. Con la huella del árbol,
-stagear contenido distinto y devolver el fichero a su contenido de `HEAD` deja la huella igual
-mientras `git commit` a secas se lleva el índice: entra contenido que nunca se compiló. El
-primero se reprodujo el 2026-09-11 con `-am`, `-a -m` y un pathspec; el segundo lo reprodujo el
-revisor ese mismo día, sobre la primera versión de este arreglo.
+Los dos lados tienen su fallo, y firmar uno solo deja el otro abierto: con la huella del índice
+sola, firmar con nada stageado y commitear después con `-a` o con un pathspec mete código que
+nadie ha verificado; con la del árbol sola, stagear contenido distinto y devolver el fichero a
+su contenido de `HEAD` deja la huella igual mientras `git commit` a secas se lleva el índice.
 
 La 3 no es orden: las dos copias tienen que dar el mismo número o el digest dirá «la firma es de
 OTRO diff» en cada turno de un árbol recién firmado.
@@ -172,27 +159,24 @@ efecto era una conversación reanudada.
 ### Requirement: La firma declara con qué se verificó, y qué no cubre
 
 Una firma verde SHALL decir con qué toolchain corrió. Sin eso, «verificado» se lee como «esto
-pasa», cuando lo único que afirma es «esto pasó aquí»: el 2026-09-17 AppStarter llevaba doce
-corridas de CI en rojo con la firma local en verde, y el rojo era un diagnóstico que Swift 6.4
-no produce y Swift 6.2.4 sí.
+pasa», cuando lo único que afirma es «esto pasó aquí»: un diagnóstico que produce una versión
+de Swift y otra no, ninguna firma local lo ve.
 
 1. La firma SHALL registrar el toolchain con el que se ejecutaron los pasos: la versión del
    compilador que hay en el PATH y, si el proyecto se construye con Xcode, la versión de Xcode
    seleccionada. Si no se puede identificar, SHALL decir que no se pudo, y no callarlo.
 2. Cuando el compilador del PATH y el que expone el Xcode seleccionado anuncian **versiones
    distintas**, la firma SHALL decirlo. Dos toolchains distintos que anuncien la misma versión
-   no se distinguen, y eso queda fuera a propósito: el caso que hizo falta esto es una versión
-   contra otra. No SHALL bloquear: hay proyectos que usan un toolchain de swift.org a
-   propósito. El 2026-09-15 esa divergencia dejó un build muerto en
-   `build-tool plugin failures`, con un diagnóstico que no nombra el toolchain.
+   no se distinguen, y eso queda fuera a propósito. No SHALL bloquear: hay proyectos que usan
+   un toolchain de swift.org a propósito.
 3. Un proyecto SHALL poder declarar en su `kit.conf`, en prosa, **qué no cubre su firma**. Lo
    declarado SHALL viajar en la firma y aparecer en el informe. Cuando el proyecto no declara
    nada, el informe SHALL decir que no lo declara, en vez de dejar creer que no hay límites.
 4. Toda superficie donde el kit afirme la verificación SHALL nombrar ese alcance: el informe, la
    comprobación de firma válida, el contexto que el kit inyecta en cada turno y el estado del
    kit. Un solo sitio que siga diciendo «verificado» a secas basta para deshacer el resto.
-5. El coste de identificar el toolchain SHALL ser despreciable frente a la verificación. Medido
-   el 2026-09-17: 0,3 s sobre verificaciones de 15 s a 90 s.
+5. El coste de identificar el toolchain SHALL ser despreciable frente a la verificación: décimas
+   de segundo sobre verificaciones que tardan de segundos a minutos.
 
 **Lo que este requisito NO promete.** No hace que la firma cubra otro toolchain, y no compara la
 versión local con la del CI: eso exigiría que cada proyecto escribiera una versión en su

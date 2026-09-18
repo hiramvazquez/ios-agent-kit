@@ -3,8 +3,8 @@
 ## Purpose
 
 Poder preguntar «¿cómo estamos?» en cualquier momento y que conteste al instante, leyendo lo que el
-kit ya escribe: sin compilar, sin red y sin tocar el árbol de trabajo. Existe porque los demás
-comandos sirven para hacer, y el único que ya decía parte de esto tarda minutos.
+kit ya escribe: sin compilar, sin red y sin tocar el árbol de trabajo. Lo que **no** pretende:
+verificar ni bloquear nada; es una pregunta, no una puerta.
 
 ## Requirements
 

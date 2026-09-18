@@ -1,27 +1,11 @@
 #!/usr/bin/env bash
 # Banco de pruebas de `puerta-commit.sh`.
-#
-# Por qué existe: la puerta se ha cambiado a ojo desde que nació, y el 2026-09-07 se
-# descubrió que fallaba de CUATRO formas distintas a la vez — dos de ellas dejando pasar
-# commits sin verificar. Ninguna se veía leyendo el script; todas se ven aquí.
-#
-# Y aun con este banco en verde, un juez de aceptación encontró una quinta: `(cd X && …)`
-# caía al directorio heredado porque el primer token del segmento era `(`. Los casos que
-# empiezan por «agrupada» y «envuelta» salen de ahí. La lección, escrita para el siguiente:
-# un banco verde dice que lo probado funciona, no que se haya probado lo que importa.
+# Por qué existe: la puerta decide qué commits pasan sin verificar, y sus fallos no se ven
+# leyendo el script.
 #
 # Uso:  bash scripts/verifica-puerta.sh
-#
-# Se puede apuntar a otra versión con PUERTA_BAJO_PRUEBA, para comprobar caso por caso que
-# cada prueba que fija un fallo sale roja contra la versión sin arreglar:
-#
-#   git show <commit>:scripts/puerta-commit.sh > scripts/.puerta-vieja.sh
-#   PUERTA_BAJO_PRUEBA="$PWD/scripts/.puerta-vieja.sh" bash scripts/verifica-puerta.sh
-#
-# La copia tiene que quedar DENTRO de `scripts/`, no en `/tmp`. La puerta busca a
-# `verifica.sh` y a `analiza-invocacion.py` como vecinos suyos, así que una copia en otro
-# directorio no los encuentra, el `if` falla y TODO acaba bloqueado: sale un rojo que parece
-# un hallazgo y es el montaje. Pasó al escribir esto.
+#       PUERTA_BAJO_PRUEBA=<ruta> bash scripts/verifica-puerta.sh   ← contra otra versión;
+#       la copia va DENTRO de `scripts/`, porque la puerta busca a sus vecinos por directorio.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -89,8 +73,7 @@ espera() {
 }
 
 # El literal que dispara el reconocimiento se compone en tiempo de ejecución. Escrito
-# entero, la propia puerta bloquea cualquier comando que abra este fichero — que es el
-# tercer fallo que se arregló, y que muerde al escribir sus pruebas.
+# entero, la propia puerta bloquea cualquier comando que abra este fichero.
 C="comm""it"
 
 repo kit_firmado    si valida
@@ -112,8 +95,8 @@ espera pasa    "$TMP/kit_firmado"    "git status"   "otro subcomando de git → 
 echo "▶ la firma cubre el árbol, no el índice"
 
 # El agujero que cierran estos casos: con la huella del índice, verificar sin nada stageado
-# firmaba el diff VACÍO y esa firma seguía valiendo después de editar. Reproducido el
-# 2026-09-11 en un repositorio temporal: `-am`, `-a -m` y un pathspec pasaban los tres.
+# firma el diff VACÍO y esa firma sigue valiendo después de editar: `-am`, `-a -m` y un
+# pathspec pasarían los tres.
 echo "editado despues de firmar" >> "$TMP/kit_editado/nuevo.txt"
 espera bloquea "$TMP/kit_editado" "git $C -am x" \
      "editado el árbol sin stagear, un commit con -a → bloquea" \
@@ -127,11 +110,10 @@ espera bloquea "$TMP/kit_editado" "git $C nuevo.txt -m x" \
 espera pasa "$TMP/kit_firmado" "git $C -am x" \
      "con el árbol limpio, un commit con -a → pasa"
 
-# El agujero del otro lado, y el que se coló en la PRIMERA versión de este mismo arreglo:
-# firmando solo el árbol, `git diff HEAD` no ve el índice. Se stagea veneno y se devuelve el
-# fichero a su contenido de HEAD: el árbol vuelve a estar como estaba, la huella no se movía, y
-# `git commit` a secas commitea el índice — contenido que nunca se compiló. Lo reprodujo el
-# revisor de punta a punta el 2026-09-11.
+# El agujero del otro lado: firmando solo el árbol, `git diff HEAD` no ve el índice. Se
+# stagea veneno y se devuelve el fichero a su contenido de HEAD: el árbol vuelve a estar como
+# estaba, la huella no se mueve, y `git commit` a secas commitea el índice — contenido que
+# nunca se compiló.
 (
     cd "$TMP/kit_indice" || exit 1
     printf 'VENENO\n' > base.txt
@@ -144,7 +126,7 @@ espera bloquea "$TMP/kit_indice" "git $C -m x" \
 
 # Y el tercero de la misma familia, que ya no es «qué mira la huella» sino «cómo lo pega»: sin
 # un separador entre los dos diffs, el hunk del ÚLTIMO fichero por orden migra del árbol al
-# índice sin cambiar un byte, y la huella no se mueve. Lo reprodujo el revisor.
+# índice sin cambiar un byte, y la huella no se mueve.
 repo_base kit_migra si
 (
     cd "$TMP/kit_migra" || exit 1

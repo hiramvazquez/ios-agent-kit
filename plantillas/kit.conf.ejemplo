@@ -10,9 +10,9 @@ FUENTES="App Packages"
 # aquí viaja EN la firma: el informe lo imprime y `/kit-estado` dice que está declarado. Si no
 # lo declaras, el informe lo dice, que es mejor que dejar creer que no hay límites.
 #
-# Escribe lo que tu verificación local no puede ver, no lo que te gustaría tener. El caso que
-# hizo falta esto: una firma en verde con el CI en rojo doce corridas, porque el CI compilaba
-# con otro Xcode y el diagnóstico solo lo produce esa versión.
+# Escribe lo que tu verificación local no puede ver, no lo que te gustaría tener. El caso
+# típico: el CI compila con otro Xcode, y un diagnóstico que solo produce esa versión no lo
+# ve ninguna firma local.
 LIMITES="- El CI compila con otro Xcode que esta máquina: lo que solo falla ahí no lo ve esta firma.
 - Los tests de UI quedan fuera: tardan minutos y van en CI."
 
@@ -32,9 +32,7 @@ verificaciones() {
     #
     # Un proyecto iOS típico tiene targets de Xcode —la app, sus tests unitarios, los de
     # snapshot, los de UI— que `swift build` NO toca. Si no los nombras, la firma dice
-    # "verificado" sobre un árbol donde esos ficheros no se han ni compilado. Comprobado en
-    # un repo real: con `AppSnapshotTests` conteniendo texto que ni siquiera era Swift
-    # válido, la verificación salía VERDE.
+    # "verificado" sobre un árbol donde esos ficheros no se han ni compilado.
     #
     # Encadena build y tests con `&&` en UN SOLO paso: separados, un build en rojo deja al
     # segundo corriendo contra el bundle anterior y estampando un ✅ sobre artefactos

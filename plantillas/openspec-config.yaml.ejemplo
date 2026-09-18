@@ -27,7 +27,7 @@ rules:
        fecha y el comando que la produjo. Nunca un censo a pelo.'
     - 'Y cuida el predicado: si cuentas por cómo se LLAMA algo y la regla habla de lo que
        SIGNIFICA, el censo y la regla no cubren lo mismo, y por el hueco se cuela un caso
-       real. Ha pasado.'
+       real.'
   tasks:
     - 'La última tarea de todo cambio es `/kit-verifica` en verde.'
   design:
@@ -45,14 +45,8 @@ operations:
   archive:
     guidance:
       - 'El paso obligatorio antes de archivar es el REVISOR (`/kit-revisa`): ¿esto rompe algo?
-         El juez (`/kit-acepta`) pregunta otra cosa —¿es lo ACORDADO?, criterio por criterio— y
-         se invoca CUANDO NADIE VAYA A LEER EL ACUERDO CONTRA LO ENTREGADO: cambios grandes o
-         que tocan varias capas (más de unos 5 ficheros), alcance que se movió al implementar,
-         o cuando quien orquesta no es quien acordó.
-         No es adorno: su primer uso real devolvió ACUERDO-ROTO a un cambio que compilaba,
-         pasaba 144 tests y tenía el linter en verde, y que hacía justo lo que su propio "fuera
-         de alcance" prohibía. El revisor no lo ve porque no es su pregunta. Lo que decide
-         cuándo pagar esa ronda eres tú, no una regla.'
+         El juez (`/kit-acepta`) pregunta otra cosa —¿es lo ACORDADO?— y es opcional; cuándo
+         merece pagarse lo dice `/kit-acepta`. Lo decides tú, no una regla.'
       - 'No se archiva con ACUERDO-ROTO ni con un DEVUELTO del producto —una pieza que no
          hace lo acordado—. Con ACUERDO-ROTO se corrige el acuerdo primero, POR ESCRITO, y se
          vuelve a pasar. Con un DEVUELTO que no es del producto y el presupuesto de rondas

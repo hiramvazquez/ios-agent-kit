@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # Localiza la documentación de los paquetes de los que depende este proyecto.
 #
-# EL PROBLEMA QUE RESUELVE. Un SPM propio bien documentado —AGENTS.md, DocC, ejemplos,
-# plantillas de skill— es invisible desde el proyecto que lo consume: se declara por URL, así que
-# sus fuentes acaban en `.build/checkouts/` o en `DerivedData/.../SourcePackages/checkouts/`, dos
-# sitios ignorados por git, que no existen hasta que alguien compila, y que todo el mundo trata
-# como ruido de build. El AGENTS.md del proyecto acaba remitiendo a rutas que no existen desde la
-# raíz del repo: la doc está escrita y nadie la lee, no por desobediencia sino por geografía.
+# Un SPM propio bien documentado —AGENTS.md, DocC, ejemplos, plantillas de skill— es invisible
+# desde el proyecto que lo consume: se declara por URL, así que sus fuentes acaban en
+# `.build/checkouts/` o en `DerivedData/.../SourcePackages/checkouts/`, dos sitios ignorados
+# por git que no existen hasta que alguien compila. La doc está escrita y nadie la lee, no por
+# desobediencia sino por geografía.
 #
-# Esto imprime las rutas que existen AHORA MISMO, resueltas. Nada más: no resume la doc ni la
-# inyecta, porque un digest de documentación ajena envejece y miente. Da direcciones.
+# Esto imprime las rutas que existen AHORA MISMO, resueltas. No resume la doc ni la inyecta:
+# un digest de documentación ajena envejece y miente. Da direcciones.
 set -uo pipefail
 
 # `$DIR` se resuelve ANTES del `cd`: después, una invocación relativa desde un subdirectorio
@@ -19,36 +18,26 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$DIR/lib-kit.sh"
 
 # Se comprueba la RESOLUCIÓN, no el `cd`: `cd ""` devuelve 0 en bash, así que la guarda nunca
-# vería el fallo de git y este script seguiría buscando `.build/checkouts` desde donde se le
-# invoque. La asignación sí propaga el código de git.
+# vería el fallo de git. La asignación sí propaga el código de git.
 RAIZ="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "no es un repo git"; exit 1; }
 cd "$RAIZ" || exit 1
 
 # Los dos sitios donde SPM deja las fuentes resueltas, más las dependencias por ruta local.
 CHECKOUTS=()
 while IFS= read -r d; do CHECKOUTS+=("$d"); done < <(
-    # Va SIN `-depth 1`, y el flag es el sujeto de la frase: en el `find` de BSD (macOS) ese
-    # flag significa profundidad EXACTAMENTE 1, incompatible con `-path "*/.build/checkouts/*"`
-    # —que necesita ≥3—, así que CON él la condición era insatisfacible y esta rama no devolvía
-    # nada nunca.
-    #
-    # El `! -path ".../*/*"` es lo que impide que quitarlo ensanche de más, y no es teórico: ese
-    # patrón casa también con los subdirectorios DE DENTRO de un checkout, así que los tres
-    # `Package.swift` internos de `swift-syntax` se anunciaban como tres dependencias. Es lo
-    # mismo que la rama de DerivedData consigue con su `-maxdepth 1 -mindepth 1`: quedarse en el
-    # nivel del checkout y no bajar.
+    # Sin `-depth 1`: en el `find` de BSD significa profundidad EXACTAMENTE 1, incompatible
+    # con `-path "*/.build/checkouts/*"`, que necesita ≥3. El `! -path ".../*/*"` se queda en
+    # el nivel del checkout y no baja: sin él, los `Package.swift` internos de un checkout se
+    # anunciaban como dependencias.
     find . -maxdepth 5 -type d -path "*/.build/checkouts/*" \
          ! -path "*/.build/checkouts/*/*" 2>/dev/null
-    # ACOTADO AL REPOSITORIO, con la heurística y sus límites en `lib-kit.sh`, que es de donde
-    # la toma también el hook. Sin acotar, el `find` devuelve los paquetes de TODOS los
-    # proyectos de la máquina, y aquí muerde más que en el hook: la cola de esta salida manda
-    # leer las reglas de los paquetes que anuncia, así que anunciar los de otro proyecto no es
-    # una línea de ruido, es una instrucción falsa.
+    # ACOTADO AL REPOSITORIO, con la heurística y sus límites en `lib-kit.sh`. Sin acotar, el
+    # `find` devuelve los paquetes de TODOS los proyectos de la máquina, y aquí muerde más que
+    # en el hook: la cola de esta salida manda leer las reglas de los paquetes que anuncia.
     #
-    # LÍMITE: con el array VACÍO este `find` se queda sin rutas. En el `find` de BSD (macOS) eso
-    # es un error de uso —lo traga el `2>/dev/null` y el pipe sale vacío, que es lo que se
-    # quiere—, pero en GNU find recorrería el directorio actual y listaría cosas del repo como
-    # si fueran dependencias.
+    # LÍMITE: con el array VACÍO este `find` se queda sin rutas. En el `find` de BSD (macOS)
+    # eso es un error de uso —lo traga el `2>/dev/null`—, pero en GNU find recorrería el
+    # directorio actual y listaría cosas del repo como si fueran dependencias.
     derivados_propios "$RAIZ"
     find ${DD_PROPIO[@]+"${DD_PROPIO[@]}"} -maxdepth 3 -type d \
          -name checkouts -path "*SourcePackages*" 2>/dev/null \
@@ -71,8 +60,7 @@ ya_visto() { local n; for n in ${VISTOS[@]+"${VISTOS[@]}"}; do [ "$n" = "$1" ] &
 
 # Se separa por si el paquete trae AGENTS.md, y no por si es "tuyo": es el único criterio que se
 # sostiene sin una lista escrita a mano que envejezca. Un AGENTS.md dice que alguien escribió
-# instrucciones PARA UN AGENTE sobre ese código; sin él hay documentación de usuario, útil pero
-# de otra clase, y que ocupa diez veces más pantalla sin aportar una regla que seguir.
+# instrucciones PARA UN AGENTE sobre ese código.
 CON_INSTRUCCIONES=""
 SIN=""
 

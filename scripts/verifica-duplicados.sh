@@ -1,34 +1,10 @@
 #!/usr/bin/env bash
 # Banco de pruebas de `busca-duplicados.py`.
-#
-# Por qué existe: nació y creció a ojo, y este cambio le toca la semántica. Un detector sin
-# banco es un detector que nadie puede cambiar sin miedo, y el miedo se paga dejándolo como
-# está.
-#
-# Aquí ponía «es el único script del kit con lógica de verdad que nunca se ha probado», y era
-# falso: `verifica.sh` —que decide si hay firma— y `rodaja.sh` —única fuente del juez—
-# tampoco tenían banco. Los tres lo tienen desde este mismo cambio, y el de `verifica.sh`
-# llegó el último porque nadie se acordó de mirar quién más faltaba.
-#
-# El caso que nace en ROJO salió de medir el detector contra cuatro proyectos reales el
-# 2026-09-08: en `spm-pro`, 28 grupos reportados de los cuales 21 eran EL MISMO FICHERO visto
-# por dos rutas. Cuatro symlinks —el apaño estándar cuando un build tool plugin de SwiftPM no
-# puede depender de un target de librería— bastaban para hacer ilegible el informe.
-#
-# Los tres casos del SUELO no nacen en rojo, y conviene saber por qué: fijan un suelo que no
-# cambió. La misma medición creyó ver un segundo defecto —dos dobles de test de `AppStarter`,
-# cuerpo de tres líneas, que colaban como duplicados— y subir el suelo a cuatro los quitaba.
-# Se hizo, y el juez de aceptación lo devolvió: ese suelo borraba también `pascalCase()` y
-# `displayPath()` en `spm-pro`, duplicados de verdad. Perder dos verdaderos para quitarse uno
-# falso es mal trato. Se revirtió, y estos casos se quedan fijando el suelo real, incluido el
-# de cuatro líneas que impide que alguien lo vuelva a subir sin medir por identidad.
+# Por qué existe: un detector sin banco es un detector que nadie puede cambiar sin miedo, y
+# el miedo se paga dejándolo como está.
 #
 # Uso:  bash scripts/verifica-duplicados.sh
-#
-# Se puede apuntar a otra versión para comprobar que cada caso rojo lo está por lo que dice:
-#
-#   git show <commit>:scripts/busca-duplicados.py > scripts/.dup-viejo.py
-#   DETECTOR_BAJO_PRUEBA="$PWD/scripts/.dup-viejo.py" bash scripts/verifica-duplicados.sh
+#       DETECTOR_BAJO_PRUEBA=<ruta> bash scripts/verifica-duplicados.sh   ← contra otra versión
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -113,7 +89,8 @@ detecta() { local d="$1"; shift; (cd "$d" && python3 "$DETECTOR" . "$@" 2>&1); }
 mkdir -p "$TMP/enlazado/Sources" "$TMP/enlazado/Plugins" \
          "$TMP/copias" "$TMP/limpio" "$TMP/suelo2" "$TMP/suelo3" "$TMP/suelo4" "$TMP/suelo3_corto"
 
-# El mismo fichero, alcanzable por dos rutas. Es el caso de `spm-pro`.
+# El mismo fichero, alcanzable por dos rutas: el apaño habitual cuando un build tool plugin
+# de SwiftPM no puede depender de un target de librería.
 cuerpo_largo "$TMP/enlazado/Sources/Real.swift" describeError
 ln -s ../Sources/Real.swift "$TMP/enlazado/Plugins/Enlazado.swift"
 
@@ -171,18 +148,16 @@ S="$(detecta "$TMP/suelo2")"
 contiene "$S" "sin lógica repetida"; caso $? \
     "un cuerpo de DOS líneas repetido no se reporta: por debajo del suelo, coincidir es normal"
 
-# Este caso fija lo que el juez de aceptación salvó. Subir el suelo a 4 quitaba un falso
-# positivo (dos dobles de test de AppStarter) y se llevaba por delante dos duplicados REALES
-# de tres líneas en spm-pro —`pascalCase()` y `displayPath()`, copiados entre un target y un
-# plugin—, que son justo la clase que el detector existe para cazar. El fixture es una copia
-# de uno de ellos.
+# El suelo son TRES líneas, no cuatro: subirlo quitaría algún doble de test que se cuela, pero
+# se llevaría por delante ayudantes de tres líneas copiados entre un target y un plugin, que
+# son justo la clase que el detector existe para cazar. `pascalCase()` es uno de esos.
 S="$(detecta "$TMP/suelo3")"
 contiene "$S" "cuerpo(s) repetido(s)"; caso $? \
     "un ayudante de TRES líneas copiado en dos ficheros SÍ se reporta"
 
-# El segundo suelo, el que hasta este cambio no tenía ni comentario: mismo largo en líneas que
-# el caso de arriba, pero por debajo de los 60 caracteres normalizados. Por él NO se reporta,
-# y eso es lo que la spec `deteccion-de-duplicados` pasa a declarar en vez de dejarlo mudo.
+# El segundo suelo: mismo largo en líneas que el caso de arriba, pero por debajo de los 60
+# caracteres normalizados. Por él NO se reporta, y es lo que la spec `deteccion-de-duplicados`
+# declara.
 S="$(detecta "$TMP/suelo3_corto")"
 contiene "$S" "sin lógica repetida"; caso $? \
     "un cuerpo de TRES líneas por DEBAJO del suelo de caracteres no se reporta"

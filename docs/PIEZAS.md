@@ -66,6 +66,8 @@ verificar sin nada stageado firma el diff vacío y esa firma sigue valiendo desp
 devolver el fichero a su contenido anterior deja la huella igual, y `git commit` a secas
 commitea el índice: entra contenido que nunca se compiló.
 
+**Y al firmar instala la puerta de commit** (abajo), para que la firma se exija de verdad.
+
 **Lo que cuesta, y es la norma que hay que saberse:** stagear después de firmar invalida la
 firma. Por eso **stagear, verificar y commitear van en tres comandos separados**: encadenar
 `git add && git commit` cambia el índice entre la firma y el commit, y la puerta lo rechaza
@@ -81,18 +83,31 @@ pude mirar** (no hay `kit.conf`, o no define `verificaciones()`). Confundir los 
 hace que un gate roto parezca un proyecto roto. El recuento de pasos vive en el informe y en
 la línea `resultado:` de la firma.
 
-### `puerta-commit.sh` — el único que bloquea
+### La puerta de commit — un hook de git
 
-**Cuándo:** `PreToolUse` sobre Bash, el único evento de Claude Code capaz de bloquear. Analiza
-la invocación con `shlex` —no busca la subcadena `git commit`— y exige firma válida del
-repositorio al que va el commit: el que señale `-C`, `--git-dir` o un `cd` en la misma línea,
-o si no hay pista, el del directorio heredado. Se desentiende de los repositorios sin
-`kit.conf`.
+**Cuándo:** en cada `git commit` del repositorio, lo lance quien lo lance. Es un hook
+`pre-commit` de git, no un hook de Claude Code: lo escribe `verifica.sh` cada vez que firma
+—también cuando sale en rojo—, en `.git/hooks/pre-commit`, con la misma definición de huella
+que usa la firma. Comprueba lo que comprueba `--comprueba`: firma del árbol y del índice que
+se van a commitear, y resultado verde. Si no, el commit no se crea y el mensaje dice qué hacer.
 
-**Límite declarado:** frena el **olvido**, no a quien se lo quiera saltar. Con `--no-verify`,
-desde otra terminal, o invocando git de otra forma, se rodea. Qué formas de invocación cubre y
-cuáles no —una ruta con `~`, un `cd` en una línea y el commit en otra— está en la cabecera del
-script, que es la lista que manda.
+Por eso no importa desde dónde ni cómo se escriba el comando —`git -C`, un `cd ~/…`, un
+`bash -c`, otra terminal—: git lo ejecuta en el repositorio del commit y no hay nada que
+adivinar.
+
+**Si tu repositorio ya tiene un `pre-commit`** que no es del kit, o usa `core.hooksPath`, la
+verificación no lo toca: deja el hook del kit en `.agent-kit/pre-commit` y el informe dice la
+línea que hay que añadir al tuyo (`bash .agent-kit/pre-commit`). `/kit-estado` dice en qué
+situación está.
+
+**Si el repositorio deja de tener `kit.conf`, el hook se abre:** ya no usa el kit, y un hook
+que sobrevive a desinstalarlo no puede convertirse en un muro. Para retirarlo del todo, borra
+`.git/hooks/pre-commit` y `.agent-kit/`.
+
+**Límite declarado:** frena el **olvido**, no a quien se lo quiera saltar. `--no-verify`, un
+git que no lea los hooks del repositorio, y los commits que git crea sin pasar por
+`pre-commit` —merge, revert, cherry-pick, rebase— se la saltan, y eso no se puede cerrar desde
+dentro de la misma máquina.
 
 ### `inyecta-contexto.sh` — contra la deriva
 
@@ -158,8 +173,9 @@ al subir la versión del paquete. Acota DerivedData con la misma heurística que
 ### `estado.sh` — cómo estamos
 
 Junta en una pantalla lo que otras piezas ya deciden: el trabajo sin guardar, los cambios
-activos con sus tareas, el veredicto de la firma (el mismo que la puerta), los duplicados de
-todo el proyecto y la versión del kit. Solo lee; sale con 0 aunque algo esté en rojo.
+activos con sus tareas, el veredicto de la firma (el mismo que la puerta), si la puerta está
+instalada, los duplicados de todo el proyecto y la versión del kit. Solo lee; sale con 0
+aunque algo esté en rojo.
 
 ### `autocomprueba.sh` — antes de publicar el kit
 

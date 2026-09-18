@@ -1,15 +1,4 @@
-# raiz-de-trabajo Specification
-
-## Purpose
-Que una pieza que necesita un repositorio git lo compruebe de verdad, lo diga cuando no lo
-haya, y no deje nada escrito donde nadie le pidió nada. Existe por un detalle de bash que hace
-mentir a la guarda evidente: `cd ""` **devuelve 0**.
-
-Lo que **no** pretende: obligar a los hooks a hablar —un hook que imprime donde no toca rompe el
-JSON que la herramienta espera de él, o convierte un fallo suyo en una sesión inutilizable—, así
-que la cláusula de hablar les exime y las de no ensuciar y comprobar bien les siguen aplicando.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Una pieza INVOCADA POR UNA PERSONA que exige un repositorio git lo dice
 

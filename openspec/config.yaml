@@ -14,9 +14,9 @@ context: |
   y `kit.conf`. Este `openspec/` es el del propio kit — el kit se come su comida.
 
   Reglas de este repo:
-  - `hooks/hooks.json` lo dice en su `_nota`: tres hooks y ninguno de adorno. Cada
-    uno existe porque resuelve un fallo observado. Un cuarto tiene que traer escrito
-    el fallo que lo motiva.
+  - `hooks/hooks.json` lo dice en su `_nota`: dos hooks y ninguno de adorno. Cada
+    uno existe porque resuelve un fallo observado. Un tercero tiene que traer escrito
+    el fallo que lo motiva. La puerta de commit es un hook de git, no de Claude Code.
   - Los límites se declaran, no se disimulan: cada pieza escribe en su cabecera qué
     NO cubre. Un arreglo que estreche ese límite tiene que reescribir la declaración.
   - `README.md` y `docs/` describen el kit a quien lo instala. Si el comportamiento

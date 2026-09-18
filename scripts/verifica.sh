@@ -155,6 +155,64 @@ if [ -n "$SUCIO" ]; then
     INFORME="${INFORME}$(printf '%s\n' "$SUCIO" | sed 's/^/      /')"$'\n'
 fi
 
+# ── La puerta de commit ──────────────────────────────────────────────────────────────────────
+# Un hook `pre-commit` de git, regenerado en cada firma —también en rojo: la puerta tiene que
+# existir para bloquear ese árbol—. Lleva copiada la definición de `huella_diff` con
+# `declare -f`, así que la huella sigue teniendo una sola definición, en `lib-kit.sh`.
+#
+# Va siempre a `.agent-kit/pre-commit`. Si el repositorio no tiene `pre-commit`, o el que tiene
+# es del kit (lleva la marca), se copia a los hooks de git. Si hay uno ajeno, o `core.hooksPath`
+# está configurado, no se toca nada y el informe dice qué fichero es y qué línea añadir.
+#
+# El hook se ABRE si el repositorio ya no tiene `kit.conf`: sin él no hay quien firme, y un
+# hook que sobrevive a desinstalar el kit no puede convertirse en un muro.
+#
+# LÍMITES DECLARADOS: no frena `--no-verify`, un git que no lea los hooks del repositorio, ni
+# los commits que git crea sin pasar por `pre-commit` (merge, revert, cherry-pick, rebase).
+instala_puerta() {
+    local propio="$ESTADO/pre-commit" hooks destino
+    {
+        echo '#!/usr/bin/env bash'
+        echo "# $MARCA_PUERTA. La regenera verifica.sh en cada firma; no la edites."
+        echo '# Exige que la firma de .agent-kit/verificacion.txt sea del árbol y del índice que se'
+        echo '# van a commitear, y de una verificación verde. Si el repositorio ya no tiene kit.conf,'
+        echo '# deja pasar: ya no usa el kit. No frena --no-verify, un git que no lea los hooks del'
+        echo '# repositorio, ni los commits de merge, revert, cherry-pick o rebase.'
+        echo 'set -u'
+        echo 'RAIZ="$(git rev-parse --show-toplevel)" || exit 1'
+        echo 'cd "$RAIZ" || exit 1'
+        echo '[ -f kit.conf ] || exit 0'
+        declare -f huella_diff
+        cat <<'HOOK'
+M=".agent-kit/verificacion.txt"
+[ -f "$M" ] && grep -q "^diff: $(huella_diff)$" "$M" && grep -q '^resultado: verde$' "$M" && exit 0
+cat >&2 <<'MSG'
+❌ ios-agent-kit: no hay verificación firmada para lo que se va a commitear.
+   Stagea primero, corre /kit-verifica y commitea después, en un comando aparte: se firma el
+   árbol Y el índice, así que encadenar el `add` con el commit cambia lo firmado.
+MSG
+exit 1
+HOOK
+    } > "$propio"
+    chmod +x "$propio"
+
+    hooks="$(git rev-parse --git-path hooks)"
+    destino="$hooks/pre-commit"
+    if [ -n "$(git config --get core.hooksPath)" ]; then
+        INFORME="${INFORME}"$'\n'"ℹ️  PUERTA DE COMMIT: este repositorio usa core.hooksPath, así que no se toca. Añade a $destino:"$'\n'"    bash .agent-kit/pre-commit"$'\n'
+    elif [ -e "$destino" ] && ! grep -q "$MARCA_PUERTA" "$destino"; then
+        INFORME="${INFORME}"$'\n'"ℹ️  PUERTA DE COMMIT: $destino ya existe y no es del kit, así que no se toca. Añádele:"$'\n'"    bash .agent-kit/pre-commit"$'\n'
+    elif [ -e "$destino" ]; then
+        cp "$propio" "$destino" && chmod +x "$destino" \
+            || INFORME="${INFORME}"$'\n'"⚠️  PUERTA DE COMMIT: no se pudo refrescar $destino. El hook que hay se queda como estaba."$'\n'
+    elif mkdir -p "$hooks" && cp "$propio" "$destino" && chmod +x "$destino"; then
+        INFORME="${INFORME}"$'\n'"ℹ️  puerta de commit instalada en $destino"$'\n'
+    else
+        INFORME="${INFORME}"$'\n'"⚠️  PUERTA DE COMMIT: no se pudo escribir $destino. Este repositorio queda SIN puerta."$'\n'
+    fi
+}
+instala_puerta
+
 # UNA sola llamada, y su resultado se escribe en la firma: el digest y `/kit-estado` leen esa
 # línea en vez de volver a detectar (cuesta 0,3 s, inaceptable en un hook de cada turno).
 TOOLCHAIN="$(toolchain)"

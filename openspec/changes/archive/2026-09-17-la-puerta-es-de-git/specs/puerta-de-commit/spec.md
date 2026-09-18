@@ -15,8 +15,11 @@ ser del árbol y del índice que se van a commitear, y de una verificación que 
    cambia el índice firmado.
 4. En un repositorio sin ningún commit todavía, SHALL comprobar la huella del índice, que es
    la única referencia que existe.
-5. Lo que la puerta no frena SHALL estar declarado en el propio hook y en la referencia de
-   piezas: `--no-verify`, y un git que no lea los hooks del repositorio.
+5. Sin `kit.conf` en la raíz del repositorio, el hook SHALL dejar pasar: ese repositorio ya no
+   usa el kit, y un hook que sobrevive a desinstalarlo no puede convertirse en un muro.
+6. Lo que la puerta no frena SHALL estar declarado en el propio hook y en la referencia de
+   piezas: `--no-verify`, un git que no lea los hooks del repositorio, y los commits que git
+   crea sin pasar por `pre-commit` (merge, revert, cherry-pick, rebase).
 
 #### Scenario: Commit sin firma
 
@@ -40,6 +43,11 @@ ser del árbol y del índice que se van a commitear, y de una verificación que 
   un `bash -c`, o desde una terminal que no es la de Claude Code
 - **THEN** el veredicto es el mismo que desde la raíz del repositorio
 
+#### Scenario: El repositorio deja de usar el kit
+
+- **WHEN** el repositorio tiene el hook instalado y ya no tiene `kit.conf`
+- **THEN** el commit pasa
+
 #### Scenario: El primer commit del repositorio
 
 - **WHEN** el repositorio no tiene `HEAD` y hay firma verde de su índice
@@ -56,7 +64,9 @@ firma, sin pisar un hook que no sea suyo.
    modificar nada, y el informe SHALL decir qué fichero es y qué línea añadir.
 3. SHALL instalarlo también cuando la verificación sale en rojo: la puerta tiene que existir
    para bloquear ese árbol.
-4. La primera vez que lo instala en un repositorio, el informe SHALL decirlo.
+4. La primera vez que lo instala en un repositorio, el informe SHALL decirlo; si no puede
+   escribirlo, el informe SHALL decir que el repositorio queda sin puerta, y NO SHALL decir
+   que la instaló.
 
 #### Scenario: Primera verificación en un repositorio
 
@@ -69,6 +79,12 @@ firma, sin pisar un hook que no sea suyo.
 - **WHEN** el repositorio ya tiene un `pre-commit` sin la marca del kit
 - **THEN** ese fichero queda byte a byte igual
 - **AND** el informe nombra el fichero y la línea que hay que añadirle
+
+#### Scenario: No se puede escribir el hook
+
+- **WHEN** el directorio de hooks no admite escritura
+- **THEN** el informe dice que el repositorio queda sin puerta
+- **AND** no dice que la haya instalado
 
 #### Scenario: Verificación en rojo
 
@@ -85,6 +101,7 @@ cubrir sin reescribir un lexer de shell.
 **Migration**: Correr `/kit-verifica` una vez en cada proyecto; instala el hook.
 
 ### Requirement: La puerta solo vigila los repositorios que usan el kit
-**Reason**: Un hook de git solo existe donde `verifica.sh` lo instaló, así que ya no hay
-que decidir por señal qué repositorios vigilar.
-**Migration**: Ninguna. Los repositorios sin el kit no tienen hook.
+**Reason**: Un hook de git solo existe donde `verifica.sh` lo instaló, y se abre solo si el
+repositorio deja de tener `kit.conf`. La señal sigue siendo la misma; la comprueba el hook.
+**Migration**: Ninguna. Un repositorio que retire `kit.conf` queda con el hook abierto; para
+no dejar rastro se borran `.git/hooks/pre-commit` y `.agent-kit/`.

@@ -132,6 +132,20 @@ if [ -f "$M" ]; then
     esac
 fi
 
+# La puerta de commit: el hook de git que instala `verifica.sh`. Mismo sitio y misma marca.
+HOOKS="$(git rev-parse --git-path hooks 2>/dev/null)"
+if [ -n "$(git config --get core.hooksPath)" ] || { [ -e "$HOOKS/pre-commit" ] && ! grep -q "$MARCA_PUERTA" "$HOOKS/pre-commit"; }; then
+    if [ -x .agent-kit/pre-commit ]; then
+        echo "  puerta de commit: el hook del kit está en .agent-kit/pre-commit y tu pre-commit tiene que llamarlo"
+    else
+        echo "  puerta de commit: sin instalar — /kit-verifica la escribe"
+    fi
+elif [ -x "$HOOKS/pre-commit" ]; then
+    echo "  puerta de commit: instalada"
+else
+    echo "  puerta de commit: sin instalar — /kit-verifica la instala"
+fi
+
 # ── Lógica repetida ────────────────────────────────────────────────────────────────────────────
 # SIN `--tocados`: aquí se cuentan todos los grupos, también los que ningún cambio en curso toca.
 # `FUENTES` sale de `kit.conf` en un subshell, con el mismo valor por defecto que `verifica.sh`, y

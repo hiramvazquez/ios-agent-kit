@@ -19,3 +19,6 @@ Reglas al leer la salida:
 - Se firma el árbol **y** el índice: stagear después de firmar invalida la firma. Stagea
   antes de verificar, y commitea después, sin encadenar el `add` con el commit. La razón está
   en `docs/PIEZAS.md`, en la sección de `verifica.sh`.
+- Al firmar deja la puerta de commit instalada en `.git/hooks/pre-commit`. Si el informe dice
+  que ya había un `pre-commit` ajeno, o que el repositorio usa `core.hooksPath`, hay que
+  añadir la línea que indica al hook existente; hasta entonces no hay puerta.

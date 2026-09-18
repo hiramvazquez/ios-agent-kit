@@ -48,6 +48,11 @@ recuento_tareas() {
     TAREAS_HECHAS=$((TAREAS_TOTAL - pendientes))
 }
 
+# MARCA_PUERTA — la línea que identifica un `pre-commit` como del kit. La escribe `verifica.sh`
+# al generarlo y la leen `verifica.sh` (¿es mío el que hay?) y `estado.sh` (¿está instalada?).
+# shellcheck disable=SC2034
+MARCA_PUERTA="ios-agent-kit: puerta de commit"
+
 # huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE.
 #
 # Los dos, porque cada uno cierra un agujero distinto: el árbol es lo que se compila y lo que

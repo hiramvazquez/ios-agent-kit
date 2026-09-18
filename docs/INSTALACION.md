@@ -121,7 +121,8 @@ queda con la versión vieja. El comando es `update`.
 Después, abre una conversación nueva: una reanudada puede seguir cargando la versión con la
 que empezó. `/kit-estado` avisa si la conversación va desfasada y dice qué hacer.
 
-Los proyectos que usan el kit no tocan nada, salvo que cambie el contrato de `kit.conf`.
+Los proyectos que usan el kit corren `/kit-verifica` una vez tras actualizar: es lo que
+refresca la puerta de commit del repositorio.
 
 ## Desinstalar
 
@@ -130,5 +131,7 @@ claude plugin uninstall ios-agent-kit@hiram-kits
 claude plugin marketplace remove hiram-kits
 ```
 
-En tu proyecto quedan `openspec/` y `kit.conf`. El primero es documentación tuya que sigue
-teniendo sentido sin el kit; el segundo es un fichero corto que puedes borrar.
+En tu proyecto quedan `openspec/` y `kit.conf`, y fuera de git `.agent-kit/` y el hook
+`.git/hooks/pre-commit`. El primero es documentación tuya que sigue teniendo sentido sin el
+kit. Borra `kit.conf` y el hook se abre solo; para no dejar rastro, borra también
+`.agent-kit/` y `.git/hooks/pre-commit`.

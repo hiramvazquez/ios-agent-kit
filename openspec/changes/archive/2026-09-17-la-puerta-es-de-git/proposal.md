@@ -37,6 +37,8 @@ Ninguna.
 - `puerta-de-commit`: los dos requisitos actuales —juzgar el repo al que va el commit
   analizando la invocación, y vigilar solo los repositorios con `kit.conf`— se retiran. Los
   sustituyen dos: la puerta es un hook de git del repositorio, y la instala la verificación.
+- `raiz-de-trabajo`: la cláusula que exime a los hooks de Claude Code deja de nombrar a
+  `puerta-commit.sh`, que ya no existe.
 
 ## Fuera de alcance
 

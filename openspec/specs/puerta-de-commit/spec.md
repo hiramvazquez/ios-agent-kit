@@ -6,110 +6,101 @@ Impedir que se commitee un árbol que nadie ha verificado. Sin esta puerta, «lo
 es una afirmación del modelo sobre un árbol que pudo cambiar después de correrlos: error de
 proceso, no mala fe, y el más caro porque no deja rastro.
 
-Vigila **el repositorio al que va el commit**, no el directorio desde el que corre la sesión
-— el plugin se instala para el usuario, así que ambos se separan a menudo. Y solo vigila los
-repositorios que usan el kit: donde no hay `kit.conf` no hay firma que se pueda producir, y
-exigir una sería dejar el commit sin salida.
-
-Lo que NO pretende, dicho porque un límite que no se declara se convierte en una promesa
-falsa: frena el olvido, no a quien decide saltárselo. `--no-verify`, otra terminal y las
-invocaciones construidas en tiempo de ejecución siguen abiertas, y eso no se puede cerrar
-desde dentro de la misma máquina.
+Es un hook `pre-commit` de git del repositorio del proyecto, que instala la verificación al
+firmar. Lo que NO pretende: frenar a quien decide saltársela. `--no-verify` y un git que no
+lea los hooks del repositorio siguen abiertos, y eso no se puede cerrar desde dentro de la
+misma máquina.
 
 ## Requirements
 
-### Requirement: La puerta juzga el repo al que va el commit
+### Requirement: La puerta es un hook de git del repositorio
 
-El hook `PreToolUse` que vigila los commits SHALL decidir sobre el repositorio **al que va
-el commit interceptado**, no sobre el directorio de trabajo que hereda de la sesión.
+La puerta de commit SHALL ser un hook `pre-commit` de git instalado en el repositorio del
+proyecto, y SHALL decidir con la misma regla que la comprobación de firma: la firma tiene que
+ser del árbol y del índice que se van a commitear, y de una verificación que salió verde.
 
-1. Cuando el comando indica el repositorio de destino —`-C <ruta>`, `--git-dir <ruta>`, o
-   un `cd <ruta>` que precede al commit en la misma línea—, la puerta SHALL comprobar la
-   firma de verificación **de ese** repositorio.
-2. Cuando el comando no indica ninguno, la puerta SHALL comprobar la del repositorio del
-   directorio heredado, que es el caso normal.
-3. La puerta SHALL reconocer un commit por su invocación, no por la presencia de una
-   subcadena en el texto del comando.
-4. Cada salida que deje pasar el comando sin comprobar nada SHALL declarar por escrito, en
-   el propio script, si falla abierto o cerrado y por qué.
-5. Lo que la puerta exige es una firma válida **para el árbol** del repositorio de destino, no
-   para su índice: la forma de stagear —`-a`, un pathspec, o el índice— NO SHALL cambiar el
-   veredicto.
+1. Un `git commit` sin firma válida SHALL fallar antes de crear el commit, con un mensaje que
+   diga qué hacer.
+2. La decisión NO SHALL depender del directorio desde el que se invoca git, de la forma en que
+   se escribe el comando ni de la herramienta que lo lanza: un `git -C`, un `cd` previo, un
+   `bash -c` y una terminal ajena a Claude Code SHALL dar el mismo resultado.
+3. Stagear en el propio commit —`-a` o un pathspec— después de firmar SHALL bloquear, porque
+   cambia el índice firmado.
+4. En un repositorio sin ningún commit todavía, SHALL comprobar la huella del índice, que es
+   la única referencia que existe.
+5. Sin `kit.conf` en la raíz del repositorio, el hook SHALL dejar pasar: ese repositorio ya no
+   usa el kit, y un hook que sobrevive a desinstalarlo no puede convertirse en un muro.
+6. Lo que la puerta no frena SHALL estar declarado en el propio hook y en la referencia de
+   piezas: `--no-verify`, un git que no lea los hooks del repositorio, y los commits que git
+   crea sin pasar por `pre-commit` (merge, revert, cherry-pick, rebase).
 
-La 1 y la 3 no son la misma: un comando dirigido con `-C` falla hoy por las DOS razones a
-la vez —no se reconoce como commit, y aunque se reconociera se miraría el repo equivocado—,
-y arreglar solo una lo deja roto.
+#### Scenario: Commit sin firma
 
-La 3 tiene una segunda cara que no es teórica: mientras el reconocimiento sea por
-subcadena, cualquier comando que mencione las palabras queda bloqueado aunque no invoque
-git. Escribir documentación sobre la puerta es el caso que lo destapó.
+- **WHEN** se intenta `git commit` en un repositorio con el kit y sin firma válida para su árbol
+- **THEN** el commit no se crea
+- **AND** el mensaje dice que hay que stagear, verificar y commitear en comandos separados
 
-La 5 no cambia lo que hace la puerta —delega en `verifica.sh --comprueba`— sino lo que esta
-norma promete. Decía «firma válida para su diff staged», y con esa lectura `git commit -am`
-sobre un índice vacío cumplía la letra mientras metía código sin verificar. Qué se firma lo fija
-`verificacion-firmada`.
+#### Scenario: Commit con firma válida
 
-#### Scenario: Commit dirigido a otro repo sin firma
+- **WHEN** el índice y el árbol son los que firmó una verificación verde
+- **THEN** el commit pasa
 
-- **WHEN** el comando dirige un commit con `-C` a un repositorio sin firma válida para su
-  árbol
-- **THEN** la puerta lo bloquea
-- **AND** el motivo nombra el repositorio que ha comprobado
+#### Scenario: El commit stagea por su cuenta
 
-#### Scenario: Commit dirigido a otro repo con firma válida
+- **WHEN** hay firma verde y se commitea con `-a` o con un pathspec tras modificar el árbol
+- **THEN** el commit no se crea
 
-- **WHEN** el comando dirige un commit con `-C` a un repositorio cuya firma es válida para
-  su árbol
-- **THEN** la puerta lo deja pasar
+#### Scenario: Desde otro directorio o con otra forma de invocación
 
-#### Scenario: Commit a secas en el repo de la sesión
+- **WHEN** el commit se lanza con `git -C <repo>`, tras un `cd` a una ruta con `~`, dentro de
+  un `bash -c`, o desde una terminal que no es la de Claude Code
+- **THEN** el veredicto es el mismo que desde la raíz del repositorio
 
-- **WHEN** el comando es un commit sin indicar repositorio y el directorio heredado tiene
-  firma válida
-- **THEN** la puerta lo deja pasar
-- **AND** si no la tiene, la bloquea — igual que antes de este cambio
+#### Scenario: El repositorio deja de usar el kit
 
-#### Scenario: Un commit que stagea y commitea a la vez
+- **WHEN** el repositorio tiene el hook instalado y ya no tiene `kit.conf`
+- **THEN** el commit pasa
 
-- **WHEN** hay firma válida y después se modifica el árbol sin stagear
-- **THEN** la puerta bloquea el commit aunque stagee él mismo con `-a` o con un pathspec
+#### Scenario: El primer commit del repositorio
 
-#### Scenario: Un comando que solo menciona las palabras
+- **WHEN** el repositorio no tiene `HEAD` y hay firma verde de su índice
+- **THEN** el commit pasa
 
-- **WHEN** el comando escribe, imprime o busca el texto «git commit» sin invocar git
-- **THEN** la puerta no lo bloquea
+### Requirement: La verificación instala la puerta
 
-### Requirement: La puerta solo vigila los repositorios que usan el kit
+`verifica.sh` SHALL instalar o refrescar el hook `pre-commit` del repositorio cada vez que
+firma, sin pisar un hook que no sea suyo.
 
-El plugin se instala para el usuario, no para un proyecto, así que sus hooks corren en toda
-sesión. La puerta SHALL exigir firma únicamente donde esa firma se pueda producir.
+1. Si no hay `pre-commit`, o el que hay lleva la marca del kit, SHALL escribirlo con la huella
+   copiada de la única definición del kit, y hacerlo ejecutable.
+2. Si hay un `pre-commit` sin la marca del kit, o `core.hooksPath` está configurado, NO SHALL
+   modificar nada, y el informe SHALL decir qué fichero es y qué línea añadir.
+3. SHALL instalarlo también cuando la verificación sale en rojo: la puerta tiene que existir
+   para bloquear ese árbol.
+4. La primera vez que lo instala en un repositorio, el informe SHALL decirlo; si no puede
+   escribirlo, el informe SHALL decir que el repositorio queda sin puerta, y NO SHALL decir
+   que la instaló.
 
-1. La señal de que un repositorio usa el kit SHALL ser `kit.conf` en su raíz.
-2. En un repositorio sin esa señal, la puerta NO SHALL exigir firma ni bloquear el commit.
-3. En un repositorio con esa señal, la puerta SHALL comportarse como siempre: pasa con
-   firma válida, bloquea sin ella.
+#### Scenario: Primera verificación en un repositorio
 
-La 2 no afloja nada: hoy, en un repositorio sin `kit.conf`, la puerta bloquea el commit
-—porque no hay firma— y `verifica.sh` no puede crearla —porque aborta por falta de
-`kit.conf`—. El commit queda bloqueado sin salida desde dentro del kit, y lo que se pierde
-no es rigor, es la capacidad de commitear en repositorios que nunca pidieron el kit.
+- **WHEN** `verifica.sh` firma en un repositorio sin `pre-commit`
+- **THEN** existe `.git/hooks/pre-commit`, ejecutable y con la marca del kit
+- **AND** el informe dice que lo ha instalado
 
-`openspec/` no vale como señal: un repositorio puede usar OpenSpec sin usar este kit, y la
-firma que la puerta vigila no depende de OpenSpec.
+#### Scenario: Un hook ajeno
 
-#### Scenario: Un repositorio que no usa el kit
+- **WHEN** el repositorio ya tiene un `pre-commit` sin la marca del kit
+- **THEN** ese fichero queda byte a byte igual
+- **AND** el informe nombra el fichero y la línea que hay que añadirle
 
-- **WHEN** se commitea en un repositorio sin `kit.conf`
-- **THEN** la puerta deja pasar el commit
-- **AND** no exige ninguna verificación
+#### Scenario: No se puede escribir el hook
 
-#### Scenario: Un repositorio del kit sin firma
+- **WHEN** el directorio de hooks no admite escritura
+- **THEN** el informe dice que el repositorio queda sin puerta
+- **AND** no dice que la haya instalado
 
-- **WHEN** se commitea en un repositorio con `kit.conf` y sin firma válida para su diff
-- **THEN** la puerta lo bloquea, igual que antes de este cambio
+#### Scenario: Verificación en rojo
 
-#### Scenario: Un límite que se estrecha
-
-- **WHEN** una forma de invocación deja de colarse por la puerta
-- **THEN** la cabecera del script deja de declararla como límite
-- **AND** toda forma que siga colándose queda declarada en su lugar
+- **WHEN** algún paso de `kit.conf` falla
+- **THEN** el hook se instala o refresca igual
+- **AND** un `git commit` posterior se bloquea

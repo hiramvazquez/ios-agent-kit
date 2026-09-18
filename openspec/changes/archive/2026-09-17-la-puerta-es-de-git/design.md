@@ -50,11 +50,15 @@ La marca es la que decide si el fichero es nuestro: se refresca si la lleva, se 
 
 ### D3. Hook ajeno o `core.hooksPath`
 
-No se toca. El informe imprime: el fichero que hay, y la línea a añadir
-(`bash .git/hooks/pre-commit.ios-agent-kit` o equivalente). Para que esa línea tenga algo que
-llamar, con hook ajeno el kit escribe el suyo al lado, como `pre-commit.ios-agent-kit`, y es
-ese el que hay que invocar. Con `core.hooksPath`, escribe ahí mismo con el mismo nombre y da
-la misma instrucción.
+No se toca. El hook del kit se escribe SIEMPRE en `.agent-kit/pre-commit` —el directorio de
+estado del kit, que ya está fuera de git— y, cuando el `pre-commit` del repositorio no existe o
+es del kit, se copia además a los hooks de git. Con hook ajeno o con `core.hooksPath`, solo
+queda la copia de `.agent-kit/` y el informe dice la línea a añadir:
+`bash .agent-kit/pre-commit`. Escribir junto al hook ajeno o dentro del `hooksPath` metería un
+fichero del kit en un directorio que puede estar trackeado; `.agent-kit/` no lo está nunca.
+
+*Enmendado al implementar:* la primera versión decía `pre-commit.ios-agent-kit` al lado del
+ajeno. La razón de arriba es la que lo cambió.
 
 *Alternativa descartada — editar el hook ajeno para encadenar:* es código de otro; un `sed`
 sobre él puede romperlo y nadie lo pidió.

@@ -93,7 +93,8 @@ verificaciones() {
 ```
 
 Cada `paso` lleva un nombre legible y un comando; si alguno sale distinto de 0, no hay firma
-y la puerta de commit no deja pasar. `LIMITES` viaja en la firma: lo lee quien mira el verde.
+y la puerta de commit —un hook `pre-commit` de git que la propia verificación instala— no deja
+pasar. `LIMITES` viaja en la firma: lo lee quien mira el verde.
 
 ## Qué trae el plugin
 
@@ -103,7 +104,7 @@ y la puerta de commit no deja pasar. `LIMITES` viaja en la firma: lo lee quien m
 | `agents/reviewer.md` | revisor de corrección |
 | `skills/swift-swiftui/` | reglas de Swift/SwiftUI, adaptadas de [SwiftAgents](https://github.com/twostraws/SwiftAgents) de Paul Hudson, con las que exigen iOS 26 marcadas aparte |
 | `commands/` | `/kit-init`, `/kit-verifica`, `/kit-duplicados`, `/kit-doc`, `/kit-revisa`, `/kit-acepta`, `/kit-estado` |
-| `hooks/hooks.json` | tres hooks: el que inyecta el acuerdo en cada turno, el que lo reinyecta tras compactar, y el que bloquea un commit sin firma |
+| `hooks/hooks.json` | dos hooks: el que inyecta el acuerdo en cada turno y el que lo reinyecta tras compactar. La puerta de commit no es un hook de Claude Code: es un hook `pre-commit` de git que instala `/kit-verifica` |
 | `scripts/` | lo que ejecutan los hooks y los comandos, dos libs compartidas, y los bancos de pruebas `verifica-*.sh` |
 
 Qué hace cada pieza, cuándo se dispara y **qué no hace** está en [PIEZAS.md](docs/PIEZAS.md).

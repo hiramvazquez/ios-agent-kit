@@ -12,7 +12,7 @@ Todo el flujo ocurre dentro de una sesión de Claude Code, con comandos de barra
 solo aparece para instalar y actualizar el kit ([INSTALACION.md](INSTALACION.md)). Tú traduces
 el ticket, apruebas el acuerdo y decides lo que es decisión de producto; OpenSpec guarda el
 acuerdo y lo valida; el agente propone, implementa y verifica; dos jueces preguntan *¿rompe
-algo?* y *¿es lo acordado?*; hay tres hooks, que recuerdan, y uno de ellos bloquea.
+algo?* y *¿es lo acordado?*; dos hooks recuerdan, y un hook de git bloquea.
 
 ## 0. El ticket
 
@@ -211,9 +211,11 @@ recarga al volver o no?»*, la respuesta está escrita, con la razón al lado.
 
 ## 8. Commit y cierre del ticket
 
-Al intentar `git commit`, la puerta comprueba la firma. Si el árbol cambió desde que
-verificaste, bloquea y dice por qué. Stagear, verificar y commitear van por separado, y la
-razón está en [PIEZAS.md](PIEZAS.md#verificash--la-firma).
+Al intentar `git commit`, la puerta —un hook `pre-commit` de git que `/kit-verifica` dejó
+instalado en el repositorio— comprueba la firma. Si el árbol cambió desde que verificaste,
+bloquea y dice por qué, desde cualquier terminal y con cualquier forma de escribir el comando.
+Stagear, verificar y commitear van por separado, y la razón está en
+[PIEZAS.md](PIEZAS.md#verificash--la-firma).
 
 En el PR va el código **y** el cambio de `openspec/`. Quien lo revise lee el `proposal.md` y
 sabe qué se acordó sin tener que reconstruirlo del diff. Cierras PROJ-482.
@@ -233,7 +235,7 @@ casualidad.
 |---|---|---|
 | `UserPromptSubmit` | cada turno | reinyecta el acuerdo y las tareas pendientes |
 | `SessionStart(compact)` | tras compactar | lo mismo — es justo cuando se pierden las reglas |
-| `PreToolUse` | antes de cada Bash | bloquea `git commit` sin firma válida |
+| `pre-commit` de git | en cada `git commit` | lo bloquea sin firma válida. No es de Claude Code: lo instala `/kit-verifica` en `.git/hooks/` |
 
 Su código corre fuera del contexto del modelo; lo que cuesta es lo que devuelven, y está
 en [PIEZAS.md](PIEZAS.md#coste).

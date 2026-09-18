@@ -18,8 +18,6 @@ Reglas al leerla:
   primero.
 - **La línea de la firma dice su alcance**: con qué toolchain se verificó y si el proyecto
   declara límites. Sale incluso cuando la firma ya no vale, que es cuando se pregunta.
-- **Si aconseja abrir una conversación nueva, es literal.** Una conversación reanudada puede seguir
-  cargando la versión del kit con la que empezó, por mucho que ya haya otra instalada.
 - **Lo que sí toca, dicho:** carga el `kit.conf` del proyecto para saber dónde buscar duplicados
   —en un repositorio clonado de fuera, eso es ejecutar código que no has leído—, y al comprobar la
   firma git puede refrescar la caché de su índice (`.git/index`). Por parte del kit, tu árbol y lo

@@ -50,7 +50,7 @@ Ninguna.
 - [ ] `bash scripts/verifica.sh` no imprime «desfasado» ni consulta ningún remoto: con la red cortada (`GIT_TERMINAL_PROMPT=0` y un `HOME` temporal) tarda lo mismo y no crea `.agent-kit/.consulta-version`.
 - [ ] `docs/INSTALACION.md` (sección «Actualizar») y `README.md` («Para mejorar el kit») dicen cómo activar auto-update y `/reload-plugins`, y no dicen «abre una conversación nueva».
 - [ ] `grep -rn 'conversación nueva' README.md docs commands scripts openspec/specs` no encuentra nada.
-- [ ] `scripts/verifica-salidas.sh` sigue en verde con sus casos de versión retirados, y su recuento baja.
+- [ ] `scripts/verifica-salidas.sh` sigue en verde. No tenía casos de versión —corría con `HOME` en un temporal para esquivarlos—, así que lo único que cambia es ese comentario.
 - [ ] `/kit-verifica` en verde.
 
 ## Impact

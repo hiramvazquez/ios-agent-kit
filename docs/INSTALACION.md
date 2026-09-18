@@ -108,18 +108,24 @@ sesión que ya estaba abierta cuando se instaló. Reinicia.
 
 ## Actualizar
 
-Cuando el kit cambie:
+Claude Code puede actualizar el kit solo. Los marketplaces de terceros vienen con el
+auto-update apagado, así que se activa una vez:
 
-```bash
-claude plugin marketplace update hiram-kits       # trae el repo nuevo
-claude plugin update ios-agent-kit@hiram-kits     # instala la versión nueva
+```
+/plugin   →  Marketplaces  →  hiram-kits  →  Enable auto-update
 ```
 
-`claude plugin install` **no** actualiza: si ya está instalado responde «ya instalado» y se
-queda con la versión vieja. El comando es `update`.
+Desde entonces, tras arrancar una sesión, Claude Code trae la versión nueva en segundo plano
+y avisa; `/reload-plugins` la carga sin cerrar la conversación, o se carga sola en la
+siguiente. Sin auto-update, a mano:
 
-Después, abre una conversación nueva: una reanudada puede seguir cargando la versión con la
-que empezó. `/kit-estado` avisa si la conversación va desfasada y dice qué hacer.
+```bash
+claude plugin marketplace update hiram-kits
+claude plugin update ios-agent-kit@hiram-kits
+```
+
+y después `/reload-plugins` en la sesión abierta. `claude plugin install` no actualiza lo que
+ya está instalado.
 
 Los proyectos que usan el kit corren `/kit-verifica` una vez tras actualizar: es lo que
 refresca la puerta de commit del repositorio.

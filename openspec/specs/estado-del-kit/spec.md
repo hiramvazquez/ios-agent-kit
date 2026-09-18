@@ -99,41 +99,22 @@ no solo los que toca el cambio en curso— y SHALL remitir a `/kit-duplicados` p
 - **WHEN** el proyecto tiene grupos repetidos y el árbol no tiene cambios
 - **THEN** los cuenta
 
-### Requirement: La versión del kit se dice con el consejo que la arregla
+### Requirement: Dice qué versión del kit corre
 
-`/kit-estado` SHALL comparar tres versiones del kit —la que corre en esta conversación, la
-instalada y la del clon local del marketplace— y, cuando no coinciden, SHALL dar el consejo que
-corresponde:
+`/kit-estado` SHALL decir la versión del kit que ha cargado la conversación, leída del
+manifiesto del plugin que ejecuta el comando, y NO SHALL compararla con nada ni dar consejo.
 
-1. Si la instalada no es la que corre y el clon del marketplace trae la misma que la instalada,
-   SHALL decir que hay que abrir una conversación nueva, y que una reanudada puede seguir con la
-   versión con la que empezó. NO SHALL aconsejar `claude plugin update`, que ya no cambia nada.
-2. Si el clon del marketplace trae una versión distinta de la instalada, SHALL aconsejar
-   `claude plugin update` y, después, una conversación nueva, **también cuando además la instalada
-   no es la que corre**: una conversación nueva sin actualizar cargaría una versión que ya no es la
-   última.
-3. Si las tres coinciden, SHALL decir cuál es, sin consejo.
-4. Si no puede leer la versión instalada, SHALL comparar la que corre con la del clon, como hacía el
-   aviso de `verifica.sh` antes de este cambio.
+1. La línea SHALL salir siempre que el manifiesto sea legible; si no lo es, SHALL decirlo.
+2. NO SHALL consultar la red ni leer ficheros internos de Claude Code para averiguar qué hay
+   instalado.
 
-El caso 1 es el del 2026-09-14: con la 1.12.2 instalada, una conversación reanudada seguía en la
-1.10.0, y el aviso decía «claude plugin update».
+#### Scenario: Se pregunta el estado
 
-**Límite declarado.** No ve una versión publicada que todavía no ha llegado al clon del
-marketplace: verlo exige red. Eso lo mira `/kit-verifica`, una vez al día.
+- **WHEN** se invoca `/kit-estado`
+- **THEN** una línea dice la versión del kit que corre
+- **AND** no hay ninguna otra línea sobre versiones
 
-#### Scenario: Conversación reanudada con una versión vieja
+#### Scenario: El manifiesto no está
 
-- **WHEN** corre la 1.10.0, y la instalada y la del clon son la 1.12.2
-- **THEN** aconseja abrir una conversación nueva
-- **AND** no aconseja `claude plugin update`
-
-#### Scenario: El marketplace va por delante de lo instalado
-
-- **WHEN** la que corre y la instalada son la 1.12.1 y el clon trae la 1.12.2
-- **THEN** aconseja `claude plugin update` y, después, una conversación nueva
-
-#### Scenario: Todo al día
-
-- **WHEN** las tres versiones coinciden
-- **THEN** dice cuál es, sin consejo
+- **WHEN** el plugin no tiene un `plugin.json` legible junto a sus scripts
+- **THEN** la línea dice que no encuentra el manifiesto

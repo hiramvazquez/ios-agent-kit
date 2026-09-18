@@ -17,9 +17,8 @@ VER="${VERIFICA_BAJO_PRUEBA:-$DIR/verifica.sh}"
 
 mkdir -p "$TMP/home"
 
-# HOME al temporal a propósito: si no, `verifica.sh` sale a mirar los marketplaces instalados
-# de la máquina —y hasta a hacer un `git fetch`— para avisar de versiones desfasadas. Eso no
-# es lo que se está midiendo, y mete red en un banco.
+# HOME al temporal a propósito: nada de lo que se mide aquí debe depender de la máquina de
+# quien corre el banco.
 # Un `[ … ]` suelto seguido de `caso $?` hace que shellcheck avise con razón (SC2319: ese
 # `$?` viene de una condición, no de un comando). Con una función el aviso desaparece y la
 # línea se lee mejor.

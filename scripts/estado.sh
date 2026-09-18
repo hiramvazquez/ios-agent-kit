@@ -10,7 +10,7 @@
 #   - los cambios activos y sus tareas, de `cambio_activo` y `recuento_tareas` (`lib-kit.sh`);
 #   - la firma, de `verifica.sh --comprueba`, que es el veredicto de la puerta de commit;
 #   - la lógica repetida, de `busca-duplicados.py`;
-#   - la versión del kit y qué hacer con ella, de `version_kit` (`lib-kit.sh`).
+#   - la versión del kit, de su `plugin.json`.
 # Si una de estas respuestas se calculara aquí por su cuenta, podría contradecir a la pieza
 # que de verdad decide.
 #
@@ -166,20 +166,14 @@ else
 fi
 
 # ── Versión del kit ────────────────────────────────────────────────────────────────────────────
-# Qué comparar y qué aconsejar lo decide `version_kit`; lo que se añade aquí es decir con honradez
-# cuánto se ha podido comparar cuando no hay consejo.
+# La que ha cargado esta conversación, y nada más: actualizar y recargar es cosa de Claude Code
+# (auto-update del marketplace y `/reload-plugins`).
 echo
-version_kit "$(cd "$DIR/.." && pwd)"
-if [ -z "$VER_CORRE" ]; then
-    echo "▶ Kit: no encuentro su plugin.json junto a los scripts"
-elif [ -n "$CONSEJO_VERSION" ]; then
-    echo "▶ Kit: ⚠️  $CONSEJO_VERSION"
-elif [ -n "$VER_INSTALADA" ] && [ -n "$VER_CLON" ]; then
-    echo "▶ Kit: corre la $VER_CORRE, la misma que está instalada y que trae el marketplace"
-elif [ -n "$VER_CLON" ]; then
-    echo "▶ Kit: corre la $VER_CORRE, la misma que trae el marketplace; la instalada no la puedo leer"
+VER_KIT="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$DIR/../.claude-plugin/plugin.json" 2>/dev/null | head -1)"
+if [ -n "$VER_KIT" ]; then
+    echo "▶ Kit: $VER_KIT"
 else
-    echo "▶ Kit: corre la $VER_CORRE; no encuentro el marketplace con el que compararla"
+    echo "▶ Kit: no encuentro su plugin.json junto a los scripts"
 fi
 
 exit 0

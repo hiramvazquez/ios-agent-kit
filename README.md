@@ -114,12 +114,11 @@ Qué hace cada pieza, cuándo se dispara y **qué no hace** está en [PIEZAS.md]
 ```bash
 bash scripts/autocomprueba.sh          # ANTES de publicar: comprueba lo que el CLI rechaza
 # sube la versión en .claude-plugin/plugin.json, commit y push
-claude plugin marketplace update hiram-kits
-claude plugin update ios-agent-kit@hiram-kits    # `install` NO actualiza: dice "ya instalado"
 ```
 
-Y abre una conversación nueva: una reanudada puede seguir cargando la versión con la que
-empezó. `/kit-estado` avisa si la conversación va desfasada.
+Con auto-update activado para `hiram-kits`, Claude Code trae la versión nueva solo y
+`/reload-plugins` la carga; la vía manual está en
+[INSTALACION.md](docs/INSTALACION.md#actualizar). `/kit-estado` dice qué versión corre.
 
 ## La regla que impide que esto crezca
 

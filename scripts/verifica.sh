@@ -71,29 +71,6 @@ fi
 # probado solo. Avisa y lo deja escrito en el informe; no bloquea.
 SUCIO="$(git diff --name-only 2>/dev/null)"
 
-# ¿Estoy corriendo el kit que el proyecto cree que corre?
-#
-# Un plugin instalado no se actualiza solo, y una conversación reanudada puede seguir
-# cargando la versión con la que empezó. Qué versiones se comparan y qué se aconseja lo
-# decide `version_kit`, en `lib-kit.sh`, que es de donde lo toma también `/kit-estado`. Lo
-# único que es de aquí es mirar el REMOTO del marketplace, como mucho una vez al día y en
-# silencio sin red. No bloquea y no habla si no tiene nada que decir.
-version_kit "$(cd "$DIR/.." && pwd)"
-DESFASE="$CONSEJO_VERSION"
-if [ -n "$KIT_CLON" ]; then
-    STAMP="$ESTADO/.consulta-version"
-    if [ -z "$(find "$STAMP" -mtime -1 2>/dev/null)" ]; then
-        if GIT_TERMINAL_PROMPT=0 git -C "$KIT_CLON" fetch --quiet origin 2>/dev/null; then
-            touch "$STAMP"
-            REF="$(git -C "$KIT_CLON" rev-parse --verify --quiet origin/HEAD || echo origin/main)"
-            REM_VER="$(git -C "$KIT_CLON" show "$REF:.claude-plugin/plugin.json" 2>/dev/null | version_json)"
-            # El marketplace se nombra por su NOMBRE, no por su ruta.
-            [ -n "$REM_VER" ] && [ "$REM_VER" != "$VER_CLON" ] && \
-                DESFASE="corriendo $VER_CORRE, publicada $REM_VER → claude plugin marketplace update ${KIT_CLON##*/} && claude plugin update $KIT_ID, y después abre una conversación nueva"
-        fi
-    fi
-fi
-
 FALLOS=0
 INFORME=""
 paso() {  # paso "<nombre>" <comando...>   ← lo usa kit.conf
@@ -136,10 +113,6 @@ case "$DUP" in
   *"sin lógica repetida"*) INFORME="${INFORME}${DUP}"$'\n' ;;
   *) INFORME="${INFORME}⚠️  lógica repetida (mírala, no bloquea):"$'\n'"${DUP}"$'\n' ;;
 esac
-
-if [ -n "$DESFASE" ]; then
-    INFORME="${INFORME}"$'\n'"⚠️  KIT DESFASADO: $DESFASE"$'\n'
-fi
 
 if [ -n "$LIMITES" ]; then
     INFORME="${INFORME}"$'\n'"LO QUE ESTA FIRMA NO CUBRE, según este proyecto:"$'\n'
@@ -232,7 +205,6 @@ TOOLCHAIN="$(toolchain)"
 } > "$MARKER"
 
 printf '%s' "$INFORME"
-[ -n "$DESFASE" ] && echo "⚠️  kit desfasado: $DESFASE"
 [ -n "$SUCIO" ] && echo "⚠️  hay cambios sin stagear: se ha verificado el árbol entero, y un commit del índice lleva menos."
 # El alcance va EN la línea del veredicto, no debajo: una línea aparte se lee como un aviso
 # más y se salta.

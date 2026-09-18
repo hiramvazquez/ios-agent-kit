@@ -194,7 +194,11 @@ igual "$C" 0; caso $? "un marker sin los campos nuevos sigue siendo válido ($C)
 # simula con un shim que anuncia otra versión, y lo que se exige es que lo DIGA y que NO
 # bloquee — hay proyectos que usan un toolchain de swift.org a propósito.
 FALSO="$TMP/falso_swift"; mkdir -p "$FALSO"
-printf '#!/bin/sh\necho "Apple Swift version 9.9.9 (swiftlang-9.9.9)"\n' > "$FALSO/swift"
+# Sin «Apple» a propósito: es el banner de un toolchain de swift.org, y con el prefijo
+# obligatorio en el patrón de `version_swift` este shim se leía igual con las dos versiones del
+# patrón, así que el caso no protegía el arreglo que lo quitó. Lo midió el revisor: devolviendo
+# el prefijo, el banco seguía verde. Ahora un caso cubre las dos cosas.
+printf '#!/bin/sh\necho "Swift version 9.9.9 (swiftlang-9.9.9)"\n' > "$FALSO/swift"
 chmod +x "$FALSO/swift"
 S="$( cd "$TMP/verde" && HOME="$TMP/home" PATH="$FALSO:$PATH" bash "$VER" 2>&1 )"
 contiene "$S" "OJO: el swift del PATH"

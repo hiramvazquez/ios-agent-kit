@@ -51,7 +51,11 @@ case "${1:-}" in
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
     grep -q "^resultado: verde$" "$MARKER" \
         || { echo "❌ la última verificación salió en ROJO — arréglalo y vuelve a verificar"; exit 1; }
-    echo "✅ firma válida para este árbol"; exit 0
+    # El alcance sale del marker, no de detectarlo otra vez: lo que importa es con qué se
+    # FIRMÓ, no con qué esté la máquina ahora. Una firma anterior a este campo no lo tiene, y
+    # entonces esto responde como antes en vez de fallar.
+    TC="$(sed -n 's/^toolchain: //p' "$MARKER" | head -1)"
+    echo "✅ firma válida para este árbol${TC:+ · toolchain: $TC}"; exit 0
     ;;
 esac
 mkdir -p "$ESTADO"
@@ -124,6 +128,12 @@ paso() {  # paso "<nombre>" <comando...>   ← lo usa kit.conf
 }
 
 FUENTES="App Sources Packages"      # default razonable; kit.conf puede pisarlo
+
+# Qué NO cubre la firma de ESTE proyecto, en prosa y opcional. Vacío por defecto: un proyecto
+# que no lo declara no miente, pero el informe lo dice —«no declara límites»— en vez de dejar
+# creer que no hay ninguno. Lo escribe el proyecto porque el kit no puede saberlo: qué queda
+# fuera depende de qué pasos tenga y de qué valide su CI.
+LIMITES=""
 # shellcheck disable=SC1090
 . "$CONF"
 type verificaciones >/dev/null 2>&1 || {
@@ -154,6 +164,13 @@ if [ -n "$DESFASE" ]; then
     INFORME="${INFORME}"$'\n'"⚠️  KIT DESFASADO: $DESFASE"$'\n'
 fi
 
+if [ -n "$LIMITES" ]; then
+    INFORME="${INFORME}"$'\n'"LO QUE ESTA FIRMA NO CUBRE, según este proyecto:"$'\n'
+    INFORME="${INFORME}$(printf '%s\n' "$LIMITES" | sed 's/^/    /')"$'\n'
+else
+    INFORME="${INFORME}"$'\n'"ℹ️  este proyecto no declara los límites de su firma (LIMITES en kit.conf)."$'\n'
+fi
+
 if [ -n "$SUCIO" ]; then
     INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR. Lo que se ha"$'\n'
     INFORME="${INFORME}    verificado es el árbol entero; si commiteas solo el índice, commitearás MENOS"$'\n'
@@ -161,10 +178,18 @@ if [ -n "$SUCIO" ]; then
     INFORME="${INFORME}$(printf '%s\n' "$SUCIO" | sed 's/^/      /')"$'\n'
 fi
 
+# UNA sola llamada, y su resultado se escribe en la firma: el digest y `/kit-estado` leen esa
+# línea en vez de volver a detectar. Cuesta 0,3 s aquí (medido el 2026-09-17, tres corridas:
+# 0,33 · 0,31 · 0,30) y sería inaceptable en un hook que corre en cada turno.
+TOOLCHAIN="$(toolchain)"
+
 {
     echo "verificado: $(date -u +%FT%TZ)"
     echo "diff: $(huella_diff)"
     echo "rama: $(git rev-parse --abbrev-ref HEAD)"
+    # Lo que hace que «verificado» no se lea como «esto pasa» sino como «esto pasó aquí».
+    echo "toolchain: $TOOLCHAIN"
+    [ -n "$LIMITES" ] && echo "limites: declarados" || echo "limites: sin declarar"
     # Lo lee `--comprueba`. Sin esta línea, un marker de una corrida en rojo era
     # indistinguible de uno verde para la puerta de commit.
     [ "$FALLOS" -eq 0 ] && echo "resultado: verde" || echo "resultado: rojo ($FALLOS paso(s))"
@@ -175,8 +200,12 @@ fi
 printf '%s' "$INFORME"
 [ -n "$DESFASE" ] && echo "⚠️  kit desfasado: $DESFASE"
 [ -n "$SUCIO" ] && echo "⚠️  hay cambios sin stagear: se ha verificado el árbol entero, y un commit del índice lleva menos."
-[ "$FALLOS" -eq 0 ] && echo "✅ verificación en verde, firmada contra el árbol verificado." \
-                    || echo "❌ $FALLOS paso(s) en rojo — sin firma útil."
+# El alcance va EN la línea del veredicto, no debajo: una línea aparte se lee como un aviso
+# más y se salta. Aquí no se puede leer el verde sin leer con qué se consiguió.
+# `· toolchain: X` y no `con X`: con `no identificado`, «verde con no identificado» se lee
+# fatal, y la alternativa —un condicional para cambiar la frase— es código para una preposición.
+[ "$FALLOS" -eq 0 ] && echo "✅ verde · toolchain: $TOOLCHAIN · firmado contra el árbol verificado — no dice nada de otros toolchains." \
+                    || echo "❌ $FALLOS paso(s) en rojo · toolchain: $TOOLCHAIN — sin firma útil."
 
 # 0 verde · 1 rojo · 3 «no pude mirar». El rojo es 1 SIEMPRE, no el número de pasos: saliendo
 # con el recuento, exactamente TRES pasos en rojo son indistinguibles de «no hay kit.conf», y

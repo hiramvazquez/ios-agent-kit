@@ -1,5 +1,5 @@
 ---
-description: Verifica el proyecto (build, tests y lógica repetida) y firma el resultado contra el árbol que verificó.
+description: Verifica el proyecto (build, tests y lógica repetida) y firma el resultado contra el árbol que verificó, diciendo con qué toolchain y qué no cubre.
 allowed-tools: Bash
 ---
 

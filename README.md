@@ -20,6 +20,7 @@ scripts viven en el plugin, no en tu repo.
 | El agente escribe código correcto que rompe algo | **reviewer** — contexto fresco, una sola pregunta: ¿esto rompe algo? |
 | Empieza bien y acaba repitiendo lógica que ya existía | **detector de duplicados** — el mismo cuerpo de función en dos ficheros |
 | "Los tests pasan" dicho sobre un árbol que ya cambió | **verificación firmada** contra el `sha256` del árbol que se verificó |
+| "Verificado" leído como "esto pasa", cuando solo pasó aquí | la firma **declara su alcance**: con qué toolchain corrió, y qué no cubre según el propio proyecto |
 | Se olvida de las reglas a mitad de sesión, o tras compactar | **inyección del acuerdo** en cada turno y tras cada compactación |
 
 Y lo que **no** hace, dicho por delante: no impide que un modelo alucine, no obliga a nadie
@@ -141,6 +142,9 @@ sigue teniendo sentido sin él.
 
 ```bash
 FUENTES="App Packages"
+
+# Opcional: qué NO cubre tu firma. Viaja EN la firma, así que lo lee quien mira el verde.
+LIMITES="- El CI compila con otro Xcode: lo que solo falla ahí no lo ve esta firma."
 
 verificaciones() {
     paso "Platform · build"  bash -c 'cd Packages/Platform && swift build'

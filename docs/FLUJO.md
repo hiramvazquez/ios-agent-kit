@@ -116,6 +116,10 @@ Corre lo que diga tu `kit.conf`, pasa el detector de duplicados, y **firma el re
 contra el `sha256` del árbol que acaba de verificar**. La firma vive en
 `.agent-kit/verificacion.txt`, fuera de git.
 
+La firma dice **con qué** se verificó —`toolchain: Swift 6.4 · Xcode 27.0`— y **qué no cubre**,
+si tu `kit.conf` lo declara en `LIMITES`. Un verde no significa «esto pasa», significa «esto
+pasó aquí»: si tu CI compila con otra versión, eso lo dice el CI y no esta firma.
+
 Los duplicados **avisan, no bloquean**: uno puede ser deliberado, y eso lo decide quien
 tiene el cambio delante.
 

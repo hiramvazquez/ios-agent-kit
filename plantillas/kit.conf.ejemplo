@@ -1,10 +1,20 @@
 # kit.conf — el ÚNICO fichero que el kit necesita de tu proyecto.
 #
-# Lo lee `verifica.sh` del plugin. Define dos cosas: qué significa "verificado" aquí, y
-# dónde vive el código Swift.
+# Lo lee `verifica.sh` del plugin. Define tres cosas: qué significa "verificado" aquí, dónde
+# vive el código Swift, y qué NO cubre tu firma.
 
 # Dónde buscar duplicados. Directorios, separados por espacios.
 FUENTES="App Packages"
+
+# Qué NO cubre tu firma. OPCIONAL, en prosa, dos o tres líneas — no un ensayo. Lo que escribas
+# aquí viaja EN la firma: el informe lo imprime y `/kit-estado` dice que está declarado. Si no
+# lo declaras, el informe lo dice, que es mejor que dejar creer que no hay límites.
+#
+# Escribe lo que tu verificación local no puede ver, no lo que te gustaría tener. El caso que
+# hizo falta esto: una firma en verde con el CI en rojo doce corridas, porque el CI compilaba
+# con otro Xcode y el diagnóstico solo lo produce esa versión.
+LIMITES="- El CI compila con otro Xcode que esta máquina: lo que solo falla ahí no lo ve esta firma.
+- Los tests de UI quedan fuera: tardan minutos y van en CI."
 
 # Qué hay que ejecutar para dar el proyecto por verificado. Cada `paso` lleva un nombre
 # legible y un comando; si alguno sale distinto de 0, no hay firma.
@@ -39,6 +49,6 @@ verificaciones() {
     #         -destination "$D" -only-testing:MiAppTests CODE_SIGNING_ALLOWED=NO -quiet'
     #
     # Los UI tests suelen quedarse fuera (arrancan simulador, tardan minutos): van en CI.
-    # Pero decláralo como límite en un comentario — si no, alguien creerá que un cambio de
-    # UI está cubierto por esta firma, y no lo está.
+    # Cuando dejes algo fuera, ponlo en `LIMITES`, arriba — no en un comentario como este: un
+    # comentario no viaja a la firma, y alguien creerá que un cambio de UI está cubierto.
 }

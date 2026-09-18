@@ -103,6 +103,65 @@ huella_diff() {
     fi | shasum -a 256 | cut -d' ' -f1
 }
 
+# toolchain — imprime en UNA línea con qué se ha verificado.
+#
+# POR QUÉ EXISTE. La firma decía «verificado» y lo único que puede decir es «verificado con el
+# toolchain de esta máquina». El 2026-09-17 AppStarter llevaba doce corridas de CI en rojo con la
+# firma local en verde: el diagnóstico que lo tumbaba lo produce Swift 6.2.4 —el del CI— y no lo
+# produce Swift 6.4 —el de aquí—. Ninguna firma local puede ver eso; lo que sí puede es decir con
+# qué corrió, para que quien lea el verde sepa qué le falta.
+#
+# Vive aquí, y no en `verifica.sh`, por lo mismo que `huella_diff`: la escribe quien firma y la
+# LEEN el digest y `/kit-estado`. Pero esos dos leen la línea del marker, no vuelven a llamar
+# aquí — detectar cuesta 0,3 s, despreciable una vez por verificación e inaceptable en un hook
+# que corre en cada turno.
+#
+# UNA LÍNEA, y corta: la consume el digest, que se inyecta en cada turno. `Swift 6.4 · Xcode
+# 27.0` dice lo que hace falta; el build number no distingue nada que importe para esto.
+#
+# LA DIVERGENCIA que avisa es la que costó un día el 2026-09-15: el `swift` del PATH era el de
+# swiftly (6.3.3) mientras Xcode traía 6.4, y el build moría en `build-tool plugin failures` sin
+# compilar una línea, con un diagnóstico que no nombra el toolchain. Se AVISA, no se bloquea:
+# hay proyectos que usan un toolchain de swift.org a propósito.
+#
+# LÍMITE DECLARADO. Esto describe el entorno, no lo valida: si no hay nada que interrogar dice
+# «no identificado» y sale con 0. Un paso que aborta por no poder describir el entorno convierte
+# un dato informativo en una puerta, y el kit se usa en repositorios sin Xcode.
+toolchain() {
+    local swift_path="" swift_xcrun="" xcode="" linea=""
+
+    command -v swift >/dev/null 2>&1 && swift_path="$(version_swift swift)"
+    command -v xcrun >/dev/null 2>&1 && swift_xcrun="$(version_swift xcrun swift)"
+    command -v xcodebuild >/dev/null 2>&1 \
+        && xcode="$(xcodebuild -version 2>/dev/null | sed -n '1s/^Xcode //p')"
+
+    # El del PATH es el que ejecuta la mayoría de los pasos de un `kit.conf`; si no hay, el de
+    # `xcrun` es el que habría corrido.
+    [ -n "$swift_path" ] && linea="Swift $swift_path" \
+        || { [ -n "$swift_xcrun" ] && linea="Swift $swift_xcrun (vía xcrun)"; }
+    [ -n "$xcode" ] && linea="${linea:+$linea · }Xcode $xcode"
+
+    if [ -n "$swift_path" ] && [ -n "$swift_xcrun" ] && [ "$swift_path" != "$swift_xcrun" ]; then
+        linea="$linea · OJO: el swift del PATH ($swift_path) NO es el de Xcode ($swift_xcrun)"
+    fi
+
+    printf '%s\n' "${linea:-no identificado}"
+}
+
+# version_swift <orden…> — la versión de Swift que anuncia esa orden, o vacío.
+#
+# Separada de `toolchain` porque se interroga DOS veces —el del PATH y el de `xcrun`— y la
+# comparación de las dos es el aviso de divergencia. `head -1` porque `swift --version` imprime
+# también la línea del target, que aquí no aporta.
+#
+# El patrón NO exige «Apple»: un toolchain de swift.org en Linux anuncia `Swift version 6.0.3`,
+# y con el prefijo obligatorio esta función lo saltaba en silencio y la línea acabava
+# atribuyendo la corrida al Swift de `xcrun` — afirmando un compilador que no ejecutó los pasos.
+# Lo encontró el revisor; en macOS no es alcanzable, pero el modo de fallo era mentir, no callar.
+version_swift() {
+    "$@" --version 2>/dev/null | sed -n 's/.*Swift version \([0-9][0-9.]*\).*/\1/p' | head -1
+}
+
 # derivados_propios <raíz> — deja una variable puesta:
 #     DD_PROPIO  array con los directorios de DerivedData que son de ESE repositorio
 #

@@ -446,4 +446,33 @@ else
 fi
 rm -f "$MARCA_FIN"
 
+echo "▶ la línea de verificación dice con qué se firmó"
+
+# Este banco no tenía ni un caso sobre la línea de verificación del digest, y es la línea que
+# más se lee: llega en cada turno. Se firma de verdad —`verifica.sh` con un kit.conf trivial—
+# en vez de fabricar el marker a mano, porque la huella tiene que cuadrar con el árbol.
+repo firmado vacio si
+( cd "$TMP/firmado" && HOME="$TMP/home" bash "$DIR/verifica.sh" ) >/dev/null 2>&1
+TC_MARKER="$(sed -n 's/^toolchain: //p' "$TMP/firmado/.agent-kit/verificacion.txt" | head -1)"
+D="$(digest "$TMP/firmado")"
+contiene "$D" "Verificación: firmada contra el árbol actual (toolchain: $TC_MARKER)"
+caso $? "el digest nombra el toolchain que dice el marker" \
+    "sin esto, «firmada» se lee como «esto pasa» y el CI puede estar rojo con otro toolchain"
+
+# Y NO lo detecta por su cuenta: interrogar al compilador en cada turno costaría 0,3 s por turno.
+# `caso` recibe el código explícito y no `$?`: después de un `[ ]`, shellcheck avisa (SC2319)
+# de que ese `$?` es de una condición y no de un comando, y tiene razón.
+if [ "$(grep -c 'swift --version\|xcodebuild' "$HOOK")" = 0 ]
+then caso 0 "el hook no interroga a ningún compilador"
+else caso 1 "el hook no interroga a ningún compilador" \
+    "detectar el toolchain en el hook costaría 0,3 s en cada turno"
+fi
+
+# Un marker anterior a este campo: la línea queda como estaba, sin inventarse un dato.
+grep -v "^toolchain: " "$TMP/firmado/.agent-kit/verificacion.txt" > "$TMP/firmado/.agent-kit/v" \
+    && mv "$TMP/firmado/.agent-kit/v" "$TMP/firmado/.agent-kit/verificacion.txt"
+D="$(digest "$TMP/firmado")"
+contiene "$D" "Verificación: firmada contra el árbol actual."
+caso $? "con un marker sin ese campo, la línea queda como antes"
+
 resumen "el hook" "donde-la-regla-solo-llego-a-un-hermano"

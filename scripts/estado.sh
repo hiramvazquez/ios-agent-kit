@@ -121,10 +121,22 @@ fi
 # verde. Mirar solo la huella —como hace el digest— daría «firmada» tras una verificación en rojo.
 echo
 echo "▶ Verificación"
-echo "  $(bash "$DIR/verifica.sh" --comprueba 2>&1)"
+VEREDICTO="$(bash "$DIR/verifica.sh" --comprueba 2>&1)"
+echo "  $VEREDICTO"
 M=".agent-kit/verificacion.txt"
 if [ -f "$M" ]; then
     echo "  última: $(sed -n 's/^verificado: //p' "$M" | head -1) · $(sed -n 's/^resultado: //p' "$M" | head -1) · rama $(sed -n 's/^rama: //p' "$M" | head -1)"
+    # También cuando la firma ya no vale: saber CON QUÉ se verificó la última vez es justo lo
+    # que falta cuando el CI dice una cosa y la firma local decía otra.
+    TC="$(sed -n 's/^toolchain: //p' "$M" | head -1)"
+    LIM="$(sed -n 's/^limites: //p' "$M" | head -1)"
+    # Solo si el veredicto no lo trae ya: cuando la firma vale, `--comprueba` lo dice, y
+    # repetirlo dos líneas más abajo es ruido. Cuando NO vale, esta línea es la única que
+    # cuenta con qué se verificó la última vez, que es justo cuando se pregunta.
+    case "$VEREDICTO" in
+        *"toolchain: "*) [ -n "$TC" ] && echo "  límites del proyecto: ${LIM:-sin declarar}" ;;
+        *) [ -n "$TC" ] && echo "  toolchain: $TC · límites del proyecto: ${LIM:-sin declarar}" ;;
+    esac
 fi
 
 # ── Lógica repetida ────────────────────────────────────────────────────────────────────────────

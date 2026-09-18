@@ -52,7 +52,7 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 | comando | qué hace |
 |---|---|
 | `/kit-init` | prepara el proyecto: OpenSpec, `kit.conf`, reglas, `.gitignore` |
-| `/kit-verifica` | build, tests y duplicados, firmado contra el árbol que se verificó |
+| `/kit-verifica` | build, tests y duplicados, firmado contra el árbol que se verificó, con el toolchain que lo corrió y los límites que declare el proyecto |
 | `/kit-duplicados` | busca lógica repetida, a demanda — **todos** los grupos, también los preexistentes |
 | `/kit-doc` | dónde está la doc de los paquetes de los que dependes (rutas resueltas) |
 | `/kit-revisa` | lanza el revisor sobre la **rodaja** pendiente, no sobre el cambio entero |
@@ -69,6 +69,12 @@ Corre lo que diga tu `kit.conf` y escribe `.agent-kit/verificacion.txt` con el `
 **árbol de trabajo y del índice** —o solo del índice si el repositorio no tiene commits
 todavía—. Tres modos: verificar y firmar, `--informe` (imprime sin volver a correr) y
 `--comprueba` (¿la firma es de este árbol?).
+
+**Y la firma dice su alcance**, porque «verificado» se lee como «esto pasa» cuando solo afirma
+«esto pasó aquí». La cabecera lleva `toolchain:` —el compilador del PATH, el Xcode seleccionado,
+y un aviso si el del PATH no es el de Xcode— y `limites:`, según si tu `kit.conf` define
+`LIMITES` con lo que tu verificación NO cubre. Ese texto sale en el informe, y el toolchain
+también en `--comprueba`, en `/kit-estado` y en el digest de cada turno.
 
 **Firma los dos, y cada uno cierra un agujero distinto.** Con la huella solo del índice,
 verificar sin nada stageado firmaba el diff vacío y esa firma seguía valiendo después de

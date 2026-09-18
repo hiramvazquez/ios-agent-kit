@@ -146,4 +146,65 @@ igual "$C" 1; caso $? "sin ningún commit, stagear algo más invalida la firma (
 C="$(codigo "$TMP/sin_conf" --comprueba)"
 igual "$C" 1; caso $? "sin nada verificado, --comprueba rechaza ($C)"
 
+echo "▶ la firma declara su alcance"
+
+# Lo que se prueba aquí no es el formato por el formato: es que un verde no se pueda leer sin
+# leer con qué se consiguió. El rojo de AppStarter del 2026-09-17 duró doce corridas porque la
+# firma local decía «verificado» y el CI compilaba con otro toolchain.
+FIRMA="$(cat "$TMP/verde/.agent-kit/verificacion.txt")"
+contiene "$FIRMA" "toolchain: "; caso $? "la cabecera de la firma dice con qué se verificó"
+contiene "$FIRMA" "limites: sin declarar"
+caso $? "sin LIMITES en kit.conf, la cabecera lo dice en vez de callarlo"
+
+S="$(salida "$TMP/verde")"
+contiene "$S" "no declara los límites de su firma"
+caso $? "y el informe se lo dice a quien lo lee"
+contiene "$S" "toolchain: Swift"
+caso $? "la línea del verde nombra el toolchain"
+contiene "$S" "no dice nada de otros toolchains"
+caso $? "y dice que no habla de los demás" \
+    "sin esto, «verificación en verde» se lee como «esto pasa» y no como «esto pasó aquí»"
+
+C="$(salida "$TMP/verde" --comprueba)"
+contiene "$C" "toolchain: "; caso $? "--comprueba también dice con qué se firmó"
+
+# Con límites declarados: el texto del proyecto viaja al informe.
+repo_base con_limites no ; conf con_limites 0
+{
+    echo 'LIMITES="Los tests de UI no entran: tardan minutos y van en CI."'
+    cat "$TMP/con_limites/kit.conf"
+} > "$TMP/con_limites/kit.conf.nuevo" && mv "$TMP/con_limites/kit.conf.nuevo" "$TMP/con_limites/kit.conf"
+S="$(salida "$TMP/con_limites")"
+contiene "$S" "LO QUE ESTA FIRMA NO CUBRE"
+caso $? "con LIMITES declarado, el informe trae su rótulo"
+contiene "$S" "Los tests de UI no entran"
+caso $? "y trae el texto que escribió el proyecto"
+contiene "$(cat "$TMP/con_limites/.agent-kit/verificacion.txt")" "limites: declarados"
+caso $? "la cabecera de la firma dice que los declara"
+
+# Una firma ANTERIOR a este campo sigue valiendo: el riesgo declarado en el design. Se simula
+# quitándole las dos líneas nuevas a un marker verde, sin tocar el árbol.
+grep -v "^toolchain: \|^limites: " "$TMP/verde/.agent-kit/verificacion.txt" > "$TMP/verde/.agent-kit/v.viejo" \
+    && mv "$TMP/verde/.agent-kit/v.viejo" "$TMP/verde/.agent-kit/verificacion.txt"
+C="$(codigo "$TMP/verde" --comprueba)"
+igual "$C" 0; caso $? "un marker sin los campos nuevos sigue siendo válido ($C)" \
+    "si esto rechaza, actualizar el kit invalida la firma de todos los proyectos a la vez"
+
+# La divergencia que costó un día el 2026-09-15: el `swift` del PATH no es el de Xcode. Se
+# simula con un shim que anuncia otra versión, y lo que se exige es que lo DIGA y que NO
+# bloquee — hay proyectos que usan un toolchain de swift.org a propósito.
+FALSO="$TMP/falso_swift"; mkdir -p "$FALSO"
+printf '#!/bin/sh\necho "Apple Swift version 9.9.9 (swiftlang-9.9.9)"\n' > "$FALSO/swift"
+chmod +x "$FALSO/swift"
+S="$( cd "$TMP/verde" && HOME="$TMP/home" PATH="$FALSO:$PATH" bash "$VER" 2>&1 )"
+contiene "$S" "OJO: el swift del PATH"
+caso $? "si el swift del PATH no es el de Xcode, la firma lo dice"
+contiene "$S" "✅ verde · toolchain: Swift 9.9.9"
+caso $? "y avisa sin bloquear: la verificación sigue firmando" \
+    "bloquear aquí rompería a quien usa un toolchain de swift.org a propósito"
+# Y en el MARKER, no solo en la salida: es la firma la que tiene que llevarlo, porque es lo que
+# se lee después. Lo pidió el revisor: este caso asertaba sobre stdout y decía «la firma».
+contiene "$(cat "$TMP/verde/.agent-kit/verificacion.txt")" "OJO: el swift del PATH"
+caso $? "y la firma se lo queda, no solo la salida"
+
 resumen "verifica.sh" "el-kit-se-aplica-a-si-mismo"

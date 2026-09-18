@@ -16,6 +16,8 @@ Reglas al leerla:
   comando: la firma con `/kit-verifica`, los duplicados con `/kit-duplicados`.
 - **«Sin empujar» y «sin traer» son respecto al último `fetch`.** Si importa, haz `git fetch`
   primero.
+- **La línea de la firma dice su alcance**: con qué toolchain se verificó y si el proyecto
+  declara límites. Sale incluso cuando la firma ya no vale, que es cuando se pregunta.
 - **Si aconseja abrir una conversación nueva, es literal.** Una conversación reanudada puede seguir
   cargando la versión del kit con la que empezó, por mucho que ya haya otra instalada.
 - **Lo que sí toca, dicho:** carga el `kit.conf` del proyecto para saber dónde buscar duplicados

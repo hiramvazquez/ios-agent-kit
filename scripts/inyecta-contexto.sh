@@ -151,8 +151,12 @@ DEPDOC="$(cat "$CACHE" 2>/dev/null)"
 # tiene algo que firmar.
 M="$RAIZ/.agent-kit/verificacion.txt"
 if [ -f "$M" ]; then
+    # El toolchain sale del marker, NO se detecta: interrogar al compilador cuesta 0,3 s y
+    # esto corre en cada turno. Una firma anterior a ese campo no lo trae, y entonces la línea
+    # queda como estaba en vez de mentir con un dato que no tiene.
+    TC="$(sed -n 's/^toolchain: //p' "$M" | head -1)"
     grep -q "^diff: $(huella_diff)$" "$M" \
-        && add "· Verificación: firmada contra el árbol actual." \
+        && add "· Verificación: firmada contra el árbol actual${TC:+ (toolchain: $TC)}." \
         || add "· Verificación: la firma es de OTRO árbol — /kit-verifica antes de commitear."
 else
     add "· Verificación: sin firmar todavía."

@@ -6,14 +6,19 @@
 # cambiar de directorio.
 
 # cambio_activo — deja tres variables puestas:
-#     ACTIVO     ruta del cambio OpenSpec activo, o vacío si no hay ninguno
+#     ACTIVO     ruta del cambio OpenSpec activo SI HAY EXACTAMENTE UNO; vacío con ninguno
+#                y vacío con varios
 #     ACTIVOS_N  cuántos hay
 #     ACTIVOS    las rutas de TODOS, una por línea y en el mismo orden, o vacío
 #
+# Con varios no se designa ninguno: nada dice cuál es el de la sesión, y una pieza que actúe
+# sobre el primero afirma cosas del acuerdo de otro. Quien necesite uno lo recibe de quien lo
+# invoca, o dice que hay varios. El orden de la lista lo fija `LC_ALL=C sort`, para que sea el
+# mismo en cada invocación.
+#
 # Se llama SIN subshell —`cambio_activo` y luego `$ACTIVO`, nunca `$(cambio_activo)`—: una
 # sustitución de comandos se comería dos de las tres. `ACTIVOS` es una cadena y no un array
-# porque expandir un array vacío bajo `set -u` aborta en bash 3.2. El orden lo fija
-# `LC_ALL=C sort`: cuál es «el» activo cuando hay varios es arbitrario, pero estable.
+# porque expandir un array vacío bajo `set -u` aborta en bash 3.2.
 cambio_activo() {
     ACTIVO=""
     ACTIVOS=""
@@ -22,10 +27,13 @@ cambio_activo() {
     while IFS= read -r d; do
         [ -n "$d" ] || continue
         ACTIVOS_N=$((ACTIVOS_N + 1))
-        [ -z "$ACTIVO" ] && ACTIVO="$d"
         ACTIVOS="${ACTIVOS}${d}"$'\n'
     done < <(find openspec/changes -maxdepth 1 -mindepth 1 -type d ! -name archive 2>/dev/null \
              | LC_ALL=C sort)
+    # `if` y no `[ … ] && …`: como última orden, un `&&` fallido haría devolver 1 a la función.
+    # SC2034: se lee en los scripts que cargan esta lib, no aquí.
+    # shellcheck disable=SC2034
+    if [ "$ACTIVOS_N" -eq 1 ]; then ACTIVO="${ACTIVOS%$'\n'}"; fi
 }
 
 # recuento_tareas <cambio> — deja dos variables puestas:

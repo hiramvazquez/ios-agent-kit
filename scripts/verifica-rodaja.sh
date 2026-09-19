@@ -60,6 +60,37 @@ cambio "$TMP/dos_activos" zzz-nuevo "del nuevo"
 commitea "$TMP/dos_activos" propuestas
 echo "trabajo" > "$TMP/dos_activos/b.txt"
 
+# 6. Una marca MÁS VIEJA que el cambio: se revisó algo, después se commiteó trabajo de otro
+#    cambio sin pasar por el revisor, y después empezó este. Es lo que llegó a un proyecto
+#    real: la rodaja de un cambio de 12 líneas traía 1847, casi todas de antes de empezarlo.
+repo_base marca_vieja no
+( cd "$TMP/marca_vieja" && bash "$ROD" --revisada >/dev/null 2>&1 )
+echo "de otro cambio, anterior" > "$TMP/marca_vieja/ajeno.txt"
+commitea "$TMP/marca_vieja" "trabajo de otro cambio"
+cambio "$TMP/marca_vieja" cambio-seis "commiteada del seis"
+commitea "$TMP/marca_vieja" "propuesta aparte, antes que el codigo"
+echo "commiteado del cambio" > "$TMP/marca_vieja/src.txt"
+commitea "$TMP/marca_vieja" "primera tarea"
+echo "sin commitear del cambio" >> "$TMP/marca_vieja/base.txt"
+
+# 7. Una marca DENTRO del cambio: es el uso normal, y no puede cambiar. Con ficheros
+#    trackeados, porque `git stash create` no guarda los que están sin trackear.
+repo_base marca_dentro no
+cambio "$TMP/marca_dentro" cambio-siete "del siete"
+commitea "$TMP/marca_dentro" propuesta
+echo "tarea uno, ya revisada" >> "$TMP/marca_dentro/base.txt"
+( cd "$TMP/marca_dentro" && bash "$ROD" --revisada >/dev/null 2>&1 )
+echo "tarea dos, por revisar" >> "$TMP/marca_dentro/base.txt"
+
+# 8. La propuesta SIN commitear, una marca, y después un commit del propio cambio: el principio
+#    del cambio no se conoce, y si la marca se descartara ese commit no lo vería nadie.
+repo_base prop_sin_commitear no
+cambio "$TMP/prop_sin_commitear" cambio-ocho "del ocho"
+( cd "$TMP/prop_sin_commitear" && bash "$ROD" --revisada >/dev/null 2>&1 )
+echo "commiteado tras la marca" > "$TMP/prop_sin_commitear/src.txt"
+( cd "$TMP/prop_sin_commitear" && git add src.txt >/dev/null 2>&1 && git commit -qm "tarea dos" >/dev/null 2>&1 )
+echo "sin commitear" >> "$TMP/prop_sin_commitear/base.txt"
+
 # 5. Nada que juzgar: ningún cambio activo y el árbol limpio.
 #
 #    Ojo con lo que NO es este caso: un cambio cuyo proposal está commiteado y sin código
@@ -92,11 +123,70 @@ S="$(entregado "$TMP/nada")"
 contiene "$S" "NADA ENTREGADO"; caso $? \
     "sin cambio activo y con el árbol limpio, lo dice en vez de callarse"
 
-echo "▶ el modo rodaja no se toca"
+echo "▶ la rodaja del revisor"
 
-S="$( cd "$TMP/sin_commitear" && bash "$ROD" 2>&1 )"
+# rodaja <repo> [args…]
+rodaja() { local r="$1"; shift; ( cd "$r" && bash "$ROD" "$@" 2>&1 ); }
+
+S="$(rodaja "$TMP/sin_commitear")"
 contiene "$S" "RODAJA A REVISAR"; caso $? \
     "sin flag sigue siendo la rodaja del revisor"
+
+echo "▶ con varios cambios activos, no elige"
+
+S="$(rodaja "$TMP/dos_activos")"; COD=$?
+if [ "$COD" -ne 0 ] && contiene "$S" "aaa-viejo" && contiene "$S" "zzz-nuevo" \
+    && ! contiene "$S" "TAREAS" && ! contiene "$S" "RODAJA A REVISAR"; then
+    caso 0 "con dos cambios activos y sin ruta, los nombra, pide cuál y para (cod $COD)"
+else
+    caso 1 "con dos cambios activos y sin ruta, los nombra, pide cuál y para (cod $COD)" \
+        "elegía uno por su cuenta y avisaba: el revisor recibía las tareas de otro cambio"
+fi
+
+S="$(rodaja "$TMP/dos_activos" --revisada)"; COD=$?
+if [ "$COD" -ne 0 ] && [ ! -f "$TMP/dos_activos/.agent-kit/.ultima-revision" ]; then
+    caso 0 "con dos cambios activos y sin ruta, --revisada no mueve la marca"
+else
+    caso 1 "con dos cambios activos y sin ruta, --revisada no mueve la marca" \
+        "marcaba, y guardaba como revisadas las tareas de un cambio elegido por su cuenta"
+fi
+
+S="$(rodaja "$TMP/dos_activos" openspec/changes/zzz-nuevo)"
+CABECERA="$(printf '%s\n' "$S" | sed -n '1,/^RODAJA A REVISAR/p')"
+contiene "$CABECERA" "del nuevo" && ! contiene "$CABECERA" "del viejo"; caso $? \
+    "con dos cambios activos y la ruta de uno, las tareas son las de ese" \
+    "la ruta solo valía para --entregado: la rodaja listaba las tareas de otro cambio"
+
+echo "▶ la rodaja es del cambio que se revisa"
+
+S="$(rodaja "$TMP/marca_vieja")"
+if contiene "$S" "commiteado del cambio" && contiene "$S" "sin commitear del cambio" \
+    && ! contiene "$S" "de otro cambio, anterior"; then
+    caso 0 "con una marca anterior al cambio, no trae lo commiteado antes de que empezara"
+else
+    caso 1 "con una marca anterior al cambio, no trae lo commiteado antes de que empezara" \
+        "iba desde la marca, tuviera la edad que tuviera: el revisor pagaba el trabajo de otros cambios"
+fi
+
+S="$(rodaja "$TMP/marca_dentro")"
+contiene "$S" "tarea dos, por revisar" && ! contiene "$S" "+tarea uno, ya revisada"; caso $? \
+    "con una marca dentro del cambio, empieza en la marca" \
+    "descartaba también las marcas buenas y volvía a traer lo ya revisado"
+
+S="$(rodaja "$TMP/prop_sin_commitear")"
+contiene "$S" "commiteado tras la marca"; caso $? \
+    "con la propuesta sin commitear, lo commiteado tras la marca sigue en la rodaja" \
+    "sin principio conocido tomaba HEAD de suelo y descartaba la marca: ese commit no lo veía nadie"
+
+# Las dos mitades: la propuesta commiteada aparte (`marca_vieja`) y la que sigue sin trackear
+# (`sin_commitear`). Y lo entregado, que SÍ la lleva: es la evidencia del juez.
+S1="$(rodaja "$TMP/marca_vieja")"
+S2="$(rodaja "$TMP/sin_commitear")"
+S3="$(entregado "$TMP/sin_commitear")"
+! contiene "$S1" "openspec/changes/" && ! contiene "$S2" "openspec/changes/" \
+    && contiene "$S3" "openspec/changes/"; caso $? \
+    "la rodaja no vuelca openspec/changes/, y lo entregado sí" \
+    "volcaba la planificación entera: en la prueba real era el 91 % de lo que recibió el revisor"
 
 echo "▶ se juzga el cambio que se pide"
 
@@ -108,7 +198,7 @@ if contiene "$CABECERA" "del nuevo" && ! contiene "$CABECERA" "del viejo"; then
     caso 0 "con dos cambios activos, juzga el que se le nombra"
 else
     caso 1 "con dos cambios activos, juzga el que se le nombra" \
-        "ignoraba el argumento y cogía el primero por orden: el juez leía el acuerdo de uno y las tareas del otro"
+        "ignoraba el argumento y elegía por su cuenta: el juez leía el acuerdo de uno y las tareas del otro"
 fi
 
 S="$(entregado "$TMP/dos_activos" openspec/changes/no-existe)"

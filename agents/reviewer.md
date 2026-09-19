@@ -44,16 +44,20 @@ trocea fino; crearlo, no.
 ## Entrada
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh"   # qué ha cambiado DESDE la última revisión
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh" openspec/changes/<nombre>   # qué ha cambiado DESDE la última revisión
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/verifica.sh" --informe   # build, tests y duplicados
-cat openspec/changes/*/proposal.md               # el acuerdo, para saber qué es "fuera de scope"
+cat openspec/changes/<nombre>/proposal.md        # el acuerdo, para saber qué es "fuera de scope"
 ```
 
-`rodaja.sh` dice además qué tareas se cerraron desde la última vez: eso es lo que se revisa.
-Si no hay marca previa, la rodaja es todo lo que haya — la primera siempre es la más grande.
+`<nombre>` es el cambio que te han dicho que se implementa. Sin ruta, `rodaja.sh` usa el único
+cambio activo; con varios, los nombra y para: pregunta a quien te invocó, no elijas tú.
+
+`rodaja.sh` dice además qué tareas de ese cambio se cerraron desde la última vez: eso es lo que
+se revisa. La rodaja no empieza antes que el cambio ni trae `openspec/changes/` —el acuerdo lo
+lees del disco—. Si no hay marca previa, es todo lo que haya: la primera siempre es la más grande.
 
 Cuando termines, y **solo si tu veredicto no es RED**, quien te invocó marca el punto con
-`rodaja.sh --revisada`. Tú no lo marcas: no ejecutas nada que cambie estado del repo.
+`rodaja.sh --revisada <ruta>`. Tú no lo marcas: no ejecutas nada que cambie estado del repo.
 
 ## Cómo se revisa
 

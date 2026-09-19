@@ -45,7 +45,9 @@ que no pueden romper nada.
   elegir. **BREAKING** para quien invoque `rodaja.sh` o `rodaja.sh --revisada` a mano con
   varios cambios abiertos: antes elegía y avisaba, ahora para.
 - **La rodaja se ciñe al cambio que se revisa.** No empieza antes del principio de ese cambio
-  —el mismo que ya calcula `--entregado`—: una marca más vieja que eso no se usa. Y no vuelca
+  —el mismo que ya calcula `--entregado`—: una marca más vieja que eso no se usa. Ese principio
+  solo se conoce con la propuesta ya commiteada; sin eso la marca se respeta (enmendado el
+  2026-09-18 tras la revisión: ver `design.md` §4). Y no vuelca
   `openspec/changes/`: las tareas cerradas ya van en su propia lista, y el acuerdo el revisor
   lo lee del disco.
 - **`/kit-revisa` y el revisor pasan la ruta** en vez de explicar qué parte de la salida
@@ -108,7 +110,7 @@ que no pueden romper nada.
   por orden estable» pasa a exigir lo contrario, y entran los casos de los criterios. Nacen
   de un fallo que llegó a un proyecto real.
 - `commands/kit-revisa.md`, `agents/reviewer.md`, `docs/PIEZAS.md`. `agents/aceptacion.md` ya
-  pasa la ruta y no cambia.
+  pasa la ruta; cambia una frase, la que contaba qué hacía `--entregado` sin argumento.
 - `scripts/estado.sh` solo usa la lista y el recuento: no cambia.
 - Las tres specs de Capabilities, y el propósito de `cambio-activo`, que hoy dice que elegir
   entre varios es «arbitrario pero estable».

@@ -119,6 +119,11 @@ puede comprobar, el cambio OpenSpec activo con sus tareas pendientes y su «fuer
 qué dependencias traen reglas propias, y si la firma de verificación corresponde al árbol
 actual. La de las dependencias solo aparece si las hay.
 
+**Con varios cambios activos no afirma el acuerdo de ninguno:** los nombra con su recuento de
+tareas y dice que el acuerdo de la sesión es el del cambio en el que se trabaja. No recibe nada
+que le diga cuál es, y las tareas o el «fuera de alcance» de otro cambio, puestos delante en
+cada turno, se leen como propios.
+
 **Por qué así:** contra la deriva no sirve obligar a releer una skill: el modelo cree que se
 acuerda y no relee. Sirve que el texto esté delante **otra vez**, y que sea **corto**.
 
@@ -136,13 +141,19 @@ fuera de tu repositorio.
 ### `rodaja.sh` — qué queda por revisar
 
 Guarda dónde acabó la última revisión —un objeto de `git stash create`, sin tocar índice ni
-working tree— y enseña lo que ha cambiado desde ahí, con las tareas cerradas desde entonces.
-Con `--entregado <cambio>` da el cambio entero, incluidos los ficheros nuevos sin trackear, que
-es lo que necesita el juez: `git diff main...HEAD` está vacío cuando se le invoca, porque el
-commit es posterior al juicio.
+working tree— y enseña lo que ha cambiado desde ahí **en el cambio que se revisa**, con sus
+tareas cerradas desde entonces. El cambio se le pasa por su ruta (`rodaja.sh
+openspec/changes/<nombre>`); sin ruta usa el único activo, y con varios los nombra y para.
 
-**Límite declarado:** un fichero sin trackear aparece entero en cada rodaja hasta que se
-stagee. Se repite trabajo, no se pierde.
+La rodaja no empieza antes del principio de ese cambio —una marca más vieja no se usa— y no
+vuelca `openspec/changes/`, que es planificación. El principio se conoce cuando la propuesta ya
+está commiteada; mientras no lo esté, la rodaja va desde la marca. Con `--entregado <cambio>` da el cambio entero,
+planificación y ficheros nuevos sin trackear incluidos, que es lo que necesita el juez:
+`git diff main...HEAD` está vacío cuando se le invoca, porque el commit es posterior al juicio.
+
+**Límites declarados:** un fichero sin trackear aparece entero en cada rodaja hasta que se
+stagee; se repite trabajo, no se pierde. Y lo commiteado antes de que el cambio empezara no
+entra en su rodaja, lo haya revisado alguien o no.
 
 ### `busca-duplicados.py` — el mismo cuerpo en dos sitios
 

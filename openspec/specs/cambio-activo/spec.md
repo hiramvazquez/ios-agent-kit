@@ -6,9 +6,10 @@ Que todas las piezas del kit hablen del **mismo** cambio: la pregunta «¿cuál 
 activo?» la hacen el hook que inyecta el acuerdo en cada turno y la marca de revisión, y si cada
 una la responde por su cuenta pueden responderse distinto sin que nada lo diga.
 
-Lo que **no** pretende: elegir bien cuando hay varios. Cuál es «el» activo entre dos es
-arbitrario; lo que se exige es que sea **estable**, y que quien pregunte pueda decir que hay más
-de uno en vez de callárselo.
+Lo que **no** pretende: elegir cuando hay varios. Nada dice cuál es el de la sesión, y una pieza
+que actúa sobre uno elegido por su cuenta afirma cosas del acuerdo de otro. Lo que se exige es
+que la lista sea **estable**, que quien pregunte sepa que hay más de uno, y que el cambio
+concreto lo diga quien invoca.
 
 ## Requirements
 

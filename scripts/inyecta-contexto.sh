@@ -7,7 +7,8 @@
 # Inyecta cinco cosas y ninguna más:
 #   0. DE QUÉ REPOSITORIO habla,
 #   1. las reglas innegociables (las que no puede comprobar ningún linter),
-#   2. el cambio OpenSpec activo, con lo que queda por hacer y lo que está FUERA de alcance,
+#   2. el cambio OpenSpec activo, con lo que queda por hacer y lo que está FUERA de alcance
+#      — con VARIOS activos, solo sus nombres: no se afirma el acuerdo de ninguno,
 #   3. qué dependencias traen reglas propias — SOLO si las hay,
 #   4. si la firma de verificación corresponde al árbol actual.
 #
@@ -66,11 +67,21 @@ if [ ! -d openspec ]; then
 else
     cambio_activo
     ACT="$ACTIVO"
-    if [ -n "$ACT" ]; then
+    if [ "$ACTIVOS_N" -gt 1 ]; then
+        # Con varios, nombres y nada más: este hook no recibe nada que diga cuál es el de la
+        # sesión, y las tareas o el «fuera de alcance» de otro cambio, puestos delante en cada
+        # turno, se leen como el acuerdo propio. Hasta cinco, porque el digest se paga siempre.
+        add "· Cambios activos: $ACTIVOS_N — el acuerdo de esta sesión es el del cambio en el que trabajas; léelo en su carpeta."
+        VISTOS=0
+        while IFS= read -r c; do
+            VISTOS=$((VISTOS + 1))
+            [ "$VISTOS" -le 5 ] || break
+            recuento_tareas "$c"
+            add "    - ${c##*/}${TAREAS_TOTAL:+ ($TAREAS_HECHAS/$TAREAS_TOTAL)}"
+        done < <(printf '%s' "$ACTIVOS")
+        [ "$ACTIVOS_N" -gt 5 ] && add "    … y $((ACTIVOS_N - 5)) más"
+    elif [ -n "$ACT" ]; then
         add "· Cambio activo: ${ACT##*/}"
-        # Callarse cuál de los dos se ha elegido es peor que elegir: el digest afirmaría
-        # cosas de un acuerdo mientras se trabaja en el otro.
-        [ "$ACTIVOS_N" -gt 1 ] && add "    ⚠️  hay $ACTIVOS_N cambios activos; este es el primero por orden, no necesariamente el tuyo."
         # SOLO si hay lista: sin `tasks.md` no hay línea de recuento (ver `recuento_tareas`).
         PEND=0
         recuento_tareas "$ACT"

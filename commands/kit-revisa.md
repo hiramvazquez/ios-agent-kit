@@ -9,13 +9,9 @@ Lanza el sub-agente `reviewer` sobre **la rodaja pendiente**: lo que ha cambiado
 hace falta el diff. Ejecutarlo antes lo vuelca también en esta conversación, donde se queda para
 siempre, y el diff se acaba pagando dos veces.
 
-Dile qué cambio se está implementando —por su ruta— y que corra él la rodaja, el informe de
-`/kit-verifica` y el `proposal.md`. Su única pregunta es **¿esto rompe algo?** — corrección,
-seguridad o un requisito explícito del encargo.
-
-**Y dile qué hacer si la rodaja avisa de varios cambios activos:** `rodaja.sh` sin argumentos
-elige el primero por orden y solo avisa. Que se quede con la ruta que le has dado: lo único que
-depende de esa elección es la lista de tareas cerradas; el diff es del repositorio entero.
+Dile qué cambio se está implementando —por su ruta— y que corra él la rodaja **de ese cambio**,
+el informe de `/kit-verifica` y su `proposal.md`. Su única pregunta es **¿esto rompe algo?** —
+corrección, seguridad o un requisito explícito del encargo.
 
 ## Qué hacer con lo que devuelva, antes de tocar nada
 
@@ -30,10 +26,10 @@ Y cuenta las rondas contra el presupuesto que declaraste (`docs/FLUJO.md`). El m
 caro no es el hallazgo: es que **tu arreglo fabrique el siguiente**. Si la segunda ronda solo
 devuelve redacción, para y que decida el owner.
 
-Cuando devuelva **GREEN o AMBER**, marca el punto:
+Cuando devuelva **GREEN o AMBER**, marca el punto, con la misma ruta:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh" --revisada
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/rodaja.sh" --revisada openspec/changes/<nombre>
 ```
 
 Con **RED no se marca**: se arregla y se vuelve a pasar, y así lo arreglado entra en la

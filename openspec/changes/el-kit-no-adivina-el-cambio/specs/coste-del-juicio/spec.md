@@ -11,7 +11,9 @@ Lo que paga una ronda de revisión es el tamaño de lo que se le entrega. La rod
 2. Las tareas cerradas que lista SHALL ser las de ese cambio.
 3. La rodaja NO SHALL empezar antes del principio de ese cambio: una marca de revisión
    anterior a él NO SHALL usarse, y una posterior SHALL usarse como hoy. «El principio del
-   cambio» SHALL calcularse de una sola manera para la rodaja y para `--entregado`.
+   cambio» SHALL calcularse de una sola manera para la rodaja y para `--entregado`. Cuando
+   ese principio no se conoce —la propuesta aún sin commitear— la marca SHALL usarse: una
+   rodaja NO SHALL dejar fuera lo commiteado desde la última revisión.
 4. La rodaja NO SHALL volcar ficheros de `openspec/changes/`, trackeados o nuevos. La salida
    de `--entregado` NO SHALL cambiar por este requisito.
 5. Sin ningún cambio activo y sin ruta, la rodaja SHALL seguir yendo desde la marca.
@@ -31,6 +33,13 @@ cambio hecho a mitad de él sí entra, porque nada dice de quién es cada línea
 
 - **WHEN** la última revisión marcada es posterior al principio del cambio
 - **THEN** la rodaja empieza en la marca, y solo trae lo hecho desde entonces
+
+#### Scenario: La propuesta sigue sin commitear y hay un commit tras la marca
+
+- **WHEN** el `proposal.md` del cambio no está commiteado, se marcó una revisión y después se
+  commiteó código del cambio
+- **THEN** la rodaja empieza en la marca
+- **AND** contiene ese commit
 
 #### Scenario: La propuesta va en un commit aparte, antes que el código
 

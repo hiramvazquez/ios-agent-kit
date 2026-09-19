@@ -75,6 +75,14 @@ marca de la prueba (`576c959`, stash sobre `fafee38`) da «es ancestro» y se us
 vieja (`41ed19c`) da «no» y se usa el suelo. Una marca que ya no tiene relación con la rama
 —tras un rebase— también da «no», que es el lado seguro.
 
+**Sin suelo, la marca se respeta.** Con la propuesta aún sin commitear el principio no se
+conoce. La primera versión tomaba `HEAD` de suelo, y la ronda de revisión reprodujo lo que
+eso rompe: un commit del propio cambio hecho tras la marca quedaba por debajo de ese suelo
+móvil, la marca se descartaba, el commit no salía, y el `--revisada` siguiente lo enterraba.
+La regla de arriba solo se aplica con `SUELO` conocido. Lo que se pierde a cambio: en ese
+flujo una marca vieja sigue inflando la parte de código de la rodaja (161 líneas en lo
+medido, no 12); la planificación sigue fuera por la decisión 5.
+
 El suelo es el commit **anterior** al de la propuesta, no el de la propuesta: si propuesta y
 código entran en el mismo commit —lo habitual en AppStarter— el de la propuesta ya lleva
 código. Que así entren también los ficheros de planificación lo resuelve la decisión 5.

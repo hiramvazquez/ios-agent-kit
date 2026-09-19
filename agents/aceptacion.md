@@ -26,8 +26,8 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/verifica.sh" --informe    # build, tests y d
 ```
 
 **Escribe la ruta literal en cada comando, no una variable.** Cada invocación de Bash es un
-shell nuevo: una `CAMBIO=…` llega vacía a la siguiente, y `--entregado` sin argumento vuelve a
-elegir el primer cambio por orden — el acuerdo de uno con la lista de tareas del otro.
+shell nuevo: una `CAMBIO=…` llega vacía a la siguiente, y `--entregado` sin argumento solo
+sirve con un único cambio activo — con varios los nombra y para, sin entregarte nada.
 
 **`--entregado` te da el cambio entero: lo commiteado, lo staged, lo del árbol y los ficheros
 nuevos sin trackear**, desde antes de que existiera el proposal. No uses `git diff main...HEAD`

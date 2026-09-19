@@ -45,8 +45,8 @@ repo() {
                     > openspec/changes/mi-cambio/proposal.md ;;
             dos)
                 # CINCO cambios abiertos a la vez, creados en orden inverso al alfabético.
-                # OpenSpec permite varios, y el hook tiene que elegir por orden estable, no
-                # por el que devuelva el sistema de ficheros.
+                # OpenSpec permite varios, y el hook tiene que listarlos en orden estable, no
+                # en el que devuelva el sistema de ficheros.
                 #
                 # Cinco y no dos: con dos, el orden que APFS devuelve coincide con el
                 # alfabético y el caso pasaría igual con el código roto. Con cinco no
@@ -164,8 +164,9 @@ contiene "$D" "Reglas que ningún linter puede comprobar por ti"; caso $? \
 contiene "$D" "Un hallazgo se arregla en su causa"; caso $? \
     "entre ellas, qué hacer con un hallazgo de revisión" \
     "la cláusula la afirmaba el acuerdo y no la medía nada: borrar la línea dejaba el banco verde"
-contiene "$D" "mi-cambio"; caso $? \
-    "con cambio activo, lo nombra"
+contiene "$D" "Cambio activo: mi-cambio" && ! contiene "$D" "Cambios activos:"; caso $? \
+    "con UN cambio activo, lo nombra como el de la sesión" \
+    "con un solo cambio pasaba a la forma de varios: nombres sin tareas ni fuera de alcance"
 contiene "$D" "2. pendiente"; caso $? \
     "con cambio activo, lista lo que queda"
 contiene "$D" "no tocar la caja fuerte"; caso $? \
@@ -327,27 +328,44 @@ else
         "emitía siempre UserPromptSubmit, aunque hooks.json registra el mismo script también en SessionStart(compact) — emitió «${E}»"
 fi
 
-echo "▶ con varios cambios activos, elige estable y lo dice"
+echo "▶ con varios cambios activos, nombra y no afirma"
 
 D1="$(digest "$TMP/dos_cambios")"
-D2="$(digest "$TMP/dos_cambios")"
-E1="$(printf '%s' "$D1" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
-E2="$(printf '%s' "$D2" | sed -n 's/.*Cambio activo: \([a-z-]*\).*/\1/p')"
-# Se exige el MÍNIMO por `LC_ALL=C`, no solo que dos corridas coincidan entre sí: dos `find`
+ORDEN="$(printf '%s\n' "$D1" | sed -n 's/^    - \([a-z][a-z-]*\).*/\1/p' | tr '\n' ' ')"
+# Se exige el orden `LC_ALL=C` ENTERO, no que dos corridas coincidan entre sí: dos `find`
 # seguidos sobre un directorio que no ha cambiado devuelven el mismo orden en cualquier
-# sistema de ficheros, así que comparar `E1` con `E2` pasaría igual con el código roto. Los
-# directorios se crean a propósito en orden inverso al alfabético (`bbb-segundo` antes que
-# `aaa-primero`), que es lo que separa «ordenado» de «lo que devolvió el sistema de ficheros».
-if [ "$E1" = "aaa-primero" ] && [ "$E1" = "$E2" ]; then
-    caso 0 "elige el primero por orden estable, no el que devuelva el sistema de ficheros"
-else
-    caso 1 "elige el primero por orden estable, no el que devuelva el sistema de ficheros" \
-        "elegía con head -1 sobre un find: el orden lo ponía el sistema de ficheros [$E1|$E2]"
-fi
+# sistema de ficheros, así que compararlas pasaría igual con el código roto. Los directorios
+# se crean a propósito en orden inverso al alfabético, que es lo que separa «ordenado» de «lo
+# que devolvió el sistema de ficheros».
+OK=1; [ "$ORDEN" = "aaa-primero bbb-segundo ccc-tercero ddd-cuarto eee-quinto " ] && OK=0
+caso "$OK" "lista los cambios en orden estable, no en el que devuelva el sistema de ficheros" \
+    "el orden lo ponía el sistema de ficheros [$ORDEN]"
 
-contiene "$D1" "5 cambios activos"; caso $? \
-    "con varios cambios activos, avisa de cuántos hay" \
-    "elegía uno y se lo callaba: el digest hablaba de un acuerdo mientras se trabajaba en el otro"
+contiene "$D1" "Cambios activos: 5" && contiene "$D1" "aaa-primero (0/1)"; caso $? \
+    "con varios cambios activos, dice cuántos hay y el recuento de cada uno" \
+    "no decía cuántos eran o no daba las tareas de cada cambio"
+
+# El fallo que llegó a un proyecto real: con dos cambios abiertos, el digest ponía delante
+# el «fuera de alcance» del otro, que nombraba justo la tarea de la sesión.
+FUGA=""
+for t in "Cambio activo:" "FUERA de alcance" "- [ ]" "pendiente de"; do
+    contiene "$D1" "$t" && FUGA="$FUGA «${t}»"
+done
+OK=1; [ -z "$FUGA" ] && OK=0
+caso "$OK" "con varios cambios activos, no afirma el acuerdo de ninguno" \
+    "inyectaba las tareas y el fuera de alcance de un cambio que podía no ser el de la sesión:$FUGA"
+
+contiene "$D1" "el del cambio en el que trabajas"; caso $? \
+    "con varios cambios activos, dice de quién es el acuerdo de la sesión" \
+    "listaba los cambios sin decir que el acuerdo es el del cambio en el que se trabaja"
+
+# Más de cinco: el digest se paga en cada turno, así que nombra cinco y cuenta el resto. El
+# hook lee el disco, no git: basta con crear los directorios.
+mkdir -p "$TMP/dos_cambios/openspec/changes/fff-sexto" "$TMP/dos_cambios/openspec/changes/ggg-septimo"
+D7="$(digest "$TMP/dos_cambios")"
+contiene "$D7" "Cambios activos: 7" && contiene "$D7" "… y 2 más" && ! contiene "$D7" "fff-sexto"
+caso $? "con más de cinco cambios activos, nombra cinco y dice cuántos quedan" \
+    "la lista crecía con cada cambio abierto, y el digest va en cada turno"
 
 echo "▶ no escribe en directorios compartidos"
 

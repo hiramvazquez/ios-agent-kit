@@ -22,7 +22,7 @@ final, con la cabeza fresca.
 - o cuando quien orquesta no es quien acordó.
 
 Cuesta una ronda entera, así que la decisión de pagarla es tuya y conviene tomarla al
-empezar, con el presupuesto de rondas de `docs/FLUJO.md` delante.
+empezar, con el presupuesto de rondas de `${CLAUDE_PLUGIN_ROOT}/docs/FLUJO.md` delante.
 
 Pásale el cambio: `openspec list` para ver cuál está activo, y su carpeta en
 `openspec/changes/<nombre>/`.
@@ -60,4 +60,4 @@ lo ha visto ningún revisor: el juez pregunta si es lo acordado, no si rompe alg
 quien arregló.
 
 Qué hacer si se agota el presupuesto de rondas con un DEVUELTO que no es del producto está en
-`docs/FLUJO.md`, paso 7.
+`${CLAUDE_PLUGIN_ROOT}/docs/FLUJO.md`, paso 7.

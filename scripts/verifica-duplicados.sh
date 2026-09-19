@@ -125,8 +125,12 @@ contiene "$S" "sin lógica repetida"; caso $? \
     "un árbol sin repeticiones: lo dice y no inventa"
 
 S="$(detecta "$TMP/copias" --tocados "$TMP/tocados-ajeno.txt")"
-contiene "$S" "sin lógica repetida" && contiene "$S" "preexistente"; caso $? \
-    "con --tocados, un grupo que este cambio no toca no se reporta: se cuenta"
+# Y que el número vaya con lo MIRADO: «N ficheros Swift que toque este cambio» afirmaba que el
+# cambio tocaba todo lo escaneado.
+contiene "$S" "sin lógica repetida que toque este cambio" && contiene "$S" "preexistente" \
+    && ! contiene "$S" "ficheros Swift que toque"; caso $? \
+    "con --tocados, un grupo que este cambio no toca no se reporta: se cuenta" \
+    "el mensaje limpio pegaba el recuento de ficheros escaneados a «que toque este cambio»"
 
 S="$(detecta "$TMP/copias" --tocados "$TMP/tocados-suyo.txt")"
 contiene "$S" "cuerpo(s) repetido(s)"; caso $? \

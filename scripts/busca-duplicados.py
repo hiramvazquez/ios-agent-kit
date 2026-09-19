@@ -124,8 +124,12 @@ if esparcidas:
         print()
 
 if not fallos and not esparcidas:
-    print(f"✅ sin lógica repetida en {len(ficheros)} ficheros Swift"
-          + (" que toque este cambio." if TOCADOS is not None else "."))
+    # El número es lo MIRADO, no lo tocado: pegado a «que toque este cambio» se leía como si
+    # el cambio tocara todos esos ficheros.
+    if TOCADOS is not None:
+        print(f"✅ sin lógica repetida que toque este cambio ({len(ficheros)} ficheros Swift mirados).")
+    else:
+        print(f"✅ sin lógica repetida en {len(ficheros)} ficheros Swift.")
 
 if ocultos:
     # Ni se ocultan a escondidas ni se repiten enteros: se cuentan, y hay un comando para

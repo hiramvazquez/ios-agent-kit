@@ -24,9 +24,7 @@ Descúbrelo, no lo supongas:
 - Mira si ya existe un script de build/test del proyecto antes de inventar comandos.
 
 Escribe `kit.conf` en la raíz con `${CLAUDE_PLUGIN_ROOT}/plantillas/kit.conf.ejemplo` como
-base, con **los comandos reales de este proyecto**. Y luego **corre `/kit-verifica`**: si
-no sale verde a la primera, el conf está mal y hay que arreglarlo ahora, no la primera vez
-que alguien intente commitear.
+base, con **los comandos reales de este proyecto**. Se verifica al final, con todo escrito.
 
 ## 3. Estado local fuera de git
 
@@ -45,6 +43,13 @@ Si el repo ya tiene `AGENTS.md` o `CLAUDE.md`, **no los dupliques**: cítalos de
 `context` y deja que sigan mandando ellos.
 
 ## Al terminar
+
+Stagea lo que ha escrito este comando —y solo eso: lo que ya hubiera cambiado en el árbol no
+es suyo— y **corre `/kit-verifica`**. Va al final y después de stagear porque se firman el
+árbol y el índice: verificar antes de escribir el `.gitignore`, o antes de stagear, deja la
+firma caducada y el primer commit pide verificar otra vez. Si no sale verde a la primera, el
+`kit.conf` está mal y hay que arreglarlo ahora, no la primera vez que alguien intente
+commitear. Además deja instalada la puerta de commit.
 
 Di en tres líneas qué ha quedado montado, qué comando verifica el proyecto, y cuál es el
 siguiente paso real: `/opsx:propose "<lo que quieras construir>"`.

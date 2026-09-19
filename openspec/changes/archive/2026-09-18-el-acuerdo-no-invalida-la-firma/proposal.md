@@ -13,7 +13,10 @@ se verifica dos veces por construcción.
   specs—, no lo que se compila. Cambiarlo después de firmar ya no invalida la firma, ni en el
   árbol ni en el índice.
 - **Todo lo demás sigue igual:** un cambio fuera de `openspec/` después de firmar la invalida,
-  y la puerta de commit lo bloquea como hasta ahora.
+  y la puerta de commit lo bloquea como hasta ahora. La firma sigue siendo del diff contra
+  `HEAD` y deja de valer cuando un commit se lleva el código firmado, así que el acuerdo se
+  commitea junto con el código; archivar en un commit aparte, después, pide otra verificación
+  como hoy.
 - **Las firmas que ya existen siguen valiendo** mientras `openspec/` no tenga cambios: con ese
   directorio limpio, la huella nueva es idéntica a la vieja.
 - **El hook `pre-commit` de cada proyecto** recibe la definición nueva la próxima vez que se

@@ -305,4 +305,46 @@ codigo "$TMP/un_rojo" >/dev/null
 C="$(commit "$TMP/un_rojo" commit -q -m rojo)"
 igual "$C" 1; caso $? "y bloquea el commit de un árbol cuya verificación salió en rojo ($C)"
 
-resumen "verifica.sh" "la-puerta-es-de-git"
+echo "▶ lo que se escribe en openspec/ después de firmar no invalida la firma"
+
+# El flujo de OpenSpec escribe en `openspec/` justo después de verificar —marcar la última
+# tarea, archivar—, y nada de eso cambia lo que se compila. Lo de fuera sigue invalidando.
+repo_base acuerdo no ; conf acuerdo 0
+(
+    cd "$TMP/acuerdo" || exit 1
+    mkdir -p openspec/changes/x openspec/specs/y openspec-notas
+    echo '- [ ] 1.1 algo' > openspec/changes/x/tasks.md
+    echo '# y' > openspec/specs/y/spec.md
+    echo nota > openspec-notas/n.txt
+    git add -A && git commit -qm acuerdo
+) >/dev/null 2>&1
+codigo "$TMP/acuerdo" >/dev/null
+
+echo '- [x] 1.1 algo' > "$TMP/acuerdo/openspec/changes/x/tasks.md"
+C="$(codigo "$TMP/acuerdo" --comprueba)"
+igual "$C" 0; caso $? "marcar una tarea en openspec/ después de firmar no invalida la firma ($C)"
+( cd "$TMP/acuerdo" && git add openspec ) >/dev/null 2>&1
+C="$(codigo "$TMP/acuerdo" --comprueba)"
+igual "$C" 0; caso $? "stagearla tampoco ($C)"
+C="$(commit "$TMP/acuerdo" commit -q -m tarea)"
+igual "$C" 0; caso $? "y el commit que solo lleva eso pasa la puerta sin volver a verificar ($C)"
+
+(
+    cd "$TMP/acuerdo" || exit 1
+    mkdir -p openspec/changes/archive
+    git mv openspec/changes/x openspec/changes/archive/x
+    echo fundido >> openspec/specs/y/spec.md
+) >/dev/null 2>&1
+C="$(codigo "$TMP/acuerdo" --comprueba)"
+igual "$C" 0; caso $? "archivar el cambio y fundir su delta tampoco ($C)"
+
+echo otra >> "$TMP/acuerdo/base.txt"
+C="$(codigo "$TMP/acuerdo" --comprueba)"
+igual "$C" 1; caso $? "con el acuerdo cambiado, un cambio fuera de openspec/ sí la invalida ($C)"
+( cd "$TMP/acuerdo" && git checkout -q base.txt ) >/dev/null 2>&1
+
+echo otra >> "$TMP/acuerdo/openspec-notas/n.txt"
+C="$(codigo "$TMP/acuerdo" --comprueba)"
+igual "$C" 1; caso $? "openspec-notas/ no es openspec/: tocarlo la invalida ($C)"
+
+resumen "verifica.sh" "el-acuerdo-no-invalida-la-firma"

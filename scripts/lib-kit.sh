@@ -61,19 +61,33 @@ recuento_tareas() {
 # shellcheck disable=SC2034
 MARCA_PUERTA="ios-agent-kit: puerta de commit"
 
-# huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE.
+# huella_diff — el sha256 de lo que hay que firmar: el ÁRBOL DE TRABAJO **y** el ÍNDICE,
+# salvo `openspec/`.
 #
 # Los dos, porque cada uno cierra un agujero distinto: el árbol es lo que se compila y lo que
 # se lleva un `git commit -a` o un pathspec; el índice es lo que se lleva un `git commit` a
 # secas. El separador impide que un hunk migre de un diff al otro sin mover la huella.
 # Consecuencia asumida: stagear después de firmar invalida la firma. Sin ningún commit no
 # hay `HEAD`, y el índice es la única referencia. Única definición: la usan quien firma
-# (`verifica.sh`) y quien dice si la firma vale (el hook de contexto).
+# (`verifica.sh`), el hook `pre-commit` que genera (la copia con `declare -f`) y el digest.
+#
+# Sin `openspec/`, porque es el acuerdo y no lo que se compila, y OpenSpec escribe ahí justo
+# después de verificar: marcar tareas o archivar invalidaba una firma cuyo código no cambió.
+# `:(top)` para que no dependa del directorio desde el que se llame; la barra final para que
+# solo sea el directorio (un fichero llamado `openspec`, o un `src/openspec/`, se firman); y
+# `--no-literal-pathspecs` porque el hook hereda el entorno del commit, y con
+# `GIT_LITERAL_PATHSPECS=1` (`git --literal-pathspecs`, magit) git leería el pathspec como un
+# nombre, los diffs saldrían vacíos y pasaría código sin verificar. Con `openspec/` limpio da
+# el mismo número que sin la exclusión, así que las firmas ya escritas siguen valiendo.
+# LÍMITE DECLARADO: lo que vive en `openspec/` no queda firmado; si un `kit.conf` verifica
+# algo de ahí, un cambio posterior en ese directorio no lo invalida.
 huella_diff() {
     if git rev-parse --verify --quiet HEAD >/dev/null 2>&1; then
-        { git diff HEAD; echo '--- índice ---'; git diff --cached; }
+        { git --no-literal-pathspecs diff HEAD -- ':(top)' ':(top,exclude)openspec/'
+          echo '--- índice ---'
+          git --no-literal-pathspecs diff --cached -- ':(top)' ':(top,exclude)openspec/'; }
     else
-        git diff --cached
+        git --no-literal-pathspecs diff --cached -- ':(top)' ':(top,exclude)openspec/'
     fi | shasum -a 256 | cut -d' ' -f1
 }
 

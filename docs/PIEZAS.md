@@ -51,8 +51,8 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 
 Corre lo que diga tu `kit.conf` y escribe `.agent-kit/verificacion.txt` con el `sha256` del
 **árbol de trabajo y del índice** —o solo del índice si el repositorio no tiene commits
-todavía—. Tres modos: verificar y firmar, `--informe` (imprime sin volver a correr) y
-`--comprueba` (¿la firma es de este árbol y de una verificación verde?).
+todavía—, **salvo `openspec/`**. Tres modos: verificar y firmar, `--informe` (imprime sin
+volver a correr) y `--comprueba` (¿la firma es de este árbol y de una verificación verde?).
 
 **La firma dice su alcance.** La cabecera lleva `toolchain:` —el compilador del PATH, el Xcode
 seleccionado, y un aviso si el del PATH no es el de Xcode— y `limites:`, según si tu
@@ -68,11 +68,20 @@ commitea el índice: entra contenido que nunca se compiló.
 
 **Y al firmar instala la puerta de commit** (abajo), para que la firma se exija de verdad.
 
-**Lo que cuesta, y es la norma que hay que saberse:** stagear después de firmar invalida la
-firma. Por eso **stagear, verificar y commitear van en tres comandos separados**: encadenar
-`git add && git commit` cambia el índice entre la firma y el commit, y la puerta lo rechaza
-con razón. Lo que queda abierto, y el informe avisa como árbol sucio, es lo contrario:
+**Lo que cuesta, y es la norma que hay que saberse:** stagear código después de firmar
+invalida la firma. Por eso **stagear, verificar y commitear van en tres comandos separados**:
+encadenar `git add && git commit` cambia el índice entre la firma y el commit, y la puerta lo
+rechaza con razón. Lo que queda abierto, y el informe avisa como árbol sucio, es lo contrario:
 commitear **menos** de lo verificado.
+
+**`openspec/` queda fuera de la huella**, porque es el acuerdo y no lo que se compila, y el
+flujo escribe ahí justo después de verificar: marcar la última tarea, anotar la ronda,
+archivar. Nada de eso invalida la firma, así que se commitea todo junto sin volver a
+verificar. La firma sigue siendo del diff contra `HEAD`, así que deja de valer cuando un
+commit se lleva el código firmado: después, un commit que solo toque `openspec/` pide otra
+verificación, como antes.
+**Límite declarado:** lo que vive en `openspec/` no queda firmado; si tu `kit.conf` verifica
+algo de ahí —un `openspec validate`—, un cambio posterior en ese directorio no lo invalida.
 
 **Límite declarado:** `verifica.sh` **ejecuta** tu `kit.conf` (lo carga con `.`). Verificar
 es correr código del repositorio en el que estás; sobre un repositorio clonado de fuera,

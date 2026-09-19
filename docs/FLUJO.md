@@ -212,8 +212,10 @@ recarga al volver o no?»*, la respuesta está escrita, con la razón al lado.
 ## 8. Commit y cierre del ticket
 
 Al intentar `git commit`, la puerta —un hook `pre-commit` de git que `/kit-verifica` dejó
-instalado en el repositorio— comprueba la firma. Si el árbol cambió desde que verificaste,
-bloquea y dice por qué, desde cualquier terminal y con cualquier forma de escribir el comando.
+instalado en el repositorio— comprueba la firma. Si algo fuera de `openspec/` cambió desde
+que verificaste, bloquea y dice por qué, desde cualquier terminal y con cualquier forma de
+escribir el comando. Archivar entre la verificación y el commit no obliga a verificar otra
+vez: commitea el código y el acuerdo juntos.
 Stagear, verificar y commitear van por separado, y la razón está en
 [PIEZAS.md](PIEZAS.md#verificash--la-firma).
 

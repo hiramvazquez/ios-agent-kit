@@ -17,15 +17,17 @@ misma máquina.
 
 La puerta de commit SHALL ser un hook `pre-commit` de git instalado en el repositorio del
 proyecto, y SHALL decidir con la misma regla que la comprobación de firma: la firma tiene que
-ser del árbol y del índice que se van a commitear, y de una verificación que salió verde.
+ser del árbol y del índice que se van a commitear —fuera de `openspec/`, que la huella no
+cubre—, y de una verificación que salió verde.
 
 1. Un `git commit` sin firma válida SHALL fallar antes de crear el commit, con un mensaje que
    diga qué hacer.
 2. La decisión NO SHALL depender del directorio desde el que se invoca git, de la forma en que
    se escribe el comando ni de la herramienta que lo lanza: un `git -C`, un `cd` previo, un
    `bash -c` y una terminal ajena a Claude Code SHALL dar el mismo resultado.
-3. Stagear en el propio commit —`-a` o un pathspec— después de firmar SHALL bloquear, porque
-   cambia el índice firmado.
+3. Stagear en el propio commit —`-a` o un pathspec— algo de fuera de `openspec/` después de
+   firmar SHALL bloquear, porque cambia el índice firmado. Lo que se stagee de `openspec/` NO
+   SHALL bloquear.
 4. En un repositorio sin ningún commit todavía, SHALL comprobar la huella del índice, que es
    la única referencia que existe.
 5. Sin `kit.conf` en la raíz del repositorio, el hook SHALL dejar pasar: ese repositorio ya no
@@ -48,7 +50,13 @@ ser del árbol y del índice que se van a commitear, y de una verificación que 
 #### Scenario: El commit stagea por su cuenta
 
 - **WHEN** hay firma verde y se commitea con `-a` o con un pathspec tras modificar el árbol
+  fuera de `openspec/`
 - **THEN** el commit no se crea
+
+#### Scenario: El commit lleva el acuerdo actualizado
+
+- **WHEN** hay firma verde y, después, solo se ha cambiado y stageado algo dentro de `openspec/`
+- **THEN** el commit pasa con esa firma, sin volver a verificar
 
 #### Scenario: Desde otro directorio o con otra forma de invocación
 

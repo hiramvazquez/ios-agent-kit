@@ -38,8 +38,11 @@ cada escritura obligaba a verificar otra vez un árbol cuyo código no había ca
 
 **Límites declarados.** Sigue siendo posible commitear **menos** de lo verificado —stagear una
 parte y commitear solo esa—. Eso lo avisa el informe como árbol sucio, y no bloquea: quien tiene
-trabajo en curso aparte decide. Y lo que vive en `openspec/` no queda firmado: si un proyecto
-verifica algo de ahí en su `kit.conf`, un cambio posterior en ese directorio no lo invalida.
+trabajo en curso aparte decide. Lo que vive en `openspec/` no queda firmado: si un proyecto
+verifica algo de ahí en su `kit.conf`, un cambio posterior en ese directorio no lo invalida. Y
+la huella sigue siendo del diff contra `HEAD`: la firma deja de valer cuando un commit se
+lleva el código firmado, y después un commit que solo toque `openspec/` necesita otra
+verificación.
 
 #### Scenario: El índice lleva algo que el árbol ya no
 

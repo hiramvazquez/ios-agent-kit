@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Verifica el proyecto y FIRMA que la verificación corrió contra ESTE diff.
 #
-# El marker liga el resultado al sha256 del árbol de trabajo Y del índice: entre los dos está
-# todo lo que un commit puede llevarse. Stagear después de firmar cambia el índice y por tanto
-# invalida la firma — por eso stagear, verificar y commitear van en comandos separados.
+# El marker liga el resultado al sha256 del árbol de trabajo Y del índice, salvo `openspec/`:
+# entre los dos está todo lo que un commit puede llevarse. Stagear código después de firmar
+# cambia el índice y por tanto invalida la firma — por eso stagear, verificar y commitear van
+# en comandos separados. Qué cubre la huella y qué no, en `huella_diff` (`lib-kit.sh`).
 #
 # Sin esto, "los tests pasan" es una afirmación sobre un árbol que pudo cambiar después de
 # correrlos — el fallo de proceso más común y el que menos rastro deja.
@@ -148,9 +149,9 @@ instala_puerta() {
         echo '#!/usr/bin/env bash'
         echo "# $MARCA_PUERTA. La regenera verifica.sh en cada firma; no la edites."
         echo '# Exige que la firma de .agent-kit/verificacion.txt sea del árbol y del índice que se'
-        echo '# van a commitear, y de una verificación verde. Si el repositorio ya no tiene kit.conf,'
-        echo '# deja pasar: ya no usa el kit. No frena --no-verify, un git que no lea los hooks del'
-        echo '# repositorio, ni los commits de merge, revert, cherry-pick o rebase.'
+        echo '# van a commitear, salvo openspec/, y de una verificación verde. Si el repositorio ya'
+        echo '# no tiene kit.conf, deja pasar: ya no usa el kit. No frena --no-verify, un git que no'
+        echo '# lea los hooks del repositorio, ni los commits de merge, revert, cherry-pick o rebase.'
         echo 'set -u'
         echo 'RAIZ="$(git rev-parse --show-toplevel)" || exit 1'
         echo 'cd "$RAIZ" || exit 1'

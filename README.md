@@ -21,8 +21,9 @@ hace falta.
 | Se olvida de las reglas a mitad de sesión, o tras compactar | **inyección del acuerdo** en cada turno y tras cada compactación |
 
 Lo que **no** hace: no impide que un modelo alucine, no obliga a nadie a leer una skill, y no
-defiende contra alguien decidido a saltárselo (`--no-verify`, otra terminal). Frena el **error
-de proceso**, que es el fallo real y el más caro.
+defiende contra alguien decidido a saltárselo; qué deja abierto la puerta de commit está en
+[PIEZAS.md](docs/PIEZAS.md#la-puerta-de-commit--un-hook-de-git). Frena el **error de
+proceso**, que es el fallo real y el más caro.
 
 ## Puesta en marcha
 

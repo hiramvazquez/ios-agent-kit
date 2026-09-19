@@ -294,6 +294,7 @@ cambio activo y `openspec list` enseña; y los duplicados: extraer, o dejarlo co
 ## Lo que este flujo NO hace
 
 No impide que el modelo alucine; no obliga a nadie a leer una skill (pone el texto delante,
-no fuerza la lectura); y no defiende contra quien se lo quiera saltar (`--no-verify`, otra
-terminal). Lo que sí hace: frena el **error de proceso** —el modelo no miente, se olvida— y
-convierte la deriva en algo visible y comprobable.
+no fuerza la lectura); y no defiende contra quien se lo quiera saltar: qué deja abierto la
+puerta está en [PIEZAS.md](PIEZAS.md#la-puerta-de-commit--un-hook-de-git). Lo que sí hace:
+frena el **error de proceso** —el modelo no miente, se olvida— y convierte la deriva en algo
+visible y comprobable.

@@ -122,6 +122,10 @@ dentro de la misma máquina.
 
 **Cuándo:** en cada turno (`UserPromptSubmit`) y tras cada compactación.
 
+**Son los dos únicos hooks de Claude Code del kit**, y los dos llaman a este script. Cada uno
+existe porque resuelve un fallo observado, no por simetría. Un tercero tiene que traer escrito
+el fallo que lo motiva.
+
 Inyecta cinco cosas y ninguna más: de qué repositorio habla —el plugin se instala para el
 usuario, no para un proyecto, así que no es un dato gratis—, las reglas que ningún linter
 puede comprobar, el cambio OpenSpec activo con sus tareas pendientes y su «fuera de alcance»,

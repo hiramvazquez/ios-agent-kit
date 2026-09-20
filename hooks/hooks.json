@@ -1,5 +1,4 @@
 {
-  "_nota": "Dos hooks y ninguno más. Cada uno existe porque resuelve un fallo observado, no por simetría. La puerta de commit no es un hook de Claude Code: es un hook pre-commit de git que instala verifica.sh. Si algún día hay un tercero, tiene que traer escrito el fallo que lo motiva.",
   "hooks": {
     "UserPromptSubmit": [
       {

@@ -16,7 +16,7 @@ Reglas al leer la salida:
 - Si sale el aviso de **lógica repetida**, míralo antes de seguir. No bloquea, pero si el
   duplicado lo ha añadido este cambio, es tuyo y toca resolverlo ahora — es mucho más caro
   después.
-- Se firma el árbol **y** el índice, salvo `openspec/`: stagear código después de firmar
+- Se firma el árbol, salvo `openspec/`: editar código después de firmar
   invalida la firma. Stagea antes de verificar, y commitea después, sin encadenar el `add` con
   el commit. Marcar tareas o archivar no la invalida. La razón está en
   `${CLAUDE_PLUGIN_ROOT}/docs/PIEZAS.md`, en la sección de `verifica.sh`.

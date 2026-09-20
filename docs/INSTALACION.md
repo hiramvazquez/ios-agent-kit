@@ -91,8 +91,8 @@ distintos y por eso fallan por separado:
 | `/opsx:propose`, `/opsx:apply`… | de `.claude/commands/` **del proyecto**, que instala `openspec init` | solo si la sesión tiene ese repo como raíz |
 
 **La puerta bloquea un commit que crees válido** — la firma es de otro árbol. Casi siempre es
-por encadenar `git add && git commit`: se firma el árbol **y** el índice, así que stagear
-después de firmar cambia lo firmado. Stagea, verifica y commitea por separado (la razón, en
+por editar el árbol después de firmar: se firma el árbol, así que cambiarlo invalida la
+firma. Stagear lo que ya se verificó, en cambio, no la invalida (la razón, en
 [PIEZAS.md](PIEZAS.md#verificash--la-firma)).
 
 **`openspec list --specs` dice `requirements 0`** — tu spec es prosa que el parser no

@@ -1,17 +1,4 @@
-# puerta-de-commit Specification
-
-## Purpose
-
-Impedir que se commitee un árbol que nadie ha verificado. Sin esta puerta, «los tests pasan»
-es una afirmación del modelo sobre un árbol que pudo cambiar después de correrlos: error de
-proceso, no mala fe, y el más caro porque no deja rastro.
-
-Es un hook `pre-commit` de git del repositorio del proyecto, que instala la verificación al
-firmar. Lo que NO pretende: frenar a quien decide saltársela. `--no-verify` y un git que no
-lea los hooks del repositorio siguen abiertos, y eso no se puede cerrar desde dentro de la
-misma máquina.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: La puerta es un hook de git del repositorio
 
@@ -81,42 +68,3 @@ verificación que salió verde, y el índice no puede llevar contenido distinto 
 
 - **WHEN** el repositorio no tiene `HEAD` y hay firma verde de su índice
 - **THEN** el commit pasa
-
-### Requirement: La verificación instala la puerta
-
-`verifica.sh` SHALL instalar o refrescar el hook `pre-commit` del repositorio cada vez que
-firma, sin pisar un hook que no sea suyo.
-
-1. Si no hay `pre-commit`, o el que hay lleva la marca del kit, SHALL escribirlo con la huella
-   copiada de la única definición del kit, y hacerlo ejecutable.
-2. Si hay un `pre-commit` sin la marca del kit, o `core.hooksPath` está configurado, NO SHALL
-   modificar nada, y el informe SHALL decir qué fichero es y qué línea añadir.
-3. SHALL instalarlo también cuando la verificación sale en rojo: la puerta tiene que existir
-   para bloquear ese árbol.
-4. La primera vez que lo instala en un repositorio, el informe SHALL decirlo; si no puede
-   escribirlo, el informe SHALL decir que el repositorio queda sin puerta, y NO SHALL decir
-   que la instaló.
-
-#### Scenario: Primera verificación en un repositorio
-
-- **WHEN** `verifica.sh` firma en un repositorio sin `pre-commit`
-- **THEN** existe `.git/hooks/pre-commit`, ejecutable y con la marca del kit
-- **AND** el informe dice que lo ha instalado
-
-#### Scenario: Un hook ajeno
-
-- **WHEN** el repositorio ya tiene un `pre-commit` sin la marca del kit
-- **THEN** ese fichero queda byte a byte igual
-- **AND** el informe nombra el fichero y la línea que hay que añadirle
-
-#### Scenario: No se puede escribir el hook
-
-- **WHEN** el directorio de hooks no admite escritura
-- **THEN** el informe dice que el repositorio queda sin puerta
-- **AND** no dice que la haya instalado
-
-#### Scenario: Verificación en rojo
-
-- **WHEN** algún paso de `kit.conf` falla
-- **THEN** el hook se instala o refresca igual
-- **AND** un `git commit` posterior se bloquea

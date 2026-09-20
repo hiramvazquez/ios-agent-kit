@@ -140,9 +140,21 @@ if [ -f "$M" ]; then
     # El toolchain sale del marker, NO se detecta: interrogar al compilador cuesta 0,3 s y
     # esto corre en cada turno. Una firma sin ese campo deja la línea como estaba.
     TC="$(sed -n 's/^toolchain: //p' "$M" | head -1)"
-    grep -q "^diff: $(huella_diff)$" "$M" \
-        && add "· Verificación: firmada contra el árbol actual${TC:+ (toolchain: $TC)}." \
-        || add "· Verificación: la firma es de OTRO árbol — /kit-verifica antes de commitear."
+    # Las MISMAS TRES preguntas que la puerta, o el digest diría «firmada» en un árbol que el
+    # commit va a rechazar. Lo cazó el revisor el 2026-09-20 en dos vueltas: primero con el
+    # índice divergente, y después con la verificación en ROJO, donde el turno siguiente a un
+    # fallo empezaba diciendo «firmada».
+    if ! HUELLA="$(huella_diff)"; then
+        add "· Verificación: no se pudo fotografiar el árbol — /kit-verifica lo dirá."
+    elif ! grep -q "^diff: $HUELLA$" "$M"; then
+        add "· Verificación: la firma es de OTRO árbol — /kit-verifica antes de commitear."
+    elif ! grep -q '^resultado: verde$' "$M"; then
+        add "· Verificación: la última salió en ROJO — arréglalo y vuelve a verificar."
+    elif [ -n "$(indice_divergente)" ]; then
+        add "· Verificación: el ÍNDICE lleva algo que no se verificó — la puerta bloqueará el commit."
+    else
+        add "· Verificación: firmada contra el árbol actual${TC:+ (toolchain: $TC)}."
+    fi
 else
     add "· Verificación: sin firmar todavía."
 fi

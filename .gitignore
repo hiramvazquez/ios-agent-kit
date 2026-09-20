@@ -5,3 +5,6 @@
 
 # Lo deja el paso «sintaxis · python» de kit.conf al compilar busca-duplicados.py.
 __pycache__/
+
+# Lo deja `swift build`/SwiftPM al resolver el plugin de los paquetes de prueba.
+.build/

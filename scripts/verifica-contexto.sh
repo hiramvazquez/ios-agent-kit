@@ -436,7 +436,10 @@ contiene "$D" "Verificación: firmada contra el árbol actual (toolchain: $TC_MA
 caso $? "el digest nombra el toolchain que dice el marker" \
     "sin esto, «firmada» se lee como «esto pasa» y el CI puede estar rojo con otro toolchain"
 
-# Y NO lo detecta por su cuenta: interrogar al compilador en cada turno costaría 0,3 s por turno.
+# Y NO lo detecta por su cuenta: el dato ya está en el marcador, así que volver a interrogar al
+# compilador sería pagar 0,3 s por turno por algo que ya está escrito. No es un tope general de
+# gasto —la foto del árbol cuesta más y se paga, porque ES la pregunta—: es que un dato que ya
+# tienes no se vuelve a calcular.
 # `caso` recibe el código explícito y no `$?`: después de un `[ ]`, shellcheck avisa (SC2319)
 # de que ese `$?` es de una condición y no de un comando, y tiene razón.
 if [ "$(grep -c 'swift --version\|xcodebuild' "$HOOK")" = 0 ]
@@ -451,5 +454,27 @@ grep -v "^toolchain: " "$TMP/firmado/.agent-kit/verificacion.txt" > "$TMP/firmad
 D="$(digest "$TMP/firmado")"
 contiene "$D" "Verificación: firmada contra el árbol actual."
 caso $? "con un marker sin ese campo, la línea queda como antes"
+
+# El digest juzga la firma con las MISMAS dos preguntas que la puerta. AMBER del revisor
+# (2026-09-20): con el índice divergente decía «firmada contra el árbol actual» mientras el
+# `git commit` siguiente quedaba bloqueado, así que el turno empezaba con una afirmación falsa.
+repo divergente vacio si
+( cd "$TMP/divergente" && echo uno > uno.txt && git add uno.txt && git commit -qm base ) >/dev/null 2>&1
+( cd "$TMP/divergente" && HOME="$TMP/home" bash "$DIR/verifica.sh" ) >/dev/null 2>&1
+( cd "$TMP/divergente" && echo veneno > uno.txt && git add uno.txt && echo uno > uno.txt ) >/dev/null 2>&1
+D="$(digest "$TMP/divergente")"
+contiene "$D" "el ÍNDICE lleva algo que no se verificó"
+caso $? "con el índice divergente, el digest NO dice «firmada»" \
+    "decía «firmada contra el árbol actual» sobre un estado en el que la puerta bloquea"
+
+# Y la tercera pregunta de la puerta: una verificación en ROJO no es una firma. Segundo AMBER
+# del revisor, misma causa: el turno siguiente a un fallo empezaba diciendo «firmada».
+repo rojo vacio si
+printf 'FUENTES="."\nverificaciones() { paso "malo" false; }\n' > "$TMP/rojo/kit.conf"
+( cd "$TMP/rojo" && HOME="$TMP/home" bash "$DIR/verifica.sh" ) >/dev/null 2>&1
+D="$(digest "$TMP/rojo")"
+contiene "$D" "la última salió en ROJO"
+caso $? "tras una verificación en rojo, el digest NO dice «firmada»" \
+    "el marker conserva su línea diff, así que sin mirar «resultado» se lee como firmado"
 
 resumen "el hook" "donde-la-regla-solo-llego-a-un-hermano"

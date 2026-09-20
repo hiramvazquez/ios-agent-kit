@@ -46,12 +46,13 @@ Si el repo ya tiene `AGENTS.md` o `CLAUDE.md`, **no los dupliques**: cítalos de
 
 ## Al terminar
 
-Stagea lo que ha escrito este comando —y solo eso: lo que ya hubiera cambiado en el árbol no
-es suyo— y **corre `/kit-verifica`**. Va al final y después de stagear porque se firman el
-árbol y el índice: verificar antes de escribir el `.gitignore`, o antes de stagear, deja la
-firma caducada y el primer commit pide verificar otra vez. Si no sale verde a la primera, el
-`kit.conf` está mal y hay que arreglarlo ahora, no la primera vez que alguien intente
-commitear. Además deja instalada la puerta de commit.
+Con todo escrito, **corre `/kit-verifica`**. Va al final porque se firma el árbol: verificar
+antes de escribir el `.gitignore` deja la firma caducada y el primer commit pide verificar otra
+vez. Stagear lo que ha escrito este comando puede ir antes o después de firmar —stagear lo ya
+verificado no invalida la firma—, pero stagea **solo eso**: lo que ya hubiera cambiado en el
+árbol no es suyo. Si no sale verde a la primera, el `kit.conf` está mal y hay que arreglarlo
+ahora, no la primera vez que alguien intente commitear. Además deja instalada la puerta de
+commit.
 
 Di en tres líneas qué ha quedado montado, qué comando verifica el proyecto, y cuál es el
 siguiente paso real: `/opsx:propose "<lo que quieras construir>"`.

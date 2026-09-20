@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Verifica el proyecto y FIRMA que la verificación corrió contra ESTE diff.
 #
-# El marker liga el resultado al sha256 del árbol de trabajo Y del índice, salvo `openspec/`:
-# entre los dos está todo lo que un commit puede llevarse. Stagear código después de firmar
-# cambia el índice y por tanto invalida la firma — por eso stagear, verificar y commitear van
-# en comandos separados. Qué cubre la huella y qué no, en `huella_diff` (`lib-kit.sh`).
+# El marker liga el resultado a una foto del árbol de trabajo —la que hace git con
+# `write-tree`—, salvo `openspec/` y `.agent-kit/`. Tocar el árbol después de firmar invalida
+# la firma; stagear lo que ya se verificó, no. Que el índice no lleve otra cosa se comprueba
+# aparte, con `indice_divergente`. Las dos, en `huella_diff` (`lib-kit.sh`).
 #
 # Sin esto, "los tests pasan" es una afirmación sobre un árbol que pudo cambiar después de
 # correrlos — el fallo de proceso más común y el que menos rastro deja.
@@ -40,13 +40,25 @@ case "${1:-}" in
     [ -f "$MARKER" ] && cat "$MARKER" || echo "sin informe: nadie ha corrido verifica todavía"
     exit 0 ;;
 --comprueba)
-    # DOS condiciones, no una: la firma tiene que ser de este árbol Y de una verificación que
-    # salió VERDE. Con solo la huella, un marker de una corrida en rojo valdría.
+    # TRES condiciones, no una: la firma tiene que ser de este árbol, de una verificación que
+    # salió VERDE, y el índice no puede llevar contenido distinto del árbol firmado. Con solo
+    # la huella, un marker de una corrida en rojo valdría; sin la tercera, stagear contenido y
+    # devolver el fichero a `HEAD` deja la huella igual y el commit se lleva el índice.
     [ -f "$MARKER" ] || { echo "❌ nada verificado todavía"; exit 1; }
-    grep -q "^diff: $(huella_diff)$" "$MARKER" \
+    # El código de salida de la foto se mira SIEMPRE: si no se puede fotografiar el árbol, no
+    # hay con qué comparar, y dar eso por válido es abrir la puerta.
+    HUELLA="$(huella_diff)" \
+        || { echo "❌ no se pudo fotografiar el árbol — sin eso no hay firma que valga"; exit 1; }
+    grep -q "^diff: $HUELLA$" "$MARKER" \
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
     grep -q "^resultado: verde$" "$MARKER" \
         || { echo "❌ la última verificación salió en ROJO — arréglalo y vuelve a verificar"; exit 1; }
+    DIV="$(indice_divergente)"
+    [ -z "$DIV" ] || {
+        echo "❌ el índice lleva contenido que NO es el árbol verificado:"
+        printf '%s\n' "$DIV" | sed 's/^/     /'
+        echo "   stagea el árbol o vuelve a verificar: se commitea el índice, no el árbol."
+        exit 1; }
     # El alcance sale del marker, no de detectarlo otra vez: lo que importa es con qué se
     # FIRMÓ. Una firma sin ese campo responde sin él.
     TC="$(sed -n 's/^toolchain: //p' "$MARKER" | head -1)"
@@ -54,6 +66,7 @@ case "${1:-}" in
     ;;
 esac
 mkdir -p "$ESTADO"
+limpia_copias_viejas
 
 if [ ! -f "$CONF" ]; then
     cat >&2 <<'AYUDA'
@@ -122,6 +135,16 @@ else
     INFORME="${INFORME}"$'\n'"ℹ️  este proyecto no declara los límites de su firma (LIMITES en kit.conf)."$'\n'
 fi
 
+# El índice a medias no impide firmar —verificar no es commitear, y quien tiene el índice
+# así puede querer saber si su árbol está verde—, pero tiene que saberlo aquí y no en el
+# `git commit`, con el mensaje de la puerta.
+DIVERGENTE="$(indice_divergente)"
+if [ -n "$DIVERGENTE" ]; then
+    INFORME="${INFORME}"$'\n'"⚠️  ÍNDICE DIVERGENTE: estas rutas tienen stageado un contenido que NO es el que se"$'\n'
+    INFORME="${INFORME}    ha verificado. La puerta bloqueará el commit hasta que stagees el árbol:"$'\n'
+    INFORME="${INFORME}$(printf '%s\n' "$DIVERGENTE" | sed 's/^/      /')"$'\n'
+fi
+
 if [ -n "$SUCIO" ]; then
     INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR. Lo que se ha"$'\n'
     INFORME="${INFORME}    verificado es el árbol entero; si commiteas solo el índice, commitearás MENOS"$'\n'
@@ -148,22 +171,40 @@ instala_puerta() {
     {
         echo '#!/usr/bin/env bash'
         echo "# $MARCA_PUERTA. La regenera verifica.sh en cada firma; no la edites."
-        echo '# Exige que la firma de .agent-kit/verificacion.txt sea del árbol y del índice que se'
-        echo '# van a commitear, salvo openspec/, y de una verificación verde. Si el repositorio ya'
-        echo '# no tiene kit.conf, deja pasar: ya no usa el kit. No frena --no-verify, un git que no'
-        echo '# lea los hooks del repositorio, ni los commits de merge, revert, cherry-pick o rebase.'
+        echo '# Exige que la firma de .agent-kit/verificacion.txt sea del árbol que se va a commitear,'
+        echo '# salvo openspec/, de una verificación verde, y que el índice no lleve contenido distinto'
+        echo '# de ese árbol. Si el repositorio ya no tiene kit.conf, deja pasar: ya no usa el kit. No'
+        echo '# frena --no-verify, un git que no lea los hooks del repositorio, ni los commits de'
+        echo '# merge, revert, cherry-pick o rebase.'
         echo 'set -u'
         echo 'RAIZ="$(git rev-parse --show-toplevel)" || exit 1'
         echo 'cd "$RAIZ" || exit 1'
         echo '[ -f kit.conf ] || exit 0'
+        # TODAS las que usa la foto, no solo la de arriba: si falta una, dentro del hook queda
+        # indefinida, la foto falla y la puerta bloquea cualquier commit. Lo cazó el banco.
+        declare -f cache_foto
+        declare -f fallo_sin_huella
         declare -f huella_diff
+        declare -f indice_divergente
         cat <<'HOOK'
 M=".agent-kit/verificacion.txt"
-[ -f "$M" ] && grep -q "^diff: $(huella_diff)$" "$M" && grep -q '^resultado: verde$' "$M" && exit 0
+HUELLA="$(huella_diff)" || {
+    echo "❌ ios-agent-kit: no se pudo fotografiar el árbol, así que no hay firma que valga." >&2
+    echo "   Mira si hay ficheros sin permiso de lectura o un filtro de .gitattributes sin instalar." >&2
+    exit 1
+}
+DIV="$(indice_divergente)"
+if [ -n "$DIV" ]; then
+    { echo "❌ ios-agent-kit: el índice lleva contenido que NO es el árbol verificado:"
+      printf '%s\n' "$DIV" | sed 's/^/     /'
+      echo "   Se commitea el índice, no el árbol. Stagea el árbol o vuelve a verificar."; } >&2
+    exit 1
+fi
+[ -f "$M" ] && grep -q "^diff: $HUELLA$" "$M" && grep -q '^resultado: verde$' "$M" && exit 0
 cat >&2 <<'MSG'
 ❌ ios-agent-kit: no hay verificación firmada para lo que se va a commitear.
-   Stagea primero, corre /kit-verifica y commitea después, en un comando aparte: se firma el
-   árbol Y el índice, así que encadenar el `add` con el commit cambia lo firmado.
+   Corre /kit-verifica y commitea después. Stagear lo que ya se verificó no invalida la firma;
+   editar el árbol después de firmar, sí.
 MSG
 exit 1
 HOOK
@@ -191,9 +232,25 @@ instala_puerta
 # línea en vez de volver a detectar (cuesta 0,3 s, inaceptable en un hook de cada turno).
 TOOLCHAIN="$(toolchain)"
 
+# La foto, ANTES de escribir nada: si el árbol no se puede fotografiar no hay firma posible, y
+# escribir uno de todos modos sería peor que no escribir ninguno —el valor se guardaría y
+# después cuadraría consigo mismo—. Sale con 3, que es «no pude mirar», no «está mal».
+HUELLA="$(huella_diff)" || {
+    printf '%s\n' "$INFORME" >&2
+    cat >&2 <<'NOFOTO'
+
+❌ no se pudo fotografiar el árbol de trabajo, así que NO se firma nada.
+   Suele ser un fichero sin permiso de lectura para tu usuario, o un filtro declarado en
+   .gitattributes que no está instalado (Git LFS, por ejemplo). Arréglalo y vuelve a verificar.
+   El caché de la foto (~/.cache/ios-agent-kit/foto) ya se ha tirado por si era él: es
+   desechable, y la siguiente verificación lo reconstruye.
+NOFOTO
+    exit 3
+}
+
 {
     echo "verificado: $(date -u +%FT%TZ)"
-    echo "diff: $(huella_diff)"
+    echo "diff: $HUELLA"
     echo "rama: $(git rev-parse --abbrev-ref HEAD)"
     # Lo que hace que «verificado» no se lea como «esto pasa» sino como «esto pasó aquí».
     echo "toolchain: $TOOLCHAIN"

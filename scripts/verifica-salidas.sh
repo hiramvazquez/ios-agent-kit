@@ -23,6 +23,7 @@ mkdir -p "$TMP/home"
 # `$?` viene de una condición, no de un comando). Con una función el aviso desaparece y la
 # línea se lee mejor.
 igual() { [ "$1" = "$2" ]; }
+existe() { [ -e "$1" ]; }
 
 codigo() { ( cd "$1" || exit 9; shift; HOME="$TMP/home" bash "$VER" "$@" >/dev/null 2>&1; echo $? ); }
 salida() { ( cd "$1" || exit 9; shift; HOME="$TMP/home" bash "$VER" "$@" 2>&1 ); }
@@ -210,6 +211,16 @@ S="$(salida "$TMP/puerta")"
 ejecutable "$HOOK" && grep -q "$HOOK_MARCA" "$HOOK"
 caso $? "tras verificar existe .git/hooks/pre-commit, ejecutable y con la marca del kit"
 contiene "$S" "puerta de commit instalada"; caso $? "y el informe lo dice la primera vez"
+
+# El hook se basta SOLO: lleva copiadas todas las funciones que usa. Si falta una, dentro del
+# hook queda indefinida, la foto falla y la puerta bloquea cualquier commit —pasó al partir la
+# foto en varias funciones—. Se comprueba corriéndolo en un shell limpio, sin la lib cargada.
+SUELTO="$( cd "$TMP/puerta" && env -i HOME="$TMP" PATH="$PATH" bash "$HOOK" 2>&1 )"
+if printf '%s' "$SUELTO" | grep -q "command not found"
+then caso 1 "el hook no depende de nada que no lleve dentro" \
+        "llamaba a funciones de lib-kit.sh que no se copiaron, y bloqueaba todos los commits"
+else caso 0 "el hook no depende de nada que no lleve dentro"
+fi
 S="$(salida "$TMP/puerta")"
 ! contiene "$S" "puerta de commit instalada"; caso $? "la segunda vez la refresca sin anunciarla"
 
@@ -228,9 +239,11 @@ igual "$C" 1; caso $? "editar tras firmar y commitear con -am bloquea ($C)"
 edita dos-bis
 C="$(commit "$TMP/puerta" commit -q -m dos -- uno.txt)"
 igual "$C" 1; caso $? "editar tras firmar y commitear con pathspec bloquea ($C)"
+# Bloquea porque el ÁRBOL cambió después de firmar, no porque se stagee: stagear lo ya
+# verificado no invalida nada, y eso lo fija la sección «stagear lo ya verificado», abajo.
 edita dos-tris; ( cd "$TMP/puerta" && git add uno.txt ) >/dev/null 2>&1
 C="$(commit "$TMP/puerta" commit -q -m dos)"
-igual "$C" 1; caso $? "stagear después de firmar y commitear aparte bloquea ($C)"
+igual "$C" 1; caso $? "editar tras firmar bloquea aunque se stagee ($C)"
 codigo "$TMP/puerta" >/dev/null
 C="$(commit "$TMP/puerta" commit -q -m dos)"
 igual "$C" 0; caso $? "tras volver a firmar con eso stageado, pasa ($C)"
@@ -277,7 +290,7 @@ contiene "$S" "bash .agent-kit/pre-commit"; caso $? "y el informe dice dónde en
 # seguiría en verde.
 edita cuatro; ( cd "$TMP/puerta" && git add uno.txt ) >/dev/null 2>&1
 MSG="$( cd "$TMP/puerta" && HOME="$TMP" git commit -q -m cuatro 2>&1 )"
-contiene "$MSG" "comando aparte"; caso $? "el mensaje del bloqueo dice cómo commitear"
+contiene "$MSG" "/kit-verifica"; caso $? "el mensaje del bloqueo dice cómo commitear"
 
 # Sin kit.conf el hook se abre: el repositorio ya no usa el kit, y un hook que sobrevive a
 # desinstalarlo no puede ser un muro.
@@ -347,4 +360,307 @@ echo otra >> "$TMP/acuerdo/openspec-notas/n.txt"
 C="$(codigo "$TMP/acuerdo" --comprueba)"
 igual "$C" 1; caso $? "openspec-notas/ no es openspec/: tocarlo la invalida ($C)"
 
-resumen "verifica.sh" "el-acuerdo-no-invalida-la-firma"
+echo "▶ stagear lo ya verificado no invalida la firma"
+
+# Nace de montar ListaPrueba desde cero (2026-09-20): la verificación avisó de que había
+# ficheros sin stagear, se le hizo caso con `git add -A`, y la firma pasó a ser «de OTRO
+# diff». Lo stageado era exactamente el árbol recién probado: el commit llevaba MÁS de lo
+# verificado, nunca algo distinto.
+repo_base indice no ; conf indice 0
+( cd "$TMP/indice" && echo uno > uno.txt && git add uno.txt ) >/dev/null 2>&1
+codigo "$TMP/indice" >/dev/null
+commit "$TMP/indice" commit -q -m base >/dev/null
+
+( cd "$TMP/indice" && echo dos >> uno.txt ) >/dev/null 2>&1   # árbol sucio, nada stageado
+S="$(salida "$TMP/indice")"                                    # se firma ASÍ
+contiene "$S" "ÁRBOL SUCIO"; caso $? "el informe avisa de lo que falta por stagear"
+
+( cd "$TMP/indice" && git add uno.txt ) >/dev/null 2>&1        # se le hace caso
+C="$(codigo "$TMP/indice" --comprueba)"
+igual "$C" 0; caso $? "stagear lo ya verificado NO invalida la firma ($C)"
+C="$(commit "$TMP/indice" commit -q -m dos)"
+igual "$C" 0; caso $? "y el commit pasa la puerta sin volver a verificar ($C)"
+
+# `git commit -am` sobre el árbol firmado, sin editar nada después: se lleva exactamente lo
+# que se verificó. Antes bloqueaba, porque stagear movía la huella.
+( cd "$TMP/indice" && echo tres >> uno.txt ) >/dev/null 2>&1
+codigo "$TMP/indice" >/dev/null
+C="$(commit "$TMP/indice" commit -q -am tres)"
+igual "$C" 0; caso $? "commit -am sin editar nada tras firmar pasa ($C)"
+
+echo "▶ el índice con contenido que nadie verificó"
+
+# El agujero que cierra `indice_divergente`, y que la huella doble dejaba abierto cuando se
+# FIRMABA con el índice ya divergente: el commit se llevaba el índice, que nadie compiló.
+( cd "$TMP/indice" && echo veneno > uno.txt && git add uno.txt \
+    && printf 'uno\ndos\ntres\n' > uno.txt ) >/dev/null 2>&1
+S="$(salida "$TMP/indice")"                                    # se firma con el índice así
+contiene "$S" "ÍNDICE DIVERGENTE"; caso $? "el informe avisa al firmar con el índice divergente"
+contiene "$S" "uno.txt"; caso $? "y nombra la ruta"
+
+C="$(codigo "$TMP/indice" --comprueba)"
+igual "$C" 1; caso $? "esa firma no vale para commitear ($C)" \
+    "sin la comprobación del índice, la huella del árbol cuadra y pasa veneno"
+S="$(salida "$TMP/indice" --comprueba)"
+contiene "$S" "uno.txt"; caso $? "y --comprueba nombra la ruta divergente"
+
+MSG="$( cd "$TMP/indice" && HOME="$TMP" git commit -q -m veneno 2>&1 )"
+C="$( cd "$TMP/indice" && HOME="$TMP" git log --oneline -1 --format=%s 2>/dev/null )"
+igual "$C" "tres"; caso $? "la puerta no deja crear ese commit (último: $C)"
+contiene "$MSG" "uno.txt"; caso $? "y el mensaje de la puerta nombra la ruta"
+
+# Y en cuanto el índice vuelve a ser el árbol, la MISMA firma vale: no hubo que reverificar.
+( cd "$TMP/indice" && git add uno.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/indice" --comprueba)"
+igual "$C" 0; caso $? "con el índice puesto al día, la firma de antes vale ($C)"
+
+echo "▶ la huella es una foto del árbol, no del índice"
+
+# El caso que destapó la prueba de ListaPrueba: `/kit-init` escribe ficheros NUEVOS —kit.conf,
+# openspec/, .claude/— y `git add -A` después de verificar los stagea. Con la huella del diff,
+# eso movía la huella (un fichero nuevo no está en `git diff HEAD` hasta que se stagea) y
+# obligaba a repetir la verificación entera.
+repo_base foto no ; conf foto 0
+( cd "$TMP/foto" && echo uno > uno.txt && git add uno.txt ) >/dev/null 2>&1
+codigo "$TMP/foto" >/dev/null
+commit "$TMP/foto" commit -q -m base >/dev/null
+
+( cd "$TMP/foto" && echo nuevo > nuevo.txt ) >/dev/null 2>&1   # fichero NUEVO, sin stagear
+codigo "$TMP/foto" >/dev/null                                   # se verifica ASÍ
+( cd "$TMP/foto" && git add nuevo.txt ) >/dev/null 2>&1         # y se stagea después
+C="$(codigo "$TMP/foto" --comprueba)"
+igual "$C" 0; caso $? "stagear un fichero NUEVO ya verificado no invalida ($C)" \
+    "con la huella del diff, un fichero nuevo entra en ella al stagearlo y obliga a reverificar"
+C="$(commit "$TMP/foto" commit -q -m nuevo)"
+igual "$C" 0; caso $? "y su commit pasa la puerta ($C)"
+
+# Y al revés: crear un fichero DESPUÉS de firmar sí invalida. Con la huella del diff no lo
+# hacía —un fichero sin trackear no sale en `git diff HEAD`—, así que se podía commitear
+# código que nadie había compilado con solo crearlo tras verificar y stagearlo en el commit.
+codigo "$TMP/foto" >/dev/null
+( cd "$TMP/foto" && echo tarde > tarde.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/foto" --comprueba)"
+igual "$C" 1; caso $? "crear un fichero tras firmar invalida la firma ($C)" \
+    "sin la foto del árbol, el código creado después de verificar entraba sin verificar"
+
+# Lo que git ignora no está en la foto: si estuviera, cualquier artefacto de build invalidaría
+# la firma en cuanto alguien compilara.
+( cd "$TMP/foto" && rm tarde.txt && printf 'basura/\n' > .gitignore && git add .gitignore ) >/dev/null 2>&1
+codigo "$TMP/foto" >/dev/null
+( cd "$TMP/foto" && mkdir -p basura && echo x > basura/artefacto.o ) >/dev/null 2>&1
+C="$(codigo "$TMP/foto" --comprueba)"
+igual "$C" 0; caso $? "un fichero ignorado no invalida la firma ($C)"
+
+# Borrar también es cambiar el árbol.
+( cd "$TMP/foto" && rm nuevo.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/foto" --comprueba)"
+igual "$C" 1; caso $? "borrar un fichero tras firmar invalida la firma ($C)"
+
+# Y la firma vive en .agent-kit/, que queda fuera de la foto lo ignore el proyecto o no: si
+# entrara, escribir la firma invalidaría la firma que se acaba de escribir.
+( cd "$TMP/foto" && git checkout -q -- . 2>/dev/null; echo nuevo > nuevo.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/foto")"
+igual "$C" 0; caso $? "verificar deja una firma que vale para el árbol que verificó ($C)"
+C="$(codigo "$TMP/foto" --comprueba)"
+igual "$C" 0; caso $? "y escribirla no se invalida a sí misma ($C)" \
+    "con .agent-kit/ dentro de la foto, ninguna firma valdría nunca"
+
+echo "▶ rutas y entradas que no son un fichero normal"
+
+# Dos rondas del revisor (2026-09-20) sobre esto, y la segunda tumbó los casos de la primera:
+# probaban la PRIMERA transición de la ruta —limpia→modificada, ausente→creada— y esa se
+# detecta aunque el contenido no se hashee, porque lo que mueve la huella es que la ruta
+# ENTRE en la lista. Lo que discrimina es firmar con la ruta YA cambiada y volver a cambiarla:
+# si el contenido no entra en la foto, las dos fotos son idénticas y el veneno pasa.
+#
+# Por eso cada caso de aquí es de DOS pasos. Con la implementación que leía rutas de
+# `git diff --name-only`, todos salen rojos; con la foto que hace git, todos pasan.
+repo_base raras no ; conf raras 0
+(
+    cd "$TMP/raras" || exit 1
+    printf 'uno\n' > "Diseño.swift"
+    printf 'uno\n' > 'com"illa.swift'
+    printf 'uno\n' > "$(printf 'tab\there.swift')"
+    ln -s destino-uno enlace.swift
+    git add -A
+) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+commit "$TMP/raras" commit -q -m base >/dev/null
+
+# Paso 1: se cambia y se VERIFICA con el cambio dentro. Paso 2: se vuelve a cambiar.
+( cd "$TMP/raras" && printf 'dos\n' > "Diseño.swift" ) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+( cd "$TMP/raras" && printf 'veneno\n' > "Diseño.swift" ) >/dev/null 2>&1
+C="$(codigo "$TMP/raras" --comprueba)"
+igual "$C" 1; caso $? "una ruta con ñ, cambiada dos veces, invalida la firma ($C)" \
+    "leyendo rutas de git diff, la citada no se hasheaba y los dos contenidos daban la misma huella"
+
+( cd "$TMP/raras" && printf 'dos\n' > 'com"illa.swift' ) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+( cd "$TMP/raras" && printf 'veneno\n' > 'com"illa.swift' ) >/dev/null 2>&1
+C="$(codigo "$TMP/raras" --comprueba)"
+igual "$C" 1; caso $? "una ruta con comillas, cambiada dos veces, invalida la firma ($C)" \
+    "git la cita aunque core.quotePath esté apagado: apagarlo no bastaba"
+
+( cd "$TMP/raras" && printf 'dos\n' > "$(printf 'tab\there.swift')" ) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+( cd "$TMP/raras" && printf 'veneno\n' > "$(printf 'tab\there.swift')" ) >/dev/null 2>&1
+C="$(codigo "$TMP/raras" --comprueba)"
+igual "$C" 1; caso $? "una ruta con tabulador, cambiada dos veces, invalida la firma ($C)" \
+    "git también la cita, y el tabulador además partía la lista al leerla"
+
+# Un enlace simbólico ROTO: `[ -e ]` es falso, así que la implementación vieja lo daba por
+# borrado y repuntarlo no movía nada. Lo que se firma es su destino, exista o no.
+( cd "$TMP/raras" && rm enlace.swift && ln -s destino-roto enlace.swift ) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+( cd "$TMP/raras" && rm enlace.swift && ln -s otro-destino enlace.swift ) >/dev/null 2>&1
+C="$(codigo "$TMP/raras" --comprueba)"
+igual "$C" 1; caso $? "repuntar un enlace roto tras firmar invalida la firma ($C)" \
+    "con [ -e ] el enlace roto caía en BORRADO y su destino no entraba en la huella"
+
+# Y lo que sigue valiendo: stagear cualquiera de estas rutas después de verificar.
+( cd "$TMP/raras" && git add -A ) >/dev/null 2>&1
+codigo "$TMP/raras" >/dev/null
+( cd "$TMP/raras" && git add -A ) >/dev/null 2>&1
+C="$(codigo "$TMP/raras" --comprueba)"
+igual "$C" 0; caso $? "stagear rutas raras ya verificadas no invalida ($C)"
+
+echo "▶ un submódulo"
+
+# El submódulo es el caso realista del segundo RED: `[ -e Vendor ]` es cierto, pero
+# `git hash-object Vendor` falla —es un directorio— y su puntero no entraba en la huella. Con
+# la foto que hace git, el gitlink entra como lo que es: el commit al que apunta.
+mkdir -p "$TMP/subfuente"
+(
+    cd "$TMP/subfuente" || exit 1
+    git init -q . ; git config user.email t@t.t ; git config user.name t
+    echo v1 > f ; git add -A ; git commit -qm v1
+) >/dev/null 2>&1
+repo_base consub no ; conf consub 0
+( cd "$TMP/consub" && git -c protocol.file.allow=always submodule add -q "$TMP/subfuente" Vendor && git add -A ) >/dev/null 2>&1
+codigo "$TMP/consub" >/dev/null
+commit "$TMP/consub" commit -q -m consub >/dev/null
+
+# En DOS pasos, como los de arriba: la PRIMERA subida se detecta aunque el puntero no entre
+# en la huella, porque la ruta entra en la lista. Lo que discrimina es firmar con el submódulo
+# ya subido y volver a subirlo.
+sube_submodulo() {
+    ( cd "$TMP/subfuente" && echo "$1" > f && git add -A && git commit -qm "$1"
+      cd "$TMP/consub/Vendor" && git fetch -q origin && git checkout -q FETCH_HEAD ) >/dev/null 2>&1
+}
+sube_submodulo v2
+codigo "$TMP/consub" >/dev/null                                    # firma con el submódulo YA en v2
+sube_submodulo v3
+C="$(codigo "$TMP/consub" --comprueba)"
+igual "$C" 1; caso $? "subir el submódulo dos veces invalida la firma ($C)" \
+    "git hash-object no puede con un directorio: el puntero del submódulo no entraba en la huella"
+C="$(commit "$TMP/consub" commit -q -am sube)"
+igual "$C" 1; caso $? "y la puerta no deja commitear esa subida ($C)" \
+    "con el puntero fuera de la huella la firma valía, y el commit se llevaba un submódulo que nadie compiló"
+
+echo "▶ cuando el árbol no se puede fotografiar"
+
+# RED del revisor (2026-09-20, tercera vuelta), con reproducción: el valor de fallo era una
+# CONSTANTE, así que si la causa seguía ahí —un fichero sin permiso de lectura, un filtro de
+# .gitattributes sin instalar— la firma guardaba esa cadena, quien comprobaba recalculaba la
+# misma, cuadraban, y la puerta dejaba pasar CUALQUIER árbol. Ahora: no se firma, el valor es
+# irrepetible, y todo el que juzga mira el código de salida.
+repo_base sinfoto no ; conf sinfoto 0
+( cd "$TMP/sinfoto" && echo bueno > bueno.txt && git add -A ) >/dev/null 2>&1
+codigo "$TMP/sinfoto" >/dev/null
+commit "$TMP/sinfoto" commit -q -m base >/dev/null
+codigo "$TMP/sinfoto" >/dev/null                      # firma válida del árbol limpio
+C="$(codigo "$TMP/sinfoto" --comprueba)"
+igual "$C" 0; caso $? "antes de romper nada, la firma vale ($C)"
+
+( cd "$TMP/sinfoto" && echo secreto > ilegible.txt && chmod 000 ilegible.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/sinfoto" --comprueba)"
+igual "$C" 1; caso $? "sin poder fotografiar, --comprueba rechaza ($C)" \
+    "con un valor de fallo constante, la firma vieja cuadraba y la puerta se abría"
+C="$(commit "$TMP/sinfoto" commit -q -am nada)"
+igual "$C" 1; caso $? "y la puerta bloquea el commit ($C)"
+
+C="$(codigo "$TMP/sinfoto")"
+igual "$C" 3; caso $? "verificar en ese estado sale 3 — «no pude mirar» ($C)"
+S="$(salida "$TMP/sinfoto")"
+contiene "$S" "no se pudo fotografiar"; caso $? "y el informe dice por qué"
+
+# Lo que NO puede pasar: que esa corrida deje una firma. Si la dejara, el siguiente
+# --comprueba recalcularía el mismo fallo y cuadraría consigo mismo.
+M="$TMP/sinfoto/.agent-kit/verificacion.txt"
+if grep -q "^diff: SIN-HUELLA" "$M" 2>/dev/null
+then caso 1 "no escribe una firma de un árbol que no pudo mirar" \
+        "la firma guardaba el valor de fallo, y después cuadraba consigo misma"
+else caso 0 "no escribe una firma de un árbol que no pudo mirar"
+fi
+
+# Y al arreglar la causa, todo vuelve a su sitio.
+( cd "$TMP/sinfoto" && chmod 644 ilegible.txt ) >/dev/null 2>&1
+C="$(codigo "$TMP/sinfoto")"
+igual "$C" 0; caso $? "arreglado el permiso, vuelve a firmar ($C)"
+C="$(codigo "$TMP/sinfoto" --comprueba)"
+igual "$C" 0; caso $? "y esa firma vale ($C)"
+
+echo "▶ dos fotos a la vez, y una firma que dice que no pudo mirar"
+
+# AMBER del revisor (cuarta vuelta): el caché es único por repositorio, y con dos fotos
+# simultáneas —una sesión y un `git commit` en otra terminal, o el digest y la puerta— `git add`
+# perdía el `index.lock`: 8 de 20 fallaban, y el perdedor rechazaba un commit legítimo culpando
+# a un fichero ilegible que no existía. Ahora cada foto trabaja sobre su copia del índice.
+repo_base concurrente no ; conf concurrente 0
+( cd "$TMP/concurrente" && echo uno > uno.txt && git add -A ) >/dev/null 2>&1
+codigo "$TMP/concurrente" >/dev/null
+commit "$TMP/concurrente" commit -q -m base >/dev/null
+
+PAR_FALLOS=0
+for _ in 1 2 3 4 5; do
+    ( cd "$TMP/concurrente" && HOME="$TMP/home" bash "$VER" --comprueba >"$TMP/c1" 2>&1 ) &
+    ( cd "$TMP/concurrente" && HOME="$TMP/home" bash "$VER" --comprueba >"$TMP/c2" 2>&1 ) &
+    wait
+    grep -q "no se pudo fotografiar" "$TMP/c1" "$TMP/c2" 2>/dev/null && PAR_FALLOS=$((PAR_FALLOS+1))
+done
+igual "$PAR_FALLOS" 0; caso $? "dos comprobaciones a la vez no se estorban ($PAR_FALLOS de 5 con fallo)" \
+    "con un índice de caché compartido, una de las dos perdía el lock y rechazaba un commit bueno"
+
+# Y el caché no se queda con restos de esas copias.
+# El home del BANCO, no el de quien lo corre: `codigo`/`salida` lanzan verifica con
+# HOME="$TMP/home", así que sus copias viven ahí. Mirando el home real, el caso no veía lo suyo
+# —mutar el `mv` a `cp` lo dejaba en verde— y sí veía restos ajenos, que ponían el banco en
+# rojo por algo que no era del cambio. Lo cazó el revisor.
+RESTOS="$(find "$TMP/home/.cache/ios-agent-kit/foto" -name 'indice.*' 2>/dev/null | wc -l | tr -d ' ')"
+igual "$RESTOS" 0; caso $? "y no dejan copias del índice tiradas ($RESTOS)"
+
+# Una foto que no llega a terminar —un Ctrl-C, una sesión que se cae— sí deja la suya, y nada
+# la podaba: se acumulaban para siempre. Verificar las tira, pero solo las de más de una hora:
+# una foto en marcha no puede quedarse sin la suya. Lo cazó el revisor.
+# El directorio del caché de ESTE repo, calculado como lo calcula el kit: el sha de la raíz
+# que dice git, que en macOS es la de `/private/var/...` y no la de `$TMP`.
+CACHE_BANCO="$TMP/home/.cache/ios-agent-kit/foto/$(
+    cd "$TMP/concurrente" && git rev-parse --show-toplevel | tr -d '\n' | shasum -a 256 | cut -c1-16)"
+VIEJA="$CACHE_BANCO/indice.abcdef"
+: > "$VIEJA" 2>/dev/null
+touch -t 202001010000 "$VIEJA" 2>/dev/null
+RECIENTE="$(dirname "$VIEJA")/indice.zzzzzz"
+: > "$RECIENTE" 2>/dev/null
+codigo "$TMP/concurrente" >/dev/null
+if [ -e "$VIEJA" ]
+then caso 1 "verificar tira las copias viejas que dejó una foto interrumpida" \
+        "nada las podaba: se acumulaban y acababan poniendo el propio banco en rojo"
+else caso 0 "verificar tira las copias viejas que dejó una foto interrumpida"
+fi
+existe "$RECIENTE"; caso $? "y no toca las recientes, que pueden ser de una foto en marcha"
+rm -f "$RECIENTE" 2>/dev/null
+
+# La otra mitad del RED de la tercera vuelta: una firma que GUARDA un valor de fallo no puede
+# valer nunca. Aquí se escribe a mano, como la habría dejado una versión anterior del kit.
+( cd "$TMP/concurrente" && echo secreto > ilegible.txt && chmod 000 ilegible.txt ) >/dev/null 2>&1
+{ echo "verificado: 2026-09-20T00:00:00Z"
+  echo "diff: SIN-HUELLA-no-se-pudo-fotografiar-el-arbol"
+  echo "rama: main"
+  echo "resultado: verde"; } > "$TMP/concurrente/.agent-kit/verificacion.txt"
+C="$(codigo "$TMP/concurrente" --comprueba)"
+igual "$C" 1; caso $? "una firma con un valor de FALLO guardado no vale ($C)" \
+    "si ese valor fuera constante, se recalcularía igual, cuadraría, y cualquier árbol pasaría"
+( cd "$TMP/concurrente" && chmod 644 ilegible.txt ) >/dev/null 2>&1
+
+resumen "verifica.sh" "la-firma-no-caduca-por-stagear"

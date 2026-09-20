@@ -49,10 +49,15 @@ Veredicto `GREEN` / `AMBER` / `RED`. **RED exige reproducción**, o no es RED.
 
 ### `verifica.sh` — la firma
 
-Corre lo que diga tu `kit.conf` y escribe `.agent-kit/verificacion.txt` con el `sha256` del
-**árbol de trabajo y del índice** —o solo del índice si el repositorio no tiene commits
-todavía—, **salvo `openspec/`**. Tres modos: verificar y firmar, `--informe` (imprime sin
-volver a correr) y `--comprueba` (¿la firma es de este árbol y de una verificación verde?).
+Corre lo que diga tu `kit.conf` y escribe `.agent-kit/verificacion.txt` con el `sha256` de una
+**foto del árbol de trabajo**, la que hace git con `write-tree` sobre un índice propio. Así
+entra lo que git sabe y un script no: submódulos, enlaces simbólicos, permisos y cualquier
+nombre de fichero. Fuera, `openspec/` y `.agent-kit/`. El índice del caché vive en
+`~/.cache/ios-agent-kit/`, fuera de tu repositorio, y cuesta unas décimas de segundo por foto.
+Si el árbol no se puede fotografiar —un fichero sin permiso de lectura, un filtro de
+`.gitattributes` sin instalar— **no se firma nada** y la verificación sale con «no pude mirar». Tres modos: verificar y
+firmar, `--informe` (imprime sin volver a correr) y `--comprueba` (¿la firma es de este árbol,
+de una verificación verde, y el índice no lleva otra cosa?).
 
 **La firma dice su alcance.** La cabecera lleva `toolchain:` —el compilador del PATH, el Xcode
 seleccionado, y un aviso si el del PATH no es el de Xcode— y `limites:`, según si tu
@@ -60,19 +65,24 @@ seleccionado, y un aviso si el del PATH no es el de Xcode— y `limites:`, segú
 sale además en `--comprueba` y en el digest de cada turno: «verificado» significa «esto pasó
 aquí», no «esto pasa».
 
-**Firma los dos, y cada uno cierra un agujero distinto.** Con la huella solo del índice,
-verificar sin nada stageado firma el diff vacío y esa firma sigue valiendo después de editar:
-`git commit -am` mete código sin verificar. Con la huella solo del árbol, stagear algo y
-devolver el fichero a su contenido anterior deja la huella igual, y `git commit` a secas
-commitea el índice: entra contenido que nunca se compiló.
+**Se firma el árbol, y el índice se comprueba aparte.** Son dos preguntas distintas: «¿es
+este el árbol que se probó?» la responde el sha; «¿lleva el índice algo que no es ese árbol?»
+la responde una lista de rutas —las stageadas cuyo contenido no es el del árbol—. Las dos
+hacen falta: sin la primera, editar después de firmar pasa desapercibido; sin la segunda,
+stagear algo y devolver el fichero a su contenido anterior deja la huella igual mientras
+`git commit` a secas se lleva el índice.
 
 **Y al firmar instala la puerta de commit** (abajo), para que la firma se exija de verdad.
 
-**Lo que cuesta, y es la norma que hay que saberse:** stagear código después de firmar
-invalida la firma. Por eso **stagear, verificar y commitear van en tres comandos separados**:
-encadenar `git add && git commit` cambia el índice entre la firma y el commit, y la puerta lo
-rechaza con razón. Lo que queda abierto, y el informe avisa como árbol sucio, es lo contrario:
-commitear **menos** de lo verificado.
+**La norma que hay que saberse:** lo que invalida la firma es tocar el árbol —editar, crear o
+borrar—, no stagear.
+Stagear lo que ya se verificó no la invalida —acercar el índice al árbol solo puede hacer que
+el commit lleve **más** de lo probado—, así que hacerle caso al aviso de árbol sucio ya no
+cuesta otra verificación, y `git commit -am` pasa mientras no hayas editado nada después de
+firmar. Lo que sí bloquea: tocar el árbol tras firmar —crear un fichero nuevo incluido, que
+antes se colaba— y tener stageado un contenido distinto del árbol. Esto último el informe lo avisa al firmar, como índice divergente, y la puerta lo
+rechaza nombrando las rutas. Lo que queda abierto, y el informe avisa como árbol sucio, es lo
+contrario: commitear **menos** de lo verificado.
 
 **`openspec/` queda fuera de la huella**, porque es el acuerdo y no lo que se compila, y el
 flujo escribe ahí justo después de verificar: marcar la última tarea, anotar la ronda,
@@ -96,9 +106,11 @@ la línea `resultado:` de la firma.
 
 **Cuándo:** en cada `git commit` del repositorio, lo lance quien lo lance. Es un hook
 `pre-commit` de git, no un hook de Claude Code: lo escribe `verifica.sh` cada vez que firma
-—también cuando sale en rojo—, en `.git/hooks/pre-commit`, con la misma definición de huella
-que usa la firma. Comprueba lo que comprueba `--comprueba`: firma del árbol y del índice que
-se van a commitear, y resultado verde. Si no, el commit no se crea y el mensaje dice qué hacer.
+—también cuando sale en rojo—, en `.git/hooks/pre-commit`, con las mismas definiciones de
+huella y de divergencia que usa la firma. Comprueba lo que comprueba `--comprueba`: firma del
+árbol que se va a commitear, resultado verde, y un índice que no lleve otra cosa. Si no, el
+commit no se crea y el mensaje dice qué hacer, nombrando las rutas cuando el problema es el
+índice.
 
 Por eso no importa desde dónde ni cómo se escriba el comando —`git -C`, un `cd ~/…`, un
 `bash -c`, otra terminal—: git lo ejecuta en el repositorio del commit y no hay nada que

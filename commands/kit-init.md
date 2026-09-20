@@ -20,7 +20,9 @@ Si falta el CLI, dilo y para. Es la dependencia del kit y no se sustituye a mano
 Descúbrelo, no lo supongas:
 
 - `find . -name Package.swift -not -path "*/.build/*"` → qué paquetes hay y dónde.
-- `ls *.xcodeproj *.xcworkspace project.yml 2>/dev/null` → si hay app de Xcode.
+- `find . -maxdepth 1 \( -name '*.xcodeproj' -o -name '*.xcworkspace' -o -name project.yml \)` →
+  si hay app de Xcode. Con `find` y no con `ls *.xcodeproj …`: en zsh, un patrón sin
+  coincidencias aborta la línea entera —«no matches found»— y no llegas a ver lo que sí está.
 - Mira si ya existe un script de build/test del proyecto antes de inventar comandos.
 
 Escribe `kit.conf` en la raíz con `${CLAUDE_PLUGIN_ROOT}/plantillas/kit.conf.ejemplo` como

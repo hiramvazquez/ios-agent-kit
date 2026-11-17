@@ -663,4 +663,65 @@ igual "$C" 1; caso $? "una firma con un valor de FALLO guardado no vale ($C)" \
     "si ese valor fuera constante, se recalcularía igual, cuadraría, y cualquier árbol pasaría"
 ( cd "$TMP/concurrente" && chmod 644 ilegible.txt ) >/dev/null 2>&1
 
-resumen "verifica.sh" "la-firma-no-caduca-por-stagear"
+echo "▶ la firma solo vale por lo que vio"
+
+# El informe copia la salida de los pasos que fallan, debajo de la cabecera. Quien juzga la
+# firma lee solo la cabecera: si leyera el fichero entero, un test que imprime la línea del
+# veredicto y falla dejaría pasar el commit.
+repo_base eco no
+printf 'FUENTES="."\nverificaciones() { paso "tests" bash -c %s; }\n' \
+    "'echo \"resultado: verde\"; exit 1'" > "$TMP/eco/kit.conf"
+( cd "$TMP/eco" && echo cambio > cambio.txt && git add -A ) >/dev/null 2>&1
+C="$(codigo "$TMP/eco")"
+igual "$C" 1; caso $? "un paso que falla e imprime «resultado: verde» sale en rojo ($C)"
+C="$(codigo "$TMP/eco" --comprueba)"
+igual "$C" 1; caso $? "y --comprueba no lo da por firmado ($C)" \
+    "se buscaba el veredicto en el fichero entero, y el informe traía la línea del paso"
+C="$(commit "$TMP/eco" commit -q -m eco)"
+if igual "$C" 0
+then caso 1 "ni la puerta deja commitear" "el hook leía la misma línea del informe y dejaba pasar un rojo"
+else caso 0 "ni la puerta deja commitear"
+fi
+
+# La foto se toma antes y después de los pasos. Aquí el árbol lo cambia el propio paso, que
+# es la forma de que el caso no dependa de un reloj.
+repo_base movido no
+printf 'FUENTES="."\nverificaciones() { paso "toca" bash -c %s; }\n' \
+    "'echo x >> tocado.txt'" > "$TMP/movido/kit.conf"
+S="$(salida "$TMP/movido")"
+C="$(codigo "$TMP/movido")"
+igual "$C" 1; caso $? "si el árbol cambia mientras corren los pasos, sale en rojo ($C)" \
+    "la foto se tomaba al final: se firmaba en verde un árbol que los pasos no vieron"
+contiene "$S" "tocado.txt"; caso $? "y el informe nombra lo que cambió" \
+    "no había nada que comparar"
+C="$(codigo "$TMP/movido" --comprueba)"
+igual "$C" 1; caso $? "y esa verificación no firma nada ($C)" \
+    "quedaba firmado el árbol de después"
+
+# Un fichero nuevo, sin trackear, es lo que más toca un cambio. `git diff` no lo ve.
+repo_base nuevo_dup no
+mkdir -p "$TMP/nuevo_dup/App"
+cat > "$TMP/nuevo_dup/App/Viejo.swift" <<'SWIFT'
+struct Cosa {
+    func describeError(_ error: Error) -> String {
+        let mapped = error.localizedDescription
+        let prefix = "Se ha producido un problema al cargar los datos"
+        let suffix = "Vuelve a intentarlo en unos segundos, por favor"
+        return [prefix, mapped, suffix].joined(separator: " · ")
+    }
+}
+SWIFT
+printf 'FUENTES="App"\nverificaciones() { paso "nada" true; }\n' > "$TMP/nuevo_dup/kit.conf"
+( cd "$TMP/nuevo_dup" && git add -A && git commit -qm viejo --no-verify ) >/dev/null 2>&1
+cp "$TMP/nuevo_dup/App/Viejo.swift" "$TMP/nuevo_dup/App/Nuevo.swift"
+S="$(salida "$TMP/nuevo_dup")"
+if contiene "$S" "cuerpo(s) repetido(s)" && ! contiene "$S" "preexistente"
+then caso 0 "un duplicado en un fichero nuevo sin trackear se reporta entero"
+else caso 1 "un duplicado en un fichero nuevo sin trackear se reporta entero" \
+        "los tocados salían de git diff, que no ve lo sin trackear: se contaba como preexistente"
+fi
+contiene "$S" "ÁRBOL SUCIO" && contiene "$S" "App/Nuevo.swift"
+caso $? "y el aviso de árbol sucio nombra el fichero sin trackear" \
+    "el aviso solo miraba los ficheros trackeados"
+
+resumen "verifica.sh" "la-firma-solo-vale-por-lo-que-vio"

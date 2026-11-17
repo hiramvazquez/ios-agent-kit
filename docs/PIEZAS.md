@@ -59,6 +59,14 @@ Si el árbol no se puede fotografiar —un fichero sin permiso de lectura, un fi
 firmar, `--informe` (imprime sin volver a correr) y `--comprueba` (¿la firma es de este árbol,
 de una verificación verde, y el índice no lleva otra cosa?).
 
+**La foto se toma dos veces**, antes y después de correr los pasos. Si difieren —otra sesión
+editó algo, un paso reescribió un fichero— la verificación sale en rojo y el informe nombra
+las rutas: lo que hay al terminar no es lo que los pasos vieron. Un fichero que un paso
+genera siempre va en `.gitignore`.
+
+**El veredicto se lee de la cabecera de la firma**, que acaba en la primera línea en blanco.
+Debajo va el informe, que copia la salida de los pasos que fallan y no decide nada.
+
 **La firma dice su alcance.** La cabecera lleva `toolchain:` —el compilador del PATH, el Xcode
 seleccionado, y un aviso si el del PATH no es el de Xcode— y `limites:`, según si tu
 `kit.conf` define `LIMITES`. Los límites salen en el informe y en `/kit-estado`; el toolchain

@@ -134,7 +134,7 @@ limpia_copias_viejas() {
     return 0
 }
 
-huella_diff() {
+arbol_foto() {
     local raiz cache idx obj mio arbol alternativos rutas
     # Las dos rutas en UNA llamada: arrancar git cuesta ~60 ms en un portátil, y esto corre en
     # el hook de cada turno. `--git-path objects` y no `$raiz/.git/objects`: con un worktree
@@ -148,10 +148,10 @@ huella_diff() {
     # El caché vive FUERA del repositorio, junto al de dependencias. Dentro no puede: `add -A`
     # se lo encontraría y se añadiría a sí mismo mientras git escribe ahí, y la foto fallaba.
     # Además, preguntar por la firma no debe crear `.agent-kit/` en un repo que no pidió el kit.
-    cache="$(cache_foto)" || { fallo_sin_huella; return 1; }
+    cache="$(cache_foto)" || return 1
     idx="$cache/indice"
     obj="$cache/objetos"
-    mkdir -p "$obj" 2>/dev/null || { fallo_sin_huella; return 1; }
+    mkdir -p "$obj" 2>/dev/null || return 1
     # Cada foto trabaja sobre su PROPIA copia del índice y la devuelve al terminar. El índice
     # compartido se lo disputarían dos fotos simultáneas —una sesión y un `git commit` en otra
     # terminal, o el digest y la puerta a la vez—: `git add` pierde el `index.lock` y el
@@ -160,7 +160,7 @@ huella_diff() {
     # entero gane quien gane.
     # `mktemp` y no `$idx.$$`: dos fotos lanzadas desde el mismo shell comparten `$$` —y
     # también el estado de `$RANDOM`—, así que se pisarían el fichero entre ellas.
-    mio="$(mktemp "$idx.XXXXXX" 2>/dev/null)" || { fallo_sin_huella; return 1; }
+    mio="$(mktemp "$idx.XXXXXX" 2>/dev/null)" || return 1
     # Si todavía no hay caché, el temporal se BORRA: `mktemp` lo deja vacío y git rechaza un
     # índice de cero bytes. Sin fichero, git lo crea él.
     cp "$idx" "$mio" 2>/dev/null || rm -f "$mio"
@@ -190,10 +190,36 @@ huella_diff() {
         # y es un caché: reconstruirlo cuesta una foto. Con esto, el estado corrupto se cura
         # solo, como ya hacía el índice ilegible.
         rm -f "$mio" "$idx"
-        fallo_sin_huella
         return 1
     fi
+    printf '%s' "$arbol"
+}
+
+# huella_diff — el sha256 de la foto. Si no hay foto, devuelve 1 e imprime el valor de fallo.
+huella_diff() {
+    local arbol
+    arbol="$(arbol_foto)" || { fallo_sin_huella; return 1; }
     printf '%s' "$arbol" | shasum -a 256 | cut -d' ' -f1
+}
+
+# cambios_entre_fotos <árbol> <árbol> — las rutas que difieren entre dos fotos. Los objetos
+# de una foto viven en el caché, no en el repositorio, así que hay que decirle a git dónde.
+cambios_entre_fotos() {
+    local cache alternativos
+    cache="$(cache_foto)" || return 1
+    alternativos="$(git rev-parse --git-path objects 2>/dev/null)" || return 1
+    case "$alternativos" in /*) ;; *) alternativos="$PWD/$alternativos" ;; esac
+    GIT_OBJECT_DIRECTORY="$cache/objetos" GIT_ALTERNATE_OBJECT_DIRECTORIES="$alternativos" \
+        git -c core.quotePath=false diff --name-only "$1" "$2" 2>/dev/null
+}
+
+# firma_dice <fichero> <línea> — ¿está esa línea, exacta, en la CABECERA de la firma?
+#
+# La cabecera acaba en la primera línea en blanco. Debajo va el informe, que copia la salida
+# de los pasos que fallan: buscando en el fichero entero, un test que imprime «resultado:
+# verde» y falla pasaba por verificado. Única definición, para todo el que juzga una firma.
+firma_dice() {
+    sed '/^$/q' "$1" 2>/dev/null | grep -qxF -- "$2"
 }
 
 # fallo_sin_huella — el valor que imprime la foto cuando no puede. Cambia ENTRE PROCESOS, que

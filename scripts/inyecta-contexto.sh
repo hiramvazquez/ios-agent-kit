@@ -146,9 +146,9 @@ if [ -f "$M" ]; then
     # fallo empezaba diciendo «firmada».
     if ! HUELLA="$(huella_diff)"; then
         add "· Verificación: no se pudo fotografiar el árbol — /kit-verifica lo dirá."
-    elif ! grep -q "^diff: $HUELLA$" "$M"; then
+    elif ! firma_dice "$M" "diff: $HUELLA"; then
         add "· Verificación: la firma es de OTRO árbol — /kit-verifica antes de commitear."
-    elif ! grep -q '^resultado: verde$' "$M"; then
+    elif ! firma_dice "$M" "resultado: verde"; then
         add "· Verificación: la última salió en ROJO — arréglalo y vuelve a verificar."
     elif [ -n "$(indice_divergente)" ]; then
         add "· Verificación: el ÍNDICE lleva algo que no se verificó — la puerta bloqueará el commit."

@@ -477,4 +477,14 @@ contiene "$D" "la última salió en ROJO"
 caso $? "tras una verificación en rojo, el digest NO dice «firmada»" \
     "el marker conserva su línea diff, así que sin mirar «resultado» se lee como firmado"
 
-resumen "el hook" "donde-la-regla-solo-llego-a-un-hermano"
+# Y la lee donde está: en la cabecera. El informe de debajo copia la salida de los pasos.
+repo eco vacio si
+printf 'FUENTES="."\nverificaciones() { paso "tests" bash -c %s; }\n' \
+    "'echo \"resultado: verde\"; exit 1'" > "$TMP/eco/kit.conf"
+( cd "$TMP/eco" && HOME="$TMP/home" bash "$DIR/verifica.sh" ) >/dev/null 2>&1
+D="$(digest "$TMP/eco")"
+contiene "$D" "la última salió en ROJO"
+caso $? "un rojo cuyo paso imprime «resultado: verde» sigue siendo rojo para el digest" \
+    "buscaba el veredicto en el fichero entero y decía «firmada»"
+
+resumen "el hook" "la-firma-solo-vale-por-lo-que-vio"

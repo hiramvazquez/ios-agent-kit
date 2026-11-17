@@ -49,9 +49,9 @@ case "${1:-}" in
     # hay con qué comparar, y dar eso por válido es abrir la puerta.
     HUELLA="$(huella_diff)" \
         || { echo "❌ no se pudo fotografiar el árbol — sin eso no hay firma que valga"; exit 1; }
-    grep -q "^diff: $HUELLA$" "$MARKER" \
+    firma_dice "$MARKER" "diff: $HUELLA" \
         || { echo "❌ la firma es de OTRO diff — vuelve a verificar"; exit 1; }
-    grep -q "^resultado: verde$" "$MARKER" \
+    firma_dice "$MARKER" "resultado: verde" \
         || { echo "❌ la última verificación salió en ROJO — arréglalo y vuelve a verificar"; exit 1; }
     DIV="$(indice_divergente)"
     [ -z "$DIV" ] || {
@@ -83,7 +83,9 @@ fi
 # Se firma el árbol, así que lo verificado y lo firmado son lo mismo; pero con cambios sin
 # stagear se puede commitear un SUBCONJUNTO de lo verificado, y ese subconjunto no se ha
 # probado solo. Avisa y lo deja escrito en el informe; no bloquea.
-SUCIO="$(git diff --name-only 2>/dev/null)"
+SUCIO="$( { git diff --name-only
+            git --no-literal-pathspecs ls-files --others --exclude-standard -- ':(top)' ':(top,exclude).agent-kit/'
+          } 2>/dev/null | sort -u )"
 
 FALLOS=0
 INFORME=""
@@ -109,7 +111,19 @@ LIMITES=""
 type verificaciones >/dev/null 2>&1 || {
     echo "❌ kit.conf no define la función verificaciones()" >&2; exit 3; }
 
+# La foto se toma dos veces, antes y después de los pasos: si difieren, lo que hay al
+# terminar no es lo que los pasos vieron, y firmarlo sería firmar un árbol que nadie probó.
+ANTES="$(arbol_foto)" || ANTES=""
+
 verificaciones
+
+DESPUES="$(arbol_foto)" || DESPUES=""
+if [ -n "$ANTES" ] && [ -n "$DESPUES" ] && [ "$ANTES" != "$DESPUES" ]; then
+    INFORME="${INFORME}❌ el árbol cambió mientras se verificaba: lo que hay ahora no es lo que vieron los pasos."$'\n'
+    INFORME="${INFORME}$(cambios_entre_fotos "$ANTES" "$DESPUES" | sed 's/^/     /')"$'\n'
+    INFORME="${INFORME}     Si lo cambia un paso, vuelve a verificar; si lo genera siempre, ignóralo en .gitignore."$'\n'
+    FALLOS=$((FALLOS+1))
+fi
 
 # Lógica repetida: avisa, no bloquea. Un duplicado puede ser deliberado, y quien lo decide
 # es quien mira el cambio, no un script.
@@ -118,7 +132,8 @@ verificaciones
 # verificación hasta que nadie los lea. Se cuentan en una línea y se listan con /kit-duplicados.
 printf '▶ %s\n' "lógica repetida"
 TOCADOS="$ESTADO/.tocados"
-{ git diff --cached --name-only; git diff --name-only; } 2>/dev/null | sort -u > "$TOCADOS"
+{ git diff --cached --name-only; git diff --name-only
+  git ls-files --others --exclude-standard; } 2>/dev/null | sort -u > "$TOCADOS"
 DUP="$(python3 "$(dirname "${BASH_SOURCE[0]}")/busca-duplicados.py" $FUENTES --tocados "$TOCADOS" 2>&1)"
 rm -f "$TOCADOS"
 case "$DUP" in
@@ -146,7 +161,7 @@ if [ -n "$DIVERGENTE" ]; then
 fi
 
 if [ -n "$SUCIO" ]; then
-    INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros trackeados tienen cambios SIN STAGEAR. Lo que se ha"$'\n'
+    INFORME="${INFORME}"$'\n'"⚠️  ÁRBOL SUCIO: estos ficheros tienen cambios SIN STAGEAR o están sin trackear. Lo que se ha"$'\n'
     INFORME="${INFORME}    verificado es el árbol entero; si commiteas solo el índice, commitearás MENOS"$'\n'
     INFORME="${INFORME}    de lo que se ha probado:"$'\n'
     INFORME="${INFORME}$(printf '%s\n' "$SUCIO" | sed 's/^/      /')"$'\n'
@@ -184,7 +199,9 @@ instala_puerta() {
         # indefinida, la foto falla y la puerta bloquea cualquier commit. Lo cazó el banco.
         declare -f cache_foto
         declare -f fallo_sin_huella
+        declare -f arbol_foto
         declare -f huella_diff
+        declare -f firma_dice
         declare -f indice_divergente
         cat <<'HOOK'
 M=".agent-kit/verificacion.txt"
@@ -200,7 +217,7 @@ if [ -n "$DIV" ]; then
       echo "   Se commitea el índice, no el árbol. Stagea el árbol o vuelve a verificar."; } >&2
     exit 1
 fi
-[ -f "$M" ] && grep -q "^diff: $HUELLA$" "$M" && grep -q '^resultado: verde$' "$M" && exit 0
+[ -f "$M" ] && firma_dice "$M" "diff: $HUELLA" && firma_dice "$M" "resultado: verde" && exit 0
 cat >&2 <<'MSG'
 ❌ ios-agent-kit: no hay verificación firmada para lo que se va a commitear.
    Corre /kit-verifica y commitea después. Stagear lo que ya se verificó no invalida la firma;
@@ -263,7 +280,7 @@ NOFOTO
 } > "$MARKER"
 
 printf '%s' "$INFORME"
-[ -n "$SUCIO" ] && echo "⚠️  hay cambios sin stagear: se ha verificado el árbol entero, y un commit del índice lleva menos."
+[ -n "$SUCIO" ] && echo "⚠️  hay cambios sin stagear o ficheros sin trackear: se ha verificado el árbol entero, y un commit del índice lleva menos."
 # El alcance va EN la línea del veredicto, no debajo: una línea aparte se lee como un aviso
 # más y se salta.
 [ "$FALLOS" -eq 0 ] && echo "✅ verde · toolchain: $TOOLCHAIN · firmado contra el árbol verificado — no dice nada de otros toolchains." \

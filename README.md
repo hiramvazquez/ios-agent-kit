@@ -57,12 +57,12 @@ primera, el `kit.conf` está mal y se arregla ahí mismo.
 ## El día a día
 
 ```
-/opsx:propose "lo que quieras construir"   →  proposal + delta de spec + tareas. CERO código.
-/opsx:apply                                →  se implementa, marcando tareas
-/kit-verifica                              →  build, tests y duplicados, firmado
-/kit-revisa                                →  ¿esto rompe algo? una tarea, no el cambio entero
-/kit-acepta                                →  ¿es lo acordado? opcional; cuándo, lo dice él
-/opsx:archive                              →  el delta se funde en la spec viva
+/openspec-propose "lo que quieras construir"   →  proposal + delta de spec + tareas. CERO código.
+/openspec-apply-change                          →  se implementa, marcando tareas
+/kit-verifica                                   →  build, tests y duplicados, firmado
+/kit-revisa                                     →  ¿esto rompe algo? una tarea, no el cambio entero
+/kit-acepta                                     →  ¿es lo acordado? opcional; cuándo, lo dice él
+/openspec-archive-change                        →  el delta se funde en la spec viva
 ```
 
 Los dos jueces preguntan cosas distintas a propósito: un cambio puede estar impecable

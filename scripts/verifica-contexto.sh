@@ -175,7 +175,7 @@ contiene "$D" "no tocar la caja fuerte"; caso $? \
 D="$(digest "$TMP/sin_cambio")"
 contiene "$D" "Sin cambio OpenSpec activo"; caso $? \
     "con openspec/ y sin cambio activo, lo dice"
-contiene "$D" "/opsx:propose"; caso $? \
+contiene "$D" "/openspec-propose"; caso $? \
     "con openspec/ y sin cambio activo, manda proponer"
 
 echo "▶ el cambio terminado no rompe el digest (cero tareas pendientes)"
@@ -236,7 +236,7 @@ done
 echo "▶ un repo sin OpenSpec no recibe órdenes de OpenSpec"
 
 D="$(digest "$TMP/ajeno")"
-if contiene "$D" "/opsx:propose"; then caso 1 \
+if contiene "$D" "/openspec-propose"; then caso 1 \
     "sin openspec/, NO manda proponer" \
     "daba la misma orden que a un repo del kit, y ahí nadie puede seguirla"
 else caso 0 "sin openspec/, NO manda proponer"; fi

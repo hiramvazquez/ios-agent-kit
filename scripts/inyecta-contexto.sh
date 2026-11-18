@@ -103,7 +103,7 @@ else
                  "$ACT/proposal.md" 2>/dev/null | head -3)"
         [ -n "$FUERA" ] && { add "    FUERA de alcance:"; L="${L}$(printf '%s\n' "$FUERA" | sed 's/^/      /')"$'\n'; }
     else
-        add "· Sin cambio OpenSpec activo. Si vas a tocar código, primero /opsx:propose."
+        add "· Sin cambio OpenSpec activo. Si vas a tocar código, primero /openspec-propose."
     fi
 fi
 

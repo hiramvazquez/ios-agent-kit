@@ -55,4 +55,4 @@ ahora, no la primera vez que alguien intente commitear. Además deja instalada l
 commit.
 
 Di en tres líneas qué ha quedado montado, qué comando verifica el proyecto, y cuál es el
-siguiente paso real: `/opsx:propose "<lo que quieras construir>"`.
+siguiente paso real: `/openspec-propose "<lo que quieras construir>"`.

@@ -26,7 +26,7 @@ Abres Claude Code en la raíz del proyecto y lo pegas.
 ## 1. Proponer — se acuerda, no se programa
 
 ```
-/opsx:propose "PROJ-482: al volver de la ficha, el listado no debe recargarse ni perder el scroll"
+/openspec-propose "PROJ-482: al volver de la ficha, el listado no debe recargarse ni perder el scroll"
 ```
 
 El agente tiene prohibido tocar código en este paso. Explora, pregunta lo que no esté claro,
@@ -79,7 +79,7 @@ proponer. No hay nada que revertir.
 ## 3. Implementar
 
 ```
-/opsx:apply
+/openspec-apply-change
 ```
 
 Ejecuta las tareas marcando `[x]`. En cada turno, el hook `UserPromptSubmit` le reinyecta el
@@ -191,7 +191,7 @@ silencio para que encaje con lo entregado.
 ## 7. Archivar
 
 ```
-/opsx:archive
+/openspec-archive-change
 ```
 
 Funde el delta en `openspec/specs/<dominio>/spec.md` y mueve la carpeta a

@@ -11,7 +11,8 @@ npm install -g @fission-ai/openspec@latest
 openspec --version                             # 1.12.0 o superior
 ```
 
-Sin esto no tienes `/opsx:propose`, ni validación de specs, ni archivado.
+Sin esto no tienes `/openspec-propose`, ni validación de specs, ni archivado. Si `npm` se queja
+de la versión de Node, actualiza Node: el CLI pide una reciente.
 
 ## 2. El plugin — una vez por máquina
 
@@ -80,15 +81,22 @@ eventos fuera del objeto `hooks`. `bash scripts/autocomprueba.sh` los caza antes
 **`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1: «no pude mirar» no es
 lo mismo que «está mal». Créalo con `/kit-init`.
 
-**`Unknown command: /opsx:apply`** (o `/opsx:propose`, o `/opsx:archive`), mientras los
-`/kit-*` sí funcionan — **la sesión está abierta en el directorio equivocado**. Ábrela en la
-raíz del repositorio, no un nivel por encima. Los dos juegos de comandos vienen de sitios
-distintos y por eso fallan por separado:
+**`Unknown command: /openspec-propose`** (o `/openspec-apply-change`, o
+`/openspec-archive-change`), mientras los `/kit-*` sí funcionan — los dos juegos vienen de
+sitios distintos y por eso fallan por separado. Tiene dos causas:
+
+- **La sesión está abierta por encima del repositorio** y las skills de OpenSpec viven en el
+  proyecto. Ábrela en la raíz del repositorio.
+- **Las skills de OpenSpec no están instaladas**, o son de una versión anterior. Corre
+  `openspec update` en el proyecto.
+
+Si lo que no existe es `/opsx:propose`, es que OpenSpec ya los retiró: desde su versión 2.0
+cada flujo es solo una skill, con los nombres de arriba.
 
 | comandos | de dónde vienen | dónde funcionan |
 |---|---|---|
 | `/kit-verifica`, `/kit-acepta`… | del **plugin**, instalado para tu usuario | desde cualquier directorio |
-| `/opsx:propose`, `/opsx:apply`… | de `.claude/commands/` **del proyecto**, que instala `openspec init` | solo si la sesión tiene ese repo como raíz |
+| `/openspec-propose`, `/openspec-apply-change`… | de las skills de OpenSpec, que instala `openspec init` en el proyecto o para tu usuario | en el proyecto: solo con la sesión en ese repo · para tu usuario: desde cualquier directorio |
 
 **La puerta bloquea un commit que crees válido** — la firma es de otro árbol. Casi siempre es
 por editar el árbol después de firmar: se firma el árbol, así que cambiarlo invalida la

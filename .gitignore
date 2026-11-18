@@ -8,3 +8,6 @@ __pycache__/
 
 # Lo deja `swift build`/SwiftPM al resolver el plugin de los paquetes de prueba.
 .build/
+
+# Resultados de `claude plugin eval`: son de cada corrida y de esta máquina.
+evals/results/

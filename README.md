@@ -114,6 +114,7 @@ Qué hace cada pieza, cuándo se dispara y **qué no hace** está en [PIEZAS.md]
 
 ```bash
 bash scripts/verifica.sh               # ANTES de publicar: incluye el validador de Claude Code
+# si has tocado agents/reviewer.md, además el eval del revisor: está en docs/PIEZAS.md
 # sube la versión en .claude-plugin/plugin.json, commit y push
 ```
 

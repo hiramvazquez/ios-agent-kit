@@ -228,6 +228,25 @@ existen, y que comandos y agentes citen scripts que existen y lo hagan por la ra
 Que los manifiestos carguen lo comprueba `claude plugin validate --strict`, que corre como paso
 aparte en la verificación del kit. Es para quien mejora el kit, no para quien lo usa.
 
+### `evals/` — el revisor, contra un bug sembrado
+
+Dos casos de `claude plugin eval` sobre el mismo repositorio de juguete: en uno el cambio
+lleva un bug —el indicador de carga no se apaga si la carga falla— y el revisor tiene que dar
+RED por eso; en el otro el cambio está bien y no puede darlo. Es para quien toca los prompts
+del kit, antes de publicar:
+
+```bash
+claude plugin eval . --scaffold --allow-tools Bash --ablation none --no-publish
+```
+
+No va en la verificación: cada corrida son llamadas reales al modelo —medido el 2026-11-17,
+unos 0,65 USD y un minuto los dos casos con una corrida cada uno— y no da siempre lo mismo.
+
+**Límites declarados.** Un eval verde dice que el revisor cazó ESTE bug en esas corridas, no
+que cace los demás. Y en el sandbox del eval `git` no arranca en macOS, así que `rodaja.sh`
+falla y el revisor reconstruye el diff leyendo los ficheros: lo que se prueba es su juicio, no
+la rodaja, que tiene su propio banco.
+
 ## Skill
 
 ### `swift-swiftui`

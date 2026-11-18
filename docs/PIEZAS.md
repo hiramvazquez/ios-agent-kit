@@ -223,10 +223,10 @@ aunque algo esté en rojo.
 
 ### `autocomprueba.sh` — antes de publicar el kit
 
-Comprueba lo que solo se ve al instalar: que los manifiestos parseen, que `plugin.json` no
-declare rutas por defecto, que los hooks apunten a scripts que existen, y que comandos y
-agentes invoquen los scripts del kit por la raíz del plugin. Es para quien mejora el kit, no
-para quien lo usa.
+Comprueba lo que el validador de Claude Code no mira: que los hooks apunten a scripts que
+existen, y que comandos y agentes citen scripts que existen y lo hagan por la raíz del plugin.
+Que los manifiestos carguen lo comprueba `claude plugin validate --strict`, que corre como paso
+aparte en la verificación del kit. Es para quien mejora el kit, no para quien lo usa.
 
 ## Skill
 

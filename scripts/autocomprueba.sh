@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Comprueba que el kit está sano ANTES de publicar un cambio: lo que solo se ve al instalar,
-# cuando `claude plugin list` dice "failed to load", y lo que el kit se exige a sí mismo (que
-# comandos y agentes invoquen los scripts por la raíz del plugin).
+# Comprueba, ANTES de publicar un cambio, lo que el validador de Claude Code no mira: que los
+# scripts que citan los hooks, los comandos y los agentes existan, y que se citen por la raíz
+# del plugin. Que los manifiestos carguen lo comprueba `claude plugin validate`, que es un
+# paso aparte de `kit.conf`.
 #
 # Uso:  bash scripts/autocomprueba.sh            comprueba SU kit
 #       bash scripts/autocomprueba.sh <raíz>     comprueba el árbol de kit que le digas
@@ -10,8 +11,7 @@
 # misma forma que `verifica.sh`: confundir «no pude mirar» con «está mal» hace que un gate
 # roto parezca un proyecto roto. El recuento de problemas se imprime, que es donde se lee.
 #
-# LÍMITE DECLARADO: no tiene banco. Cubre las clases de fallo que ya rompieron al instalar,
-# no todas las posibles.
+# LÍMITE DECLARADO: no tiene banco.
 set -uo pipefail
 RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # `${1:-…}` sustituye cuando está sin definir *o* vacío, así que un argumento vacío no llega;
@@ -20,38 +20,6 @@ RAIZ="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 [ -n "$RAIZ" ] || { echo "❌ raíz vacía: pásame un directorio o ningún argumento"; exit 3; }
 cd "$RAIZ" || { echo "❌ no existe la raíz «${RAIZ}»"; exit 3; }
 FALLOS=0
-mal() { printf '❌ %s\n' "$1"; FALLOS=$((FALLOS+1)); }
-bien() { printf '✅ %s\n' "$1"; }
-
-# 1. Los tres JSON parsean
-for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.json; do
-    python3 -c "import json,sys; json.load(open('$f'))" 2>/dev/null \
-        && bien "$f parsea" || mal "$f NO parsea"
-done
-
-# 2. plugin.json no declara rutas que ya son las de por defecto (el validador las rechaza)
-python3 - <<'PY' || FALLOS=$((FALLOS+1))
-import json, sys
-d = json.load(open(".claude-plugin/plugin.json"))
-sobran = [k for k in ("agents","skills","commands","hooks") if k in d]
-if sobran:
-    print(f"❌ plugin.json declara {sobran}: usa las rutas por defecto y quita esas claves")
-    sys.exit(1)
-print("✅ plugin.json no declara rutas redundantes")
-PY
-
-# 3. hooks.json envuelve los eventos en el objeto `hooks`
-python3 - <<'PY' || FALLOS=$((FALLOS+1))
-import json, sys
-d = json.load(open("hooks/hooks.json"))
-eventos = {"PreToolUse","PostToolUse","UserPromptSubmit","SessionStart","SessionEnd","Stop"}
-if eventos & set(d) - {"hooks"}:
-    print("❌ hooks.json pone eventos en el nivel superior: van dentro de {\"hooks\": {...}}")
-    sys.exit(1)
-if "hooks" not in d:
-    print("❌ hooks.json no tiene objeto `hooks`"); sys.exit(1)
-print("✅ hooks.json tiene los eventos dentro del objeto `hooks`")
-PY
 
 # 4. Todo comando referenciado por un hook existe y es ejecutable
 python3 - <<'PY' || FALLOS=$((FALLOS+1))
@@ -115,15 +83,6 @@ if malas:
     sys.exit(1)
 print("✅ los ficheros del kit se invocan por la raíz del plugin")
 PY3
-
-# 6. Los agentes y comandos tienen frontmatter. Se compara contra el contador de ANTES de este
-#    punto, no contra 0: un fallo de un punto anterior no debe silenciar este ✅.
-ANTES_DEL_6=$FALLOS
-for f in agents/*.md commands/*.md skills/*/SKILL.md; do
-    head -1 "$f" | grep -q '^---$' && continue
-    mal "$f no empieza con frontmatter ---"
-done
-[ "$FALLOS" -eq "$ANTES_DEL_6" ] && bien "agentes, comandos y skills con frontmatter"
 
 echo
 [ "$FALLOS" -eq 0 ] && echo "✅ kit sano — se puede publicar." || echo "❌ $FALLOS problema(s): NO publiques."

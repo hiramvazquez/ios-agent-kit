@@ -76,7 +76,7 @@ Son dos plantillas, no una: el segundo `cp` pisa el `config.yaml` que acaba de g
 
 **`Status: ✘ failed to load`** — `claude plugin list` te dice el motivo exacto. Los dos
 clásicos: `plugin.json` declarando rutas que ya son las de por defecto, y `hooks.json` con los
-eventos fuera del objeto `hooks`. `bash scripts/autocomprueba.sh` los caza antes de publicar.
+eventos fuera del objeto `hooks`. `claude plugin validate` los caza antes de publicar.
 
 **`kit.conf` no encontrado** — `verifica.sh` sale con **3**, no con 1: «no pude mirar» no es
 lo mismo que «está mal». Créalo con `/kit-init`.

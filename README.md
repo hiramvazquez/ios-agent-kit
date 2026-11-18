@@ -113,7 +113,7 @@ Qué hace cada pieza, cuándo se dispara y **qué no hace** está en [PIEZAS.md]
 ### Para mejorar el kit
 
 ```bash
-bash scripts/autocomprueba.sh          # ANTES de publicar: comprueba lo que el CLI rechaza
+bash scripts/verifica.sh               # ANTES de publicar: incluye el validador de Claude Code
 # sube la versión en .claude-plugin/plugin.json, commit y push
 ```
 

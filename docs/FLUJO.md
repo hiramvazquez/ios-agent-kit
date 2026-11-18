@@ -21,7 +21,8 @@ PROJ-482 — "Al volver de la ficha de producto, el listado se recarga entero
             y se pierde el scroll"
 ```
 
-Abres Claude Code en la raíz del proyecto y lo pegas.
+Abres Claude Code en la raíz del proyecto y lo pegas. Si en vez de un ticket tienes un PRD,
+está en [Cuando partes de un PRD](#cuando-partes-de-un-prd).
 
 ## 1. Proponer — se acuerda, no se programa
 
@@ -230,6 +231,41 @@ hubo diff de código, solo un escenario nuevo en la spec con la razón al lado. 
 login se cancelaba por accidente, porque nadie miró el default de la dependencia. Después se
 cancela por decisión. El comportamiento es idéntico; lo que cambia es que deja de ser una
 casualidad.
+
+## Cuando partes de un PRD
+
+Un PRD es la entrada del `propose`, no su sustituto. Guárdalo en el repositorio —`docs/prd/`
+sirve— y pásale la ruta en vez de pegarlo:
+
+```
+/openspec-propose "implementa docs/prd/login-biometrico.md"
+```
+
+El agente lo lee una vez, mira el código y escribe la propuesta. Que sea largo no estorba.
+
+**El kit vigila la propuesta, no el PRD.** El digest de cada turno, el revisor y el juez miran
+`openspec/changes/<cambio>/`; lo que esté en el PRD y no llegue a la propuesta, nadie lo exige.
+Por eso el paso 2 sigue siendo tuyo, y aquí consiste en comprobar que la propuesta recoge el
+PRD:
+
+| en el PRD | en la propuesta |
+|---|---|
+| objetivos y motivación | el «Why» |
+| lo que no entra | «Fuera de alcance» |
+| criterios de éxito | criterios de aceptación, reescritos para poder comprobarse |
+| historias de usuario | escenarios `WHEN`/`THEN` del delta |
+
+Un criterio vago del PRD —«que vaya más fluido»— tiene que salir en la propuesta como
+pregunta o como algo comprobable. Si sale igual de vago, corrígelo ahí.
+
+**Un PRD largo suele ser varios cambios.** El cambio es lo que se verifica y se revisa de una
+vez; si el PRD cubre varias pantallas o capas, propón por trozos —`"de
+docs/prd/login-biometrico.md, solo la sección 2"`— y que cada cambio cite el mismo PRD.
+
+**No todo necesita PRD.** Para un arreglo pequeño basta una frase en el `propose`.
+
+Escríbelo antes de abrir el cambio. Está fuera de `openspec/`, así que editarlo después de
+verificar cambia el árbol y la firma deja de valer.
 
 ## Lo que corre de fondo sin que nadie lo pida
 

@@ -41,9 +41,9 @@ falla al publicar.
 
 #### Scenario: Un árbol de kit con un manifiesto roto
 
-- **WHEN** se apunta la autocomprobación a un árbol cuyo `hooks.json` pone los eventos fuera del
-  objeto `hooks`
-- **THEN** falla, y nombra el fichero
+- **WHEN** se apunta la autocomprobación a un árbol cuyo `hooks.json` llama a un script que no
+  existe
+- **THEN** falla, y nombra el script
 
 #### Scenario: Un árbol de kit sano
 
@@ -79,3 +79,20 @@ al depurar a mano.
 
 - **WHEN** se apunta la autocomprobación a un directorio que no existe
 - **THEN** sale con el código de «no pude mirar»
+
+### Requirement: El manifiesto lo valida Claude Code
+
+La verificación del kit SHALL correr `claude plugin validate --strict` sobre el propio kit, y
+`autocomprueba.sh` NOT SHALL repetir lo que ese validador comprueba: que los manifiestos
+parseen, la forma de `hooks.json` y el frontmatter. Si el CLI de `claude` no está, el paso
+SHALL fallar, no saltarse.
+
+#### Scenario: Un manifiesto roto
+
+- **WHEN** `hooks.json` pone sus eventos fuera del objeto `hooks`
+- **THEN** la verificación del kit sale en rojo por el paso del validador
+
+#### Scenario: Falta el CLI
+
+- **WHEN** `claude` no está en el PATH
+- **THEN** el paso falla y lo dice
